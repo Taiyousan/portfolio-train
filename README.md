@@ -115,8 +115,10 @@ La liste exacte des champs et leurs contraintes est dans le schéma de [src/lib/
 
 1. **Créer une branche** depuis `main`, avec un préfixe selon le sujet :
    `content/...` (contenu), `feat/...` (fonctionnalité), `fix/...` (correction), `chore/...` (config, dépendances, doc).
-2. **Commiter** avec le format `préfixe: description courte en français`, par exemple `content: ajoute le projet Configurateur`.
+2. **Commiter** avec le format `préfixe: description courte à l'impératif, en anglais`, par exemple `content: add the Configurateur project`.
    Préfixes : `feat`, `fix`, `content`, `style`, `refactor`, `chore`.
+
+   **Langue :** tout ce qui touche à git est en anglais (commits, noms de branche sans accents ni espaces, titres et descriptions de PR). Le contenu du site et cette doc restent en français.
 3. **Ouvrir une pull request**, même pour un petit changement de contenu. Vercel crée une URL de prévisualisation : on vérifie le rendu avant de fusionner.
 4. **Vérifier** que `npm run build` et `npm run lint` passent.
 5. **Fusionner en « squash merge »** (une branche = un commit propre sur `main`), puis supprimer la branche.

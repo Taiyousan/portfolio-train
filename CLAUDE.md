@@ -76,10 +76,11 @@ Un frontmatter invalide **fait échouer le build** avec le nom du fichier : c'es
 
 - **`main` est toujours déployable** (déployé sur Vercel : `main` = production). `npm run build` et `npm run lint` y passent.
 - **Ne jamais travailler directement sur `main`** (sauf le tout premier commit d'amorçage du dépôt). Toujours une branche par sujet, créée depuis `main`, courte (un sujet, quelques jours max) :
-  - `content/<sujet>` contenu · `feat/<sujet>` fonctionnalité · `fix/<sujet>` correction · `chore/<sujet>` config, dépendances, doc
+  - `content/<topic>` contenu · `feat/<topic>` fonctionnalité · `fix/<topic>` correction · `chore/<topic>` config, dépendances, doc (`<topic>` en anglais, en kebab-case)
   - Prototypes 3D : `feat/proto-<nom>`, jetables ; on ne fusionne que celui qui est retenu.
 - **Tout passe par une pull request**, y compris le contenu seul : Vercel génère une URL de prévisualisation par PR. Fusion en **squash merge**, puis suppression de la branche. Pas de branche `develop`, pas de tags ni de changelog.
-- **Messages de commit** : `préfixe: description courte à l'impératif, en français`. Préfixes : `feat` (fonctionnalité visible), `fix`, `content` (projet, texte), `style` (apparence seule), `refactor` (sans changement de comportement), `chore` (config, dépendances, doc). Exemple : `content: ajoute le projet Configurateur`.
+- **Messages de commit** : `préfixe: description courte à l'impératif, en anglais`. Préfixes : `feat` (fonctionnalité visible), `fix`, `content` (projet, texte), `style` (apparence seule), `refactor` (sans changement de comportement), `chore` (config, dépendances, doc). Exemple : `content: add the Configurateur project`.
+- **Langue** : tout ce qui touche à git est **en anglais** : messages de commit, noms de branche (ASCII, sans accents ni espaces, ex. `feat/project-page`), titres et descriptions de PR. Le contenu du site (MDX, `site.ts`) et la doc du dépôt (README, CLAUDE.md) restent en français. Commentaires dans le code : en anglais.
 - **Ne commiter, pousser ou ouvrir une PR que sur demande explicite de l'utilisateur.** Avant de proposer une fusion : `npm run build` et `npm run lint` doivent passer.
 
 ## Commandes
