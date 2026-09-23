@@ -1,10 +1,17 @@
-import { useMemo, useRef, useEffect } from "react";
+import { useMemo, useRef, useEffect, type RefObject } from "react";
+import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import type { ThreeElements } from "@react-three/fiber";
 import { useControls } from "leva";
 import { RAIL_TILE_LENGTH } from "../config/worldScale";
-import { CAMERA_POSITION } from "../config/scene";
+import {
+  CAMERA_POSITION,
+  STATION_CAMERA,
+  STATION_CLEAR_X,
+  STATION_SIDE,
+} from "../config/scene";
 import useScrollingLoop from "../hooks/useScrollingLoop";
+import { useTrainContext } from "../state/TrainContext";
 
 // Matches the rails' rendered tile length so the forest scrolls in the same
 // world-space units as the track, and tree distances stay relative to the
@@ -16,6 +23,8 @@ const MIN_X = { trees: 1.5, bushes: 1, rocks: 1.2 };
 // camera — for an immersive feel. Only a thin band right at the camera's
 // own distance stays clear (± `clearing`), so a trunk can't spawn inside
 // the camera and clip it.
+// The station shot gets no such band: trees near it are shrunk away while
+// the train pulls in instead (see useStationCull).
 const CAMERA_SIDE = Math.sign(CAMERA_POSITION[0]);
 const CAMERA_DISTANCE = Math.abs(CAMERA_POSITION[0]);
 
@@ -74,6 +83,8 @@ function sideSegments(
   maxX: number,
   clearing: number,
 ): [number, number][] {
+  // Keep the station's side of the track free of props.
+  if (side === STATION_SIDE) return [[Math.max(minX, STATION_CLEAR_X), maxX]];
   if (side !== CAMERA_SIDE) return [[minX, maxX]];
 
   const bandStart = Math.max(minX, CAMERA_DISTANCE - clearing);
@@ -105,6 +116,56 @@ function randomTransforms(
   return items;
 }
 
+// Zone in front of the station camera (x = distance from the track on the
+// camera side, z = world z) where props are shrunk away while the train
+// pulls in, so no trunk ends up right in front of the lens.
+const CULL_MAX_X = Math.abs(STATION_CAMERA.position[0]) + 2;
+const CULL_MIN_Z = -2;
+const CULL_MAX_Z = 5;
+const CULL_RATE = 6;
+
+type CullRefs = {
+  tileRef: RefObject<THREE.Group | null>;
+  factorRef: RefObject<number>;
+};
+
+// Rewrites instance matrices each frame while the cull factor (0 = none,
+// 1 = full) is non-zero or has just returned to zero, scaling down every
+// instance inside the zone. Idle otherwise.
+function useStationCull(
+  meshRefs: RefObject<THREE.InstancedMesh | null>[],
+  transforms: Transform[],
+  { tileRef, factorRef }: CullRefs,
+) {
+  const dummy = useMemo(() => new THREE.Object3D(), []);
+  const lastFactorRef = useRef(0);
+
+  useFrame(() => {
+    const factor = factorRef.current;
+    if (factor === 0 && lastFactorRef.current === 0) return;
+    lastFactorRef.current = factor;
+    const tileZ = tileRef.current?.position.z ?? 0;
+
+    meshRefs.forEach((meshRef) => {
+      const mesh = meshRef.current;
+      if (!mesh) return;
+      transforms.forEach((t, i) => {
+        const inZone =
+          Math.sign(t.x) === CAMERA_SIDE &&
+          Math.abs(t.x) < CULL_MAX_X &&
+          tileZ + t.z > CULL_MIN_Z &&
+          tileZ + t.z < CULL_MAX_Z;
+        dummy.position.set(t.x, 0, t.z);
+        dummy.rotation.set(0, t.rotationY, 0);
+        dummy.scale.setScalar(t.scale * (inZone ? 1 - factor : 1));
+        dummy.updateMatrix();
+        mesh.setMatrixAt(i, dummy.matrix);
+      });
+      mesh.instanceMatrix.needsUpdate = true;
+    });
+  });
+}
+
 function setInstanceTransforms(
   mesh: THREE.InstancedMesh | null,
   transforms: Transform[],
@@ -127,14 +188,17 @@ function InstancedClutter({
   transforms,
   color,
   roughness = 0.9,
+  cull,
 }: {
   geometry: THREE.BufferGeometry;
   transforms: Transform[];
   color: string;
   roughness?: number;
+  cull: CullRefs;
 }) {
   const ref = useRef<THREE.InstancedMesh>(null);
   useEffect(() => setInstanceTransforms(ref.current, transforms), [transforms]);
+  useStationCull([ref], transforms, cull);
 
   return (
     <instancedMesh
@@ -153,9 +217,11 @@ function InstancedClutter({
 function InstancedTrees({
   geometries,
   transforms,
+  cull,
 }: {
   geometries: TreeGeometries;
   transforms: Transform[];
+  cull: CullRefs;
 }) {
   const trunkRef = useRef<THREE.InstancedMesh>(null);
   const lowRef = useRef<THREE.InstancedMesh>(null);
@@ -166,6 +232,7 @@ function InstancedTrees({
     setInstanceTransforms(lowRef.current, transforms);
     setInstanceTransforms(highRef.current, transforms);
   }, [transforms]);
+  useStationCull([trunkRef, lowRef, highRef], transforms, cull);
 
   return (
     <>
@@ -204,11 +271,13 @@ function ForestTile({
   density,
   spread,
   clearing,
+  cull,
 }: {
   geometries: TreeGeometries;
   density: Counts;
   spread: Counts;
   clearing: number;
+  cull: CullRefs;
 }) {
   const trees = useMemo(
     () =>
@@ -228,17 +297,19 @@ function ForestTile({
 
   return (
     <>
-      <InstancedTrees geometries={geometries} transforms={trees} />
+      <InstancedTrees geometries={geometries} transforms={trees} cull={cull} />
       <InstancedClutter
         geometry={geometries.bush}
         transforms={bushes}
         color="#2e4a26"
+        cull={cull}
       />
       <InstancedClutter
         geometry={geometries.rock}
         transforms={rocks}
         color="#5c5850"
         roughness={1}
+        cull={cull}
       />
     </>
   );
@@ -277,6 +348,20 @@ export default function Forest(props: ThreeElements["group"]) {
 
   const tiles = useScrollingLoop(tileCount, TILE_SPACING);
 
+  // Eased 0 → 1 while arriving at / waiting in the station.
+  const { mode } = useTrainContext();
+  const cullFactorRef = useRef(0);
+  useFrame((_, delta) => {
+    const target = mode === "arriving" || mode === "station" ? 1 : 0;
+    const next = THREE.MathUtils.damp(
+      cullFactorRef.current,
+      target,
+      CULL_RATE,
+      delta,
+    );
+    cullFactorRef.current = Math.abs(next - target) < 0.005 ? target : next;
+  });
+
   return (
     <group {...props}>
       {tiles.map(({ ref, position }, index) => (
@@ -286,6 +371,7 @@ export default function Forest(props: ThreeElements["group"]) {
             density={density}
             spread={spread}
             clearing={clearing}
+            cull={{ tileRef: ref, factorRef: cullFactorRef }}
           />
         </group>
       ))}

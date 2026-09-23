@@ -1,4 +1,4 @@
-import { Suspense, useEffect } from "react";
+import { Suspense, useEffect, useRef } from "react";
 import { CameraControls, Environment, Html, Sky } from "@react-three/drei";
 import {
   EffectComposer,
@@ -10,12 +10,19 @@ import { monitor, useControls } from "leva";
 import * as THREE from "three";
 import { useTrainContext } from "../state/TrainContext";
 import useTrainSpeedEasing from "../hooks/useTrainSpeedEasing";
+import useStationApproach from "../hooks/useStationApproach";
+import Station from "../models/Station";
 import Train from "../models/Train";
 import Rails from "../models/Rails";
 import Smoke from "../models/Smoke";
 import Forest from "../models/Forest";
 import ForestFloor from "../models/ForestFloor";
-import { ABOUT_CAMERA, RIDE_CAMERA, SUN_POSITION } from "../config/scene";
+import {
+  ABOUT_CAMERA,
+  RIDE_CAMERA,
+  STATION_CAMERA,
+  SUN_POSITION,
+} from "../config/scene";
 
 // Scratch vectors for the read-only camera monitor below — reused every
 // poll instead of allocating, and module-level since only one TrainScene
@@ -54,6 +61,8 @@ export default function TrainScene() {
     [targetTrainSpeed, setTargetTrainSpeed],
   );
   useTrainSpeedEasing();
+  const stationRef = useRef<THREE.Group>(null);
+  useStationApproach(stationRef);
 
   // Read-only, live in the Leva panel: orbit to a framing you like, then
   // copy these straight into a CameraShot in config/scene.ts. The ref reads
@@ -75,7 +84,12 @@ export default function TrainScene() {
   });
 
   useEffect(() => {
-    const shot = mode === "about" ? ABOUT_CAMERA : RIDE_CAMERA;
+    const shot =
+      mode === "about"
+        ? ABOUT_CAMERA
+        : mode === "arriving" || mode === "station"
+          ? STATION_CAMERA
+          : RIDE_CAMERA;
     cameraControlsRef.current?.setLookAt(
       ...shot.position,
       ...shot.target,
@@ -85,11 +99,7 @@ export default function TrainScene() {
 
   return (
     <>
-      <fogExp2
-        attach="fog"
-        args={["#3a2a1f", 0.04]}
-        density={fogDensity}
-      />
+      <fogExp2 attach="fog" args={["#3a2a1f", 0.04]} density={fogDensity} />
 
       <ambientLight intensity={0.25} color="#4a5a7a" />
       <directionalLight
@@ -141,6 +151,7 @@ export default function TrainScene() {
         <Rails position={[0, -0.57, 0]} />
         <Forest position={[0, -0.58, 0]} />
         <Smoke />
+        <Station ref={stationRef} />
       </Suspense>
     </>
   );

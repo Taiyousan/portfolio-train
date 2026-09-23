@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { useGLTF, Center, Resize, Float } from "@react-three/drei";
+import { useGLTF, Center, Resize } from "@react-three/drei";
 import { animated } from "@react-spring/three";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
@@ -9,8 +9,18 @@ import Driver from "./Driver";
 
 const WHEEL_NAMES = ["EngineSpokes1", "EngineSpokes2", "EngineSpokes3"];
 
+// Same motion as drei's <Float speed={50} rotationIntensity={0.1}
+// floatIntensity={0.01}>, but its phase advances with the train's speed
+// and its amplitude fades to zero at a standstill, so the train comes to
+// rest upright instead of freezing mid-tilt.
+const SWAY_RATE = 12.5;
+const SWAY_ROTATION = 0.1;
+const SWAY_LIFT = 0.01;
+
 export default function Train() {
-  const { trainSpeedRef } = useTrainContext();
+  const { trainSpeedRef, targetTrainSpeed } = useTrainContext();
+  const swayRef = useRef<THREE.Group>(null);
+  const swayPhaseRef = useRef(0);
   const { scene } = useGLTF("/models/wagon.glb");
   const scale = usePopIn();
 
@@ -34,6 +44,21 @@ export default function Train() {
   }, [scene]);
 
   useFrame((_, delta) => {
+    const sway = swayRef.current;
+    if (sway) {
+      const cruise = Math.max(targetTrainSpeed, 1);
+      const speedRatio = trainSpeedRef.current / cruise;
+      swayPhaseRef.current += delta * SWAY_RATE * speedRatio;
+      const amplitude = THREE.MathUtils.smoothstep(speedRatio, 0, 1);
+      const phase = swayPhaseRef.current;
+      sway.rotation.set(
+        (Math.cos(phase) / 8) * SWAY_ROTATION * amplitude,
+        (Math.sin(phase) / 8) * SWAY_ROTATION * amplitude,
+        (Math.sin(phase) / 20) * SWAY_ROTATION * amplitude,
+      );
+      sway.position.y = (Math.sin(phase) / 10) * SWAY_LIFT * amplitude;
+    }
+
     const wheels = wheelsRef.current;
     if (wheels.length === 0) return;
 
@@ -66,15 +91,10 @@ export default function Train() {
     <animated.group scale={scale}>
       <Resize scale={2}>
         <Center>
-          <Float
-            speed={50}
-            rotationIntensity={0.1}
-            floatIntensity={0.01}
-            floatingRange={[1, 1.1]}
-          >
+          <group ref={swayRef}>
             <primitive object={scene} />
             <Driver position={[0.027, -0.41, -1.46]} scale={1.5} />
-          </Float>
+          </group>
         </Center>
       </Resize>
     </animated.group>

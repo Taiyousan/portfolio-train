@@ -29,6 +29,16 @@ function Overlay() {
         </button>
         <button
           type="button"
+          disabled={mode === "arriving" || mode === "departing"}
+          onClick={() =>
+            setMode(mode === "station" ? "departing" : "arriving")
+          }
+          className="pointer-events-auto rounded-full border border-white/40 px-3 py-1 hover:bg-white/10 disabled:opacity-50"
+        >
+          {mode === "station" ? "Repartir" : "Arriver en gare"}
+        </button>
+        <button
+          type="button"
           onClick={() => cameraControlsRef.current?.reset(true)}
           className="pointer-events-auto rounded-full border border-white/40 px-3 py-1 hover:bg-white/10"
         >

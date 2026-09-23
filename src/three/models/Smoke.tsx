@@ -7,6 +7,8 @@ import { createSmokeMaterial } from "../shaders/smoke";
 
 const START_POSITION = new THREE.Vector3(0, 0.55, 0.48);
 const START_SCALE = 0.1;
+// Below this speed the chimney stops emitting new puffs.
+const EMIT_MIN_SPEED = 0.3;
 
 // Puffs of smoke rising from the chimney and drifting behind the train,
 // toon-shaded by a custom shader (see shaders/smoke.ts).
@@ -35,6 +37,9 @@ export default function Smoke() {
   const meshRefs = useRef<(THREE.Mesh | null)[]>([]);
   // Each puff's age in seconds. Offset evenly so they are spread out.
   const agesRef = useRef<number[]>([]);
+  // A puff that finishes its life while the train is stopped goes idle
+  // instead of restarting; it is re-released, staggered, once moving again.
+  const idleRef = useRef<boolean[]>([]);
 
   useFrame(({ clock }, delta) => {
     const ages = agesRef.current;
@@ -43,8 +48,12 @@ export default function Smoke() {
         { length: numSmokes },
         (_, index) => (index * duration) / numSmokes,
       );
+      idleRef.current = Array.from({ length: numSmokes }, () => false);
       return;
     }
+
+    const emitting = trainSpeedRef.current > EMIT_MIN_SPEED;
+    const idle = idleRef.current;
 
     // Once released, smoke is left behind by the passing air rather than
     // travelling with the train — its backward drift should match the
@@ -53,11 +62,30 @@ export default function Smoke() {
     const driftDistance = trainSpeedRef.current * duration;
 
     ages.forEach((age, index) => {
-      const nextAge = (age + delta) % duration;
-      ages[index] = nextAge;
-
       const mesh = meshRefs.current[index];
       if (!mesh) return;
+
+      if (idle[index]) {
+        if (!emitting) return;
+        // Restart with a delay proportional to the puff's slot.
+        idle[index] = false;
+        age = -(index * duration) / numSmokes;
+      }
+      // Negative age = waiting to be released.
+      if (age < 0) {
+        ages[index] = age + delta;
+        mesh.visible = false;
+        return;
+      }
+      mesh.visible = true;
+
+      const nextAge = (age + delta) % duration;
+      ages[index] = nextAge;
+      if (nextAge < age && !emitting) {
+        idle[index] = true;
+        mesh.visible = false;
+        return;
+      }
       const { uniforms } = materials[index];
 
       const t = nextAge / duration; // 0 → 1 over the puff's lifetime
