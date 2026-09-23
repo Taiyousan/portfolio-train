@@ -13,9 +13,7 @@ import Rails from "../models/Rails";
 import Smoke from "../models/Smoke";
 import Forest from "../models/Forest";
 import ForestFloor from "../models/ForestFloor";
-
-// Low sun behind the train, warm dusk mood.
-const SUN_POSITION: [number, number, number] = [-30, 6, -20];
+import { SUN_POSITION } from "../config/scene";
 
 export default function TrainScene() {
   const { cameraControlsRef, trainSpeed: initialSpeed, setTrainSpeed } =

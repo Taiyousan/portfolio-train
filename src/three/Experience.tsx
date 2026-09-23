@@ -6,6 +6,7 @@ import { Leva } from "leva";
 import { TrainProvider, useTrainContext } from "./state/TrainContext";
 import useDebugMode from "./hooks/useDebugMode";
 import TrainScene from "./scenes/TrainScene";
+import { CAMERA_POSITION } from "./config/scene";
 
 function Overlay() {
   const { cameraControlsRef } = useTrainContext();
@@ -39,7 +40,7 @@ export default function Experience() {
           fov: 45,
           near: 0.3,
           far: 150,
-          position: [-5.552903814384558, 1.0595020092319951, -0.09906038769694253],
+          position: CAMERA_POSITION,
         }}
       >
         <color args={["#3a2a1f"]} attach="background" />

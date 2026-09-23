@@ -47,8 +47,9 @@ src/three/
   scenes/           une scène par projet ou par zone
   models/           composants 3D (chargent un .glb ou le construisent)
   hooks/            hooks R3F partagés
+  shaders/          matériaux GLSL maison (ShaderMaterial)
   state/            état partagé de la scène (contexte React)
-  config/           réglages 3D (positions, échelles)
+  config/           réglages 3D (positions de caméra et de soleil, échelles)
 ```
 
 1. Le code 3D reste dans `src/three/` ; les pages n'importent que `Experience`.
