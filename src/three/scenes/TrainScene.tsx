@@ -6,7 +6,8 @@ import {
   Vignette,
   Noise,
 } from "@react-three/postprocessing";
-import { useControls } from "leva";
+import { monitor, useControls } from "leva";
+import * as THREE from "three";
 import { useTrainContext } from "../state/TrainContext";
 import useTrainSpeedEasing from "../hooks/useTrainSpeedEasing";
 import Train from "../models/Train";
@@ -15,6 +16,16 @@ import Smoke from "../models/Smoke";
 import Forest from "../models/Forest";
 import ForestFloor from "../models/ForestFloor";
 import { ABOUT_CAMERA, RIDE_CAMERA, SUN_POSITION } from "../config/scene";
+
+// Scratch vectors for the read-only camera monitor below — reused every
+// poll instead of allocating, and module-level since only one TrainScene
+// renders at a time.
+const monitorPosition = new THREE.Vector3();
+const monitorTarget = new THREE.Vector3();
+
+function formatVec3(vec: THREE.Vector3) {
+  return `[${vec.x.toFixed(3)}, ${vec.y.toFixed(3)}, ${vec.z.toFixed(3)}]`;
+}
 
 export default function TrainScene() {
   const {
@@ -43,6 +54,25 @@ export default function TrainScene() {
     [targetTrainSpeed, setTargetTrainSpeed],
   );
   useTrainSpeedEasing();
+
+  // Read-only, live in the Leva panel: orbit to a framing you like, then
+  // copy these straight into a CameraShot in config/scene.ts. The ref reads
+  // below only ever run from Leva's own polling interval, never during
+  // render, so the react-hooks/refs warning doesn't apply here.
+  useControls("Camera (lecture seule)", {
+    // eslint-disable-next-line react-hooks/refs
+    position: monitor(() => {
+      const controls = cameraControlsRef.current;
+      if (!controls) return "—";
+      return formatVec3(controls.getPosition(monitorPosition));
+    }),
+    // eslint-disable-next-line react-hooks/refs
+    target: monitor(() => {
+      const controls = cameraControlsRef.current;
+      if (!controls) return "—";
+      return formatVec3(controls.getTarget(monitorTarget));
+    }),
+  });
 
   useEffect(() => {
     const shot = mode === "about" ? ABOUT_CAMERA : RIDE_CAMERA;

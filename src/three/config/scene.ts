@@ -17,12 +17,9 @@ export const RIDE_CAMERA: CameraShot = {
   target: [0, 0, 0],
 };
 
-// Rough placeholder aimed at the cab where Driver sits (Train.tsx). Needs
-// tuning live in the browser (`/proto/train#debug`, orbit with
-// CameraControls then read its position/target) — Driver's actual world
-// position depends on the Resize/Center/Float chain around it, which can't
-// be derived analytically from its local offset alone.
+// Close on the cab where Driver stands (Train.tsx), tuned live in the
+// browser via the Leva "Camera (lecture seule)" monitor.
 export const ABOUT_CAMERA: CameraShot = {
-  position: [-1.6, 1.4, -1.1],
-  target: [0.03, 0.75, -1.46],
+  position: [1.641, 0.636, 0.048],
+  target: [0.016, 0.05, -0.426],
 };
