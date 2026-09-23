@@ -18,10 +18,10 @@ Le train est porté dans ce dépôt, sur la branche `feat/proto-train` : `src/th
 
 L'ancien dépôt Vite, `../portfolio-pro-train`, sert d'archive et de bac à sable.
 
-**Reste de la migration :**
+La migration est terminée :
 
-- La fumée utilise un matériau translucide simple : l'ancien shader NodeToy ne fonctionne pas avec R3F 9. À réécrire en shader maison.
-- La forêt étant aléatoire, un arbre ou un buisson peut masquer le train. Laisser un couloir libre côté caméra.
+- La fumée a son propre shader (`src/three/shaders/smoke.ts`) à la place de l'ancien shader NodeToy, incompatible avec R3F 9. Même rendu « toon » (éclairage en paliers, reflet net, liseré clair), plus des bouffées qui ondulent et se désagrègent en fin de vie.
+- La forêt laisse un couloir libre entre la caméra et le train (réglage `clearing` dans le panneau Leva, groupe Forest).
 
 ## Correspondance contenu → mise en scène
 

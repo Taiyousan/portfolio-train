@@ -3,6 +3,7 @@ import * as THREE from "three";
 import type { ThreeElements } from "@react-three/fiber";
 import { useControls } from "leva";
 import { RAIL_TILE_LENGTH } from "../config/worldScale";
+import { CAMERA_POSITION } from "../config/scene";
 import useScrollingLoop from "../hooks/useScrollingLoop";
 
 // Matches the rails' rendered tile length so the forest scrolls in the same
@@ -10,6 +11,13 @@ import useScrollingLoop from "../hooks/useScrollingLoop";
 // train's actual size.
 const TILE_SPACING = RAIL_TILE_LENGTH;
 const MIN_X = { trees: 1.5, bushes: 1, rocks: 1.2 };
+// The camera looks at the train from one side of the track, with forest on
+// both sides of it — between the camera and the train, and behind the
+// camera — for an immersive feel. Only a thin band right at the camera's
+// own distance stays clear (± `clearing`), so a trunk can't spawn inside
+// the camera and clip it.
+const CAMERA_SIDE = Math.sign(CAMERA_POSITION[0]);
+const CAMERA_DISTANCE = Math.abs(CAMERA_POSITION[0]);
 
 type TreeGeometries = {
   trunk: THREE.BufferGeometry;
@@ -43,15 +51,51 @@ function useTreeGeometries(): TreeGeometries {
   }, []);
 }
 
+// Picks a random x from a list of [start, end] segments, weighted by each
+// segment's length so density stays uniform across the gap.
+function pickInSegments(segments: [number, number][]): number {
+  const lengths = segments.map(([start, end]) => end - start);
+  const total = lengths.reduce((sum, length) => sum + length, 0);
+  let roll = Math.random() * total;
+  for (let i = 0; i < segments.length; i++) {
+    if (roll < lengths[i]) {
+      const [start] = segments[i];
+      return start + roll;
+    }
+    roll -= lengths[i];
+  }
+  const [start, end] = segments[segments.length - 1];
+  return end ?? start;
+}
+
+function sideSegments(
+  side: number,
+  minX: number,
+  maxX: number,
+  clearing: number,
+): [number, number][] {
+  if (side !== CAMERA_SIDE) return [[minX, maxX]];
+
+  const bandStart = Math.max(minX, CAMERA_DISTANCE - clearing);
+  const bandEnd = Math.min(maxX, CAMERA_DISTANCE + clearing);
+  const segments: [number, number][] = [];
+  if (bandStart > minX) segments.push([minX, bandStart]);
+  if (bandEnd < maxX) segments.push([bandEnd, maxX]);
+  return segments;
+}
+
 function randomTransforms(
   count: number,
   [minX, maxX]: [number, number],
+  clearing: number,
 ): Transform[] {
   const items: Transform[] = [];
   for (let side = -1; side <= 1; side += 2) {
+    const segments = sideSegments(side, minX, maxX, clearing);
+    if (segments.length === 0) continue;
     for (let i = 0; i < count; i++) {
       items.push({
-        x: side * (minX + Math.random() * (maxX - minX)),
+        x: side * pickInSegments(segments),
         z: (Math.random() - 0.5) * TILE_SPACING,
         scale: 0.6 + Math.random() * 0.9,
         rotationY: Math.random() * Math.PI * 2,
@@ -159,22 +203,27 @@ function ForestTile({
   geometries,
   density,
   spread,
+  clearing,
 }: {
   geometries: TreeGeometries;
   density: Counts;
   spread: Counts;
+  clearing: number;
 }) {
   const trees = useMemo(
-    () => randomTransforms(density.trees, [MIN_X.trees, spread.trees]),
-    [density.trees, spread.trees],
+    () =>
+      randomTransforms(density.trees, [MIN_X.trees, spread.trees], clearing),
+    [density.trees, spread.trees, clearing],
   );
   const bushes = useMemo(
-    () => randomTransforms(density.bushes, [MIN_X.bushes, spread.bushes]),
-    [density.bushes, spread.bushes],
+    () =>
+      randomTransforms(density.bushes, [MIN_X.bushes, spread.bushes], clearing),
+    [density.bushes, spread.bushes, clearing],
   );
   const rocks = useMemo(
-    () => randomTransforms(density.rocks, [MIN_X.rocks, spread.rocks]),
-    [density.rocks, spread.rocks],
+    () =>
+      randomTransforms(density.rocks, [MIN_X.rocks, spread.rocks], clearing),
+    [density.rocks, spread.rocks, clearing],
   );
 
   return (
@@ -207,6 +256,7 @@ export default function Forest(props: ThreeElements["group"]) {
     bushSpread,
     rocksPerTile,
     rockSpread,
+    clearing,
   } = useControls("Forest", {
     tileCount: { value: 6, min: 2, max: 14, step: 1 },
     treesPerTile: { value: 32, min: 0, max: 60, step: 1 },
@@ -215,6 +265,7 @@ export default function Forest(props: ThreeElements["group"]) {
     bushSpread: { value: 32, min: 5, max: 80, step: 1 },
     rocksPerTile: { value: 18, min: 0, max: 60, step: 1 },
     rockSpread: { value: 36, min: 5, max: 80, step: 1 },
+    clearing: { value: 2, min: 0, max: 10, step: 0.5 },
   });
 
   const density = {
@@ -234,6 +285,7 @@ export default function Forest(props: ThreeElements["group"]) {
             geometries={geometries}
             density={density}
             spread={spread}
+            clearing={clearing}
           />
         </group>
       ))}
