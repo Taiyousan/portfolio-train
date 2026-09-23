@@ -39,7 +39,7 @@ On range par **nature de chose**, pas par page.
 | `src/app/` | Des pages : un dossier = une URL |
 | `src/lib/` | De la logique sans affichage (lecture et validation du contenu) |
 | `src/components/` | *(à créer quand besoin)* Morceaux d'interface réutilisables |
-| `src/three/` | *(prévu, n'existe pas encore)* Tout ce qui touche à React Three Fiber |
+| `src/three/` | Tout ce qui touche à React Three Fiber (prototype du train, page `/proto/train`) |
 
 **« Je veux ajouter... »**
 
@@ -53,13 +53,15 @@ On range par **nature de chose**, pas par page.
 
 **Pour trancher** : du texte que tu rédiges → `content/` ; un fichier lourd → `public/` ; une URL → `src/app/` ; de la logique ou de l'affichage réutilisable → `src/lib/` ou `src/components/`.
 
-### Structure prévue pour la 3D (pas encore créée)
+### Structure de la 3D
 
 ```
 src/three/
   Experience.tsx    le <Canvas> unique, chargé côté client
   scenes/           une scène par projet ou par zone
-  models/           composants qui chargent un .glb
+  models/           composants 3D (chargent un .glb ou le construisent)
+  hooks/            hooks R3F partagés
+  state/            état partagé de la scène (contexte React)
   config/           réglages 3D (positions, échelles)
 public/models/      les fichiers .glb
 ```

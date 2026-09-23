@@ -33,19 +33,21 @@ Ranger par nature de chose, pas par page :
 | `src/app/` | Pages : un dossier = une URL |
 | `src/lib/` | Logique sans affichage (lecture/validation du contenu) |
 | `src/components/` | Interface réutilisable. **N'existe pas encore** : ne le créer et n'y extraire un composant que lorsqu'une deuxième page en a besoin (ex. la carte de projet, aujourd'hui inline dans `page.tsx`) |
-| `src/three/` | Tout le code React Three Fiber. **N'existe pas encore** |
+| `src/three/` | Tout le code React Three Fiber (prototype du train sur `feat/proto-train`, page `/proto/train`) |
 
 - **Nouvelle page** : `src/app/<url>/page.tsx`. Texte long → MDX dans `content/`, pas en dur.
 - **Nouveau type de contenu** (blog, expériences) : dossier dans `content/` + schéma zod et lecteur dans `src/lib/` sur le modèle de `projects.ts` + pages.
 - **Modèles 3D** : `public/models/`.
 
-### Structure 3D prévue (à ne créer que quand on attaque la 3D)
+### Structure 3D
 
 ```
 src/three/
   Experience.tsx    <Canvas> unique, "use client"
   scenes/           une scène par projet ou par zone
-  models/           composants qui chargent un .glb
+  models/           composants 3D (chargent un .glb ou le construisent)
+  hooks/            hooks R3F partagés
+  state/            état partagé de la scène (contexte React)
   config/           réglages 3D (positions, échelles)
 ```
 
