@@ -10,7 +10,7 @@ import Driver from "./Driver";
 const WHEEL_NAMES = ["EngineSpokes1", "EngineSpokes2", "EngineSpokes3"];
 
 export default function Train() {
-  const { trainSpeed } = useTrainContext();
+  const { trainSpeedRef } = useTrainContext();
   const { scene } = useGLTF("/models/wagon.glb");
   const scale = usePopIn();
 
@@ -56,7 +56,7 @@ export default function Train() {
           : 0.3;
     }
 
-    const spin = (delta * trainSpeed) / wheelRadiusRef.current;
+    const spin = (delta * trainSpeedRef.current) / wheelRadiusRef.current;
     wheels.forEach((wheel) => {
       wheel.rotation.x += spin;
     });

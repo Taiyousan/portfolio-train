@@ -9,20 +9,32 @@ import TrainScene from "./scenes/TrainScene";
 import { CAMERA_POSITION } from "./config/scene";
 
 function Overlay() {
-  const { cameraControlsRef } = useTrainContext();
+  const { cameraControlsRef, mode, setMode } = useTrainContext();
 
   return (
     <div className="pointer-events-none absolute inset-0 flex items-start justify-between p-5 text-sm text-white">
       <Link href="/" className="pointer-events-auto underline">
         ← Accueil
       </Link>
-      <button
-        type="button"
-        onClick={() => cameraControlsRef.current?.reset(true)}
-        className="pointer-events-auto rounded-full border border-white/40 px-3 py-1 hover:bg-white/10"
-      >
-        Recentrer la vue
-      </button>
+      <div className="flex gap-2">
+        {/* Temporary trigger to reach the "about" camera shot for tuning —
+            step 5 (docs/proto-train.md) replaces this with a real cab-click
+            interaction and HTML panel. */}
+        <button
+          type="button"
+          onClick={() => setMode(mode === "about" ? "ride" : "about")}
+          className="pointer-events-auto rounded-full border border-white/40 px-3 py-1 hover:bg-white/10"
+        >
+          {mode === "about" ? "Retour au voyage" : "À propos du conducteur"}
+        </button>
+        <button
+          type="button"
+          onClick={() => cameraControlsRef.current?.reset(true)}
+          className="pointer-events-auto rounded-full border border-white/40 px-3 py-1 hover:bg-white/10"
+        >
+          Recentrer la vue
+        </button>
+      </div>
     </div>
   );
 }

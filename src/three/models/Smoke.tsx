@@ -11,7 +11,7 @@ const START_SCALE = 0.1;
 // Puffs of smoke rising from the chimney and drifting behind the train,
 // toon-shaded by a custom shader (see shaders/smoke.ts).
 export default function Smoke() {
-  const { trainSpeed } = useTrainContext();
+  const { trainSpeedRef } = useTrainContext();
 
   const { numSmokes, duration } = useControls("Smoke", {
     numSmokes: { value: 5, min: 1, max: 20, step: 1 },
@@ -50,7 +50,7 @@ export default function Smoke() {
     // travelling with the train — its backward drift should match the
     // speed the rest of the world scrolls past at, not a fixed constant,
     // or it looks like it's riding along with the train.
-    const driftDistance = trainSpeed * duration;
+    const driftDistance = trainSpeedRef.current * duration;
 
     ages.forEach((age, index) => {
       const nextAge = (age + delta) % duration;

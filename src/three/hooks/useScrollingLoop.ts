@@ -17,7 +17,7 @@ export default function useScrollingLoop(
   tileCount: number,
   tileSpacing: number,
 ): ScrollingTile[] {
-  const { trainSpeed } = useTrainContext();
+  const { trainSpeedRef } = useTrainContext();
   const totalLength = tileCount * tileSpacing;
   const halfLength = totalLength / 2;
 
@@ -29,7 +29,7 @@ export default function useScrollingLoop(
   useFrame((_, delta) => {
     tileRefs.forEach((tile) => {
       if (!tile.current) return;
-      tile.current.position.z -= delta * trainSpeed;
+      tile.current.position.z -= delta * trainSpeedRef.current;
       if (tile.current.position.z <= -halfLength) {
         tile.current.position.z += totalLength;
       }

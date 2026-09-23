@@ -8,19 +8,24 @@ import {
 } from "@react-three/postprocessing";
 import { useControls } from "leva";
 import { useTrainContext } from "../state/TrainContext";
+import useTrainSpeedEasing from "../hooks/useTrainSpeedEasing";
 import Train from "../models/Train";
 import Rails from "../models/Rails";
 import Smoke from "../models/Smoke";
 import Forest from "../models/Forest";
 import ForestFloor from "../models/ForestFloor";
-import { SUN_POSITION } from "../config/scene";
+import { ABOUT_CAMERA, RIDE_CAMERA, SUN_POSITION } from "../config/scene";
 
 export default function TrainScene() {
-  const { cameraControlsRef, trainSpeed: initialSpeed, setTrainSpeed } =
-    useTrainContext();
+  const {
+    cameraControlsRef,
+    targetTrainSpeed: initialSpeed,
+    setTargetTrainSpeed,
+    mode,
+  } = useTrainContext();
 
   const {
-    trainSpeed,
+    trainSpeed: targetTrainSpeed,
     fogDensity,
     lightIntensity,
     bloomIntensity,
@@ -33,7 +38,20 @@ export default function TrainScene() {
     vignetteDarkness: { value: 0.6, min: 0, max: 1, step: 0.05 },
   });
 
-  useEffect(() => setTrainSpeed(trainSpeed), [trainSpeed, setTrainSpeed]);
+  useEffect(
+    () => setTargetTrainSpeed(targetTrainSpeed),
+    [targetTrainSpeed, setTargetTrainSpeed],
+  );
+  useTrainSpeedEasing();
+
+  useEffect(() => {
+    const shot = mode === "about" ? ABOUT_CAMERA : RIDE_CAMERA;
+    cameraControlsRef.current?.setLookAt(
+      ...shot.position,
+      ...shot.target,
+      true,
+    );
+  }, [mode, cameraControlsRef]);
 
   return (
     <>

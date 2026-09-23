@@ -10,10 +10,21 @@ import {
 } from "react";
 import type { CameraControls } from "@react-three/drei";
 
+// See docs/proto-train.md — one mode drives target speed, camera position
+// and HTML overlay together.
+export type TrainMode = "ride" | "arriving" | "station" | "departing" | "about";
+
 type TrainContextValue = {
   cameraControlsRef: RefObject<CameraControls | null>;
-  trainSpeed: number;
-  setTrainSpeed: (speed: number) => void;
+  // Current, smoothed speed — eased toward targetTrainSpeed once per frame
+  // (see useTrainSpeedEasing). A ref rather than state: it changes every
+  // frame, and useFrame consumers (Train, Smoke, useScrollingLoop) read it
+  // directly without needing a re-render.
+  trainSpeedRef: RefObject<number>;
+  targetTrainSpeed: number;
+  setTargetTrainSpeed: (speed: number) => void;
+  mode: TrainMode;
+  setMode: (mode: TrainMode) => void;
 };
 
 const TrainContext = createContext<TrainContextValue | null>(null);
@@ -28,11 +39,20 @@ export function useTrainContext() {
 
 export function TrainProvider({ children }: { children: ReactNode }) {
   const cameraControlsRef = useRef<CameraControls | null>(null);
-  const [trainSpeed, setTrainSpeed] = useState(3);
+  const trainSpeedRef = useRef(3);
+  const [targetTrainSpeed, setTargetTrainSpeed] = useState(3);
+  const [mode, setMode] = useState<TrainMode>("ride");
 
   return (
     <TrainContext.Provider
-      value={{ cameraControlsRef, trainSpeed, setTrainSpeed }}
+      value={{
+        cameraControlsRef,
+        trainSpeedRef,
+        targetTrainSpeed,
+        setTargetTrainSpeed,
+        mode,
+        setMode,
+      }}
     >
       {children}
     </TrainContext.Provider>
