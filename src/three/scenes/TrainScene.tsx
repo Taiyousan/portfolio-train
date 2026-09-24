@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useRef } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { CameraControls, Environment, Html, Sky } from "@react-three/drei";
 import {
   EffectComposer,
@@ -18,10 +18,14 @@ import Rails from "../models/Rails";
 import Smoke from "../models/Smoke";
 import Forest from "../models/Forest";
 import ForestFloor from "../models/ForestFloor";
+import type { StationProject } from "../ui/types";
 import {
   ABOUT_CAMERA,
+  BOARD_CAMERA,
   RIDE_CAMERA,
   STATION_CAMERA,
+  STATION_SETTLE_MS,
+  STATION_VIEW_CAMERA,
   SUN_POSITION,
 } from "../config/scene";
 
@@ -35,12 +39,17 @@ function formatVec3(vec: THREE.Vector3) {
   return `[${vec.x.toFixed(3)}, ${vec.y.toFixed(3)}, ${vec.z.toFixed(3)}]`;
 }
 
-export default function TrainScene() {
+export default function TrainScene({
+  projects,
+}: {
+  projects: StationProject[];
+}) {
   const {
     cameraControlsRef,
     targetTrainSpeed: initialSpeed,
     setTargetTrainSpeed,
     mode,
+    boardFocused,
   } = useTrainContext();
 
   const {
@@ -84,19 +93,36 @@ export default function TrainScene() {
     }),
   });
 
+  // At the station, the wide arrival shot holds for a moment before
+  // settling on the platform view (see config/scene).
+  const [stationSettled, setStationSettled] = useState(false);
   useEffect(() => {
+    if (mode !== "station") return;
+    const timer = setTimeout(() => setStationSettled(true), STATION_SETTLE_MS);
+    return () => {
+      clearTimeout(timer);
+      setStationSettled(false);
+    };
+  }, [mode]);
+
+  useEffect(() => {
+    const atStation = mode === "station";
     const shot =
       mode === "about"
         ? ABOUT_CAMERA
-        : mode === "arriving" || mode === "station"
-          ? STATION_CAMERA
-          : RIDE_CAMERA;
+        : atStation && boardFocused
+          ? BOARD_CAMERA
+          : atStation && stationSettled
+            ? STATION_VIEW_CAMERA
+            : mode === "arriving" || atStation
+              ? STATION_CAMERA
+              : RIDE_CAMERA;
     cameraControlsRef.current?.setLookAt(
       ...shot.position,
       ...shot.target,
       true,
     );
-  }, [mode, cameraControlsRef]);
+  }, [mode, boardFocused, stationSettled, cameraControlsRef]);
 
   return (
     <>
@@ -152,7 +178,7 @@ export default function TrainScene() {
         <Rails position={[0, -0.57, 0]} />
         <Forest position={[0, -0.58, 0]} />
         <Smoke />
-        <Station ref={stationRef} />
+        <Station ref={stationRef} projects={projects} />
         <NavSigns />
       </Suspense>
     </>

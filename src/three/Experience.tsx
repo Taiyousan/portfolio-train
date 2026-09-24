@@ -1,56 +1,23 @@
 "use client";
 
-import Link from "next/link";
 import { Canvas } from "@react-three/fiber";
 import { Leva } from "leva";
-import { TrainProvider, useTrainContext } from "./state/TrainContext";
+import { TrainProvider } from "./state/TrainContext";
 import useDebugMode from "./hooks/useDebugMode";
 import TrainScene from "./scenes/TrainScene";
 import { CAMERA_POSITION } from "./config/scene";
+import Overlay from "./ui/Overlay";
+import type { StationProject } from "./ui/types";
 
-function Overlay() {
-  const { cameraControlsRef, mode, setMode } = useTrainContext();
-
-  return (
-    <div className="pointer-events-none absolute inset-0 flex items-start justify-between p-5 text-sm text-white">
-      <Link href="/" className="pointer-events-auto underline">
-        ← Accueil
-      </Link>
-      <div className="flex gap-2">
-        {/* Temporary trigger to reach the "about" camera shot for tuning —
-            step 5 (docs/proto-train.md) replaces this with a real cab-click
-            interaction and HTML panel. */}
-        <button
-          type="button"
-          onClick={() => setMode(mode === "about" ? "ride" : "about")}
-          className="pointer-events-auto rounded-full border border-white/40 px-3 py-1 hover:bg-white/10"
-        >
-          {mode === "about" ? "Retour au voyage" : "À propos du conducteur"}
-        </button>
-        <button
-          type="button"
-          disabled={mode === "arriving" || mode === "departing"}
-          onClick={() =>
-            setMode(mode === "station" ? "departing" : "arriving")
-          }
-          className="pointer-events-auto rounded-full border border-white/40 px-3 py-1 hover:bg-white/10 disabled:opacity-50"
-        >
-          {mode === "station" ? "Repartir" : "Arriver en gare"}
-        </button>
-        <button
-          type="button"
-          onClick={() => cameraControlsRef.current?.reset(true)}
-          className="pointer-events-auto rounded-full border border-white/40 px-3 py-1 hover:bg-white/10"
-        >
-          Recentrer la vue
-        </button>
-      </div>
-    </div>
-  );
-}
+export type { StationProject };
 
 // Full-screen train scene. Append #debug to the URL to show the Leva panel.
-export default function Experience() {
+// Content comes in as props: the page reads it on the server.
+export default function Experience({
+  projects,
+}: {
+  projects: StationProject[];
+}) {
   const debug = useDebugMode();
 
   return (
@@ -68,9 +35,9 @@ export default function Experience() {
         }}
       >
         <color args={["#3a2a1f"]} attach="background" />
-        <TrainScene />
+        <TrainScene projects={projects} />
       </Canvas>
-      <Overlay />
+      <Overlay projects={projects} />
     </TrainProvider>
   );
 }

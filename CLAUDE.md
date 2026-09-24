@@ -50,9 +50,10 @@ src/three/
   shaders/          matériaux GLSL maison (ShaderMaterial)
   state/            état partagé de la scène (contexte React)
   config/           réglages 3D (positions de caméra et de soleil, échelles)
+  ui/               surcouche HTML pilotée par l'état de la scène (panneaux, tableau des départs)
 ```
 
-1. Le code 3D reste dans `src/three/` ; les pages n'importent que `Experience`.
+1. Le code 3D reste dans `src/three/` ; les pages n'importent que `Experience`, et lui passent le contenu en props (les lecteurs de `src/lib/` utilisent `node:fs`, donc côté serveur uniquement).
 2. Les réglages 3D sont séparés du contenu (jamais dans le frontmatter des MDX).
 3. Le contenu ne dépend pas de la 3D : le site doit fonctionner sans `src/three/`.
 

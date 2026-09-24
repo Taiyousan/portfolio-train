@@ -7,6 +7,11 @@
   --line: #e4e4e7;
   --accent: #4f46e5;
   --on-accent: #ffffff;
+  /* Split-flap departures board (train prototype): always dark, whatever
+     the colour scheme, like the real thing. */
+  --board: #16140f;
+  --board-flap: #26231c;
+  --board-ink: #f5c542;
 }
 
 @theme inline {
@@ -16,6 +21,9 @@
   --color-line: var(--line);
   --color-accent: var(--accent);
   --color-on-accent: var(--on-accent);
+  --color-board: var(--board);
+  --color-board-flap: var(--board-flap);
+  --color-board-ink: var(--board-ink);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -28,6 +36,19 @@
     --line: #27272a;
     --accent: #818cf8;
   }
+}
+
+/* Re-themes a subtree in the departures board's palette (train prototype
+   panels): shared components styled with the tokens above, such as
+   ProjectDetail, follow along without knowing about it. */
+.theme-board {
+  --background: #1d1a14;
+  --foreground: #eee4cf;
+  --muted: #b8a57a;
+  --line: #3a3526;
+  --accent: var(--board-ink);
+  --on-accent: var(--board);
+  color-scheme: dark;
 }
 
 body {

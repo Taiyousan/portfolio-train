@@ -1,11 +1,16 @@
 import { useEffect, useRef } from "react";
 import { useGLTF, Center, Resize } from "@react-three/drei";
-import { animated } from "@react-spring/three";
+import { animated, useSpring } from "@react-spring/three";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { useTrainContext } from "../state/TrainContext";
 import usePopIn from "../hooks/usePopIn";
 import Driver from "./Driver";
+
+// Driver size in the cab, in the wagon model's units (see Station for the
+// matching size on the platform).
+const DRIVER_SCALE = 1.5;
+const DRIVER_SWAP_DELAY_MS = 250;
 
 const WHEEL_NAMES = ["EngineSpokes1", "EngineSpokes2", "EngineSpokes3"];
 
@@ -18,11 +23,27 @@ const SWAY_ROTATION = 0.1;
 const SWAY_LIFT = 0.01;
 
 export default function Train() {
-  const { trainSpeedRef, targetTrainSpeed } = useTrainContext();
+  const { trainSpeedRef, targetTrainSpeed, mode, setMode } = useTrainContext();
   const swayRef = useRef<THREE.Group>(null);
   const swayPhaseRef = useRef(0);
   const { scene } = useGLTF("/models/wagon.glb");
   const scale = usePopIn();
+
+  // While the train waits at the station the driver steps off onto the
+  // platform (see Station): pop out of the cab, then back in once the
+  // platform one has gone.
+  const atStation = mode === "station";
+  const { driverScale } = useSpring({
+    driverScale: atStation ? 0 : DRIVER_SCALE,
+    delay: atStation ? 0 : DRIVER_SWAP_DELAY_MS,
+    config: { mass: 1, tension: 260, friction: 12, precision: 0.001 },
+  });
+
+  // The driver is only clickable while riding: don't leave a pointer cursor
+  // behind once the click has switched modes.
+  useEffect(() => {
+    if (mode !== "ride") document.body.style.cursor = "";
+  }, [mode]);
 
   const wheelsRef = useRef<THREE.Object3D[]>([]);
   // Rolling-without-slipping angular speed (rad/s) = linear speed / radius.
@@ -93,7 +114,27 @@ export default function Train() {
         <Center>
           <group ref={swayRef}>
             <primitive object={scene} />
-            <Driver position={[0.027, -0.41, -1.46]} scale={1.5} />
+            {/* Clicking the driver while riding opens "about"; the HTML
+                "À propos" button stays the accessible way in. */}
+            <animated.group
+              position={[0.027, -0.41, -1.46]}
+              scale={driverScale}
+            >
+              <Driver
+                onClick={(e) => {
+                  if (mode !== "ride") return;
+                  e.stopPropagation();
+                  setMode("about");
+                }}
+                onPointerOver={(e) => {
+                  e.stopPropagation();
+                  if (mode === "ride") document.body.style.cursor = "pointer";
+                }}
+                onPointerOut={() => {
+                  document.body.style.cursor = "";
+                }}
+              />
+            </animated.group>
           </group>
         </Center>
       </Resize>

@@ -25,6 +25,14 @@ type TrainContextValue = {
   setTargetTrainSpeed: (speed: number) => void;
   mode: TrainMode;
   setMode: (mode: TrainMode) => void;
+  // Project opened from the departures board (3D rows or their HTML twin),
+  // by slug. Only shown while at the station.
+  selectedSlug: string | null;
+  setSelectedSlug: (slug: string | null) => void;
+  // At the station, the camera has zoomed onto the departures board (a
+  // click on it) and its rows can be picked.
+  boardFocused: boolean;
+  setBoardFocused: (focused: boolean) => void;
 };
 
 const TrainContext = createContext<TrainContextValue | null>(null);
@@ -42,6 +50,8 @@ export function TrainProvider({ children }: { children: ReactNode }) {
   const trainSpeedRef = useRef(3);
   const [targetTrainSpeed, setTargetTrainSpeed] = useState(3);
   const [mode, setMode] = useState<TrainMode>("ride");
+  const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
+  const [boardFocused, setBoardFocused] = useState(false);
 
   return (
     <TrainContext.Provider
@@ -52,6 +62,10 @@ export function TrainProvider({ children }: { children: ReactNode }) {
         setTargetTrainSpeed,
         mode,
         setMode,
+        selectedSlug,
+        setSelectedSlug,
+        boardFocused,
+        setBoardFocused,
       }}
     >
       {children}
