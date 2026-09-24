@@ -49,7 +49,7 @@ export default function ProjectDetail({ project }: { project: Project }) {
         <p className="mt-10">
           <a
             href={project.href}
-            className="inline-block rounded-lg bg-accent px-5 py-3 font-semibold text-white"
+            className="inline-block rounded-lg bg-accent px-5 py-3 font-semibold text-on-accent hover:text-on-accent"
           >
             Voir le projet en ligne ↗
           </a>

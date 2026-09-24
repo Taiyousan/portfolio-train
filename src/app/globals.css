@@ -6,6 +6,7 @@
   --muted: #5c5c66;
   --line: #e4e4e7;
   --accent: #4f46e5;
+  --on-accent: #ffffff;
 }
 
 @theme inline {
@@ -14,6 +15,7 @@
   --color-muted: var(--muted);
   --color-line: var(--line);
   --color-accent: var(--accent);
+  --color-on-accent: var(--on-accent);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
