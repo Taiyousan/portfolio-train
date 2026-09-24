@@ -55,7 +55,9 @@ export default function Experience() {
 
   return (
     <TrainProvider>
-      {debug && <Leva collapsed />}
+      {/* Always mounted: without a <Leva>, useControls auto-mounts its own
+          visible panel. */}
+      <Leva collapsed hidden={!debug} />
       <Canvas
         shadows="percentage"
         camera={{
