@@ -6,9 +6,9 @@ import * as THREE from "three";
 import { useTrainContext, type TrainMode } from "../state/TrainContext";
 import {
   NAV_SIGNS,
-  NAV_SIGNS_GAP,
   NAV_SIGNS_ORIGIN,
   NAV_SIGNS_SCALE,
+  NAV_SIGNS_SPREAD,
   RIDE_CAMERA,
 } from "../config/scene";
 
@@ -193,11 +193,11 @@ const SIGN_MODES: Record<string, TrainMode> = {
 // the HTML overlay buttons, which stay as the accessible fallback.
 export default function NavSigns() {
   const { mode, setMode } = useTrainContext();
-  const { x, y, z, gap, size } = useControls("Panneaux", {
+  const { x, y, z, spread, size } = useControls("Panneaux", {
     x: { value: NAV_SIGNS_ORIGIN[0], min: -5, max: 0, step: 0.05 },
     y: { value: NAV_SIGNS_ORIGIN[1], min: -0.5, max: 2.5, step: 0.05 },
     z: { value: NAV_SIGNS_ORIGIN[2], min: -3, max: 3, step: 0.05 },
-    gap: { value: NAV_SIGNS_GAP, min: 0, max: 1.5, step: 0.05 },
+    spread: { value: NAV_SIGNS_SPREAD, min: 0, max: 2, step: 0.05 },
     size: { value: NAV_SIGNS_SCALE, min: 0.3, max: 2.5, step: 0.05 },
   });
 
@@ -207,7 +207,7 @@ export default function NavSigns() {
         <Sign
           key={sign.id}
           label={sign.label}
-          position={[x, y - i * gap, z]}
+          position={[x, y, z + sign.side * spread]}
           size={size}
           phase={i * 1.7}
           visible={mode === "ride"}
