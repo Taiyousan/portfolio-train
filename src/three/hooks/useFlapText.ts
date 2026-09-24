@@ -10,24 +10,22 @@ function randomGlyph() {
   return FLAP_GLYPHS[Math.floor(Math.random() * FLAP_GLYPHS.length)];
 }
 
-// Split-flap text: each time `active` turns true, letters flip through
-// random glyphs, then settle one by one. Returns the real text otherwise,
-// and always with reduced motion.
-export default function useFlapText(text: string, delay = 0, active = true) {
+// Split-flap text: while `settle` is false, letters keep flipping through
+// random glyphs; each time it turns true, they settle one by one after
+// `delay`. Always the real text with reduced motion.
+export default function useFlapText(text: string, delay = 0, settle = true) {
   const [shown, setShown] = useState(text);
 
   useEffect(() => {
-    if (
-      !active ||
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches
-    ) {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       return;
     }
     const start = performance.now() + delay;
     let lastFlip = -Infinity;
     let frame = requestAnimationFrame(function tick(now) {
-      const elapsed = now - start;
-      const settled = Math.floor(Math.max(elapsed, 0) / SETTLE_STEP_MS);
+      const settled = settle
+        ? Math.floor(Math.max(now - start, 0) / SETTLE_STEP_MS)
+        : 0;
       if (settled >= text.length) {
         setShown(text);
         return;
@@ -43,7 +41,7 @@ export default function useFlapText(text: string, delay = 0, active = true) {
       frame = requestAnimationFrame(tick);
     });
     return () => cancelAnimationFrame(frame);
-  }, [text, delay, active]);
+  }, [text, delay, settle]);
 
   return shown;
 }

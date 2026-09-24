@@ -45,7 +45,7 @@ export default function DeparturesBoard({
           tabIndex={-1}
           className="font-mono text-xl font-bold tracking-widest uppercase outline-none"
         >
-          Départs
+          Mes projets
         </h2>
         <p className="font-mono text-xs text-board-ink/70 uppercase">
           Choisissez une destination

@@ -60,8 +60,23 @@ const LAYER = { frame: 0.01, flap: 0.012, text: 0.008, hinge: 0.014 };
 // Height, within a row, of the time + destination line; the flap's hinge
 // runs through it.
 const MAIN_Y = 0.025;
-// The rows start flipping once the board has popped in.
+// Once the board is open, titles start settling as the camera arrives.
 const FLAP_START_MS = 350;
+// Then each row's technos and train line light up, once its title has
+// roughly settled, with a short neon-tube flicker: [ms from start, opacity]
+// steps, the last one held. Off at once when the board closes.
+const LIGHT_DELAY_MS = 450;
+const LIGHT_FLICKER: [number, number][] = [
+  [0, 1],
+  [60, 0.15],
+  [120, 1],
+  [170, 0.4],
+  [230, 1],
+];
+const HINT_SIZE = 0.055;
+// The click hint pulses with the frame glow, between this opacity and full
+// (full on hover).
+const HINT_MIN_OPACITY = 0.1;
 
 const FLAP_WIDTH = WIDTH - 2 * PADDING;
 const LEFT = -FLAP_WIDTH / 2 + INSET;
@@ -73,6 +88,10 @@ export function stationBoardHeight(rows: number) {
   return 2 * PADDING + HEADER_HEIGHT + rows * ROW_HEIGHT + (rows - 1) * ROW_GAP;
 }
 
+// The troika mesh behind drei's <Text>; its fillOpacity applies on the next
+// render, without re-laying out the text.
+type FadeText = THREE.Mesh & { fillOpacity: number };
+
 type RowProps = {
   project: StationProject;
   index: number;
@@ -82,7 +101,8 @@ type RowProps = {
 };
 
 // One departure. The flap's dark hinge line runs through the time and
-// destination, as on a real split-flap board.
+// destination, as on a real split-flap board. Its title keeps flipping
+// until the board is open, then settles.
 function Row({ project, index, y, active, onSelect }: RowProps) {
   const [hovered, setHovered] = useState(false);
   const title = useFlapText(
@@ -93,6 +113,34 @@ function Row({ project, index, y, active, onSelect }: RowProps) {
   // Hover only shows while the rows are pickable (board open); the stray
   // pointer cursor is reset on mode change by Train.
   const lit = hovered && active;
+
+  // Technos and train line, lit only while the board is open.
+  const lightRefs = useRef<(FadeText | null)[]>([]);
+  const lightStart = useRef<number | null>(null);
+  const [reducedMotion] = useState(
+    () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+  );
+  useFrame(({ clock }) => {
+    const now = clock.elapsedTime * 1000;
+    if (!active) lightStart.current = null;
+    else if (lightStart.current === null) {
+      lightStart.current =
+        now + FLAP_START_MS + index * ROW_FLAP_DELAY_MS + LIGHT_DELAY_MS;
+    }
+    const t = lightStart.current === null ? -1 : now - lightStart.current;
+    let opacity = 0;
+    if (t >= 0) {
+      opacity = 1;
+      if (!reducedMotion) {
+        for (const [at, value] of LIGHT_FLICKER) if (t >= at) opacity = value;
+      }
+    }
+    for (const text of lightRefs.current) {
+      if (!text) continue;
+      text.fillOpacity = opacity;
+      text.visible = opacity > 0;
+    }
+  });
 
   const setHover = (value: boolean) => {
     setHovered(value);
@@ -150,8 +198,12 @@ function Row({ project, index, y, active, onSelect }: RowProps) {
         whiteSpace="nowrap"
         clipRect={[0, -ROW_HEIGHT, TITLE_MAX_WIDTH, ROW_HEIGHT]}
         color={COLORS.inkDim}
+        ref={(text: FadeText | null) => {
+          lightRefs.current[0] = text;
+        }}
+        visible={false}
       >
-        {`DESSERT : ${project.technos.join(" · ").toUpperCase()}`}
+        {project.technos.join(" · ").toUpperCase()}
       </Text>
       <Text
         font={FONT}
@@ -160,6 +212,10 @@ function Row({ project, index, y, active, onSelect }: RowProps) {
         anchorX="right"
         anchorY="middle"
         color={COLORS.inkDim}
+        ref={(text: FadeText | null) => {
+          lightRefs.current[1] = text;
+        }}
+        visible={false}
       >
         {trainLine(project.type).toUpperCase()}
       </Text>
@@ -255,17 +311,26 @@ export default function StationBoard({ projects, legHeight, ...props }: Props) {
     () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
   );
   const frameMaterialRef = useRef<THREE.MeshStandardMaterial>(null);
+  const hintRef = useRef<FadeText>(null);
   useFrame(({ clock }) => {
-    const material = frameMaterialRef.current;
-    if (!material) return;
     const pulse = reducedMotion
       ? 0.5
       : 0.5 + 0.5 * Math.sin(clock.elapsedTime * GLOW_SPEED);
-    material.emissiveIntensity = !inviting
-      ? 0
-      : hovered
-        ? GLOW_HOVER
-        : GLOW_MIN + (GLOW_MAX - GLOW_MIN) * pulse;
+    const material = frameMaterialRef.current;
+    if (material) {
+      material.emissiveIntensity = !inviting
+        ? 0
+        : hovered
+          ? GLOW_HOVER
+          : GLOW_MIN + (GLOW_MAX - GLOW_MIN) * pulse;
+    }
+    const hint = hintRef.current;
+    if (hint) {
+      hint.fillOpacity =
+        !inviting || hovered || reducedMotion
+          ? 1
+          : HINT_MIN_OPACITY + (1 - HINT_MIN_OPACITY) * pulse;
+    }
   });
 
   // Escape zooms back out, unless it's closing a project dialog.
@@ -341,7 +406,7 @@ export default function StationBoard({ projects, legHeight, ...props }: Props) {
         anchorY="middle"
         color={COLORS.ink}
       >
-        DÉPARTS
+        MES PROJETS
       </Text>
       {open ? (
         <CloseButton
@@ -356,12 +421,13 @@ export default function StationBoard({ projects, legHeight, ...props }: Props) {
         <Text
           font={FONT}
           position={[RIGHT + INSET - 0.01, headerY, LAYER.flap + LAYER.text]}
-          fontSize={SMALL_SIZE}
+          fontSize={HINT_SIZE}
           anchorX="right"
           anchorY="middle"
-          color={COLORS.inkDim}
+          color={COLORS.ink}
+          ref={hintRef}
         >
-          CHOISISSEZ UNE DESTINATION
+          CLIQUEZ POUR EN VOIR DAVANTAGE
         </Text>
       )}
 
