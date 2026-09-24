@@ -95,7 +95,7 @@ npm run build   # build de prod + vérification TypeScript + validation du conte
 npm run lint    # ESLint
 ```
 
-Toujours lancer `npm run build` et `npm run lint` avant de conclure une modification.
+Lancer `npm run build` et `npm run lint` avant chaque commit (et donc avant toute PR), pas après chaque modification : pendant le travail, le serveur de dev suffit pour vérifier le rendu.
 
 ## Contexte
 
