@@ -55,11 +55,7 @@ export default function Experience() {
 
   return (
     <TrainProvider>
-      {debug && (
-        <div className="fixed right-2.5 bottom-2.5 z-[1000] w-[280px]">
-          <Leva fill collapsed />
-        </div>
-      )}
+      {debug && <Leva collapsed />}
       <Canvas
         shadows="percentage"
         camera={{
