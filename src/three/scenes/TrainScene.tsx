@@ -12,7 +12,6 @@ import { useTrainContext } from "../state/TrainContext";
 import useTrainSpeedEasing from "../hooks/useTrainSpeedEasing";
 import useStationApproach from "../hooks/useStationApproach";
 import Station from "../models/Station";
-import NavSigns from "../models/NavSigns";
 import Train from "../models/Train";
 import Rails from "../models/Rails";
 import Smoke from "../models/Smoke";
@@ -179,7 +178,6 @@ export default function TrainScene({
         <Forest position={[0, -0.58, 0]} />
         <Smoke />
         <Station ref={stationRef} projects={projects} />
-        <NavSigns />
       </Suspense>
     </>
   );

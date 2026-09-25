@@ -12,6 +12,11 @@
   --board: #16140f;
   --board-flap: #26231c;
   --board-ink: #f5c542;
+  /* Train tickets (train prototype navigation): cream card stock, printed
+     ink, a red stamp. */
+  --ticket: #f1e6c8;
+  --ticket-ink: #2c1f14;
+  --ticket-stamp: #b3402a;
 }
 
 @theme inline {
@@ -24,6 +29,9 @@
   --color-board: var(--board);
   --color-board-flap: var(--board-flap);
   --color-board-ink: var(--board-ink);
+  --color-ticket: var(--ticket);
+  --color-ticket-ink: var(--ticket-ink);
+  --color-ticket-stamp: var(--ticket-stamp);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -49,6 +57,34 @@
   --accent: var(--board-ink);
   --on-accent: var(--board);
   color-scheme: dark;
+}
+
+/* Train ticket shape (three/ui/Ticket): rounded corners, and two notches
+   cut top and bottom at the stub's perforation, 4rem from the right edge.
+   Each mask layer covers one half, so no mask compositing is needed. */
+.ticket {
+  --notch: 0.45rem;
+  --notch-x: calc(100% - 4rem);
+  border-radius: 0.375rem;
+  mask:
+    radial-gradient(
+        circle at var(--notch-x) 0,
+        #0000 var(--notch),
+        #000 calc(var(--notch) + 0.5px)
+      )
+      top / 100% 51% no-repeat,
+    radial-gradient(
+        circle at var(--notch-x) 100%,
+        #0000 var(--notch),
+        #000 calc(var(--notch) + 0.5px)
+      )
+      bottom / 100% 51% no-repeat;
+}
+
+/* Return ticket: the same shape on pale blue card, with a teal stamp. */
+.ticket-return {
+  --ticket: #d4e3e6;
+  --ticket-stamp: #2d6474;
 }
 
 body {

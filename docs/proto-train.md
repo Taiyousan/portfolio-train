@@ -10,7 +10,7 @@ Le train qui roule en forêt est le fil conducteur. Chaque section du portfolio 
 
 - **Projets** : le train s'arrête à une gare, où un tableau des départs liste les projets.
 - **À propos** : la caméra zoome sur le conducteur, et les informations s'affichent à côté.
-- **Navigation** : des panneaux flottants autour du train servent de boutons.
+- **Navigation** : des billets de train en bas de l'écran servent de boutons.
 
 ## Base de code
 
@@ -92,11 +92,10 @@ Le train est fixe et le monde défile (`useScrollingLoop`), ce qui facilite l'ar
 - Téléphone : panneau qui monte du bas de l'écran (bottom sheet), conducteur cadré dans la moitié haute.
 - Remplacer le placeholder par un personnage stylisé (casquette, badge).
 
-### Panneaux de navigation
+### Navigation
 
-- Style **panneaux ferroviaires** : plaques émaillées ou panneaux indicateurs en bois, qui se balancent légèrement.
-- Effet au survol (lueur, balancement plus marqué) pour signaler qu'ils sont cliquables.
-- Grandes zones de clic, surtout sur téléphone.
+- Essayé puis abandonné : des pancartes 3D en bois flottant de part et d'autre du train (peu lisibles, en doublon avec les boutons HTML), puis un plan de ligne HTML (trop abstrait : « En route » n'est pas une section).
+- Retenu : des **billets de train** en HTML (`src/three/ui/Ticket.tsx`), en bas de l'écran, seulement ceux qui ont un sens là où se trouve le train : « Mes projets » et « Qui suis-je ? » en route, « Voir les projets » (zoom sur le tableau) et « Repartir » en gare (sur ordinateur ; sur téléphone, le tableau HTML a les deux). En haut, seulement le nom (lien vers l'accueil).
 
 ## Interactions en plus
 
@@ -126,10 +125,10 @@ Le train est fixe et le monde défile (`useScrollingLoop`), ce qui facilite l'ar
 5. **Interfaces HTML** : panneau « À propos », tableau des départs, détail d'un projet.
    Fait (`src/three/ui/`), piloté par `mode` en attendant le routage de l'étape 4 :
    - « À propos » : carte à droite sur ordinateur, panneau en bas sur téléphone ; ouverte aussi par un clic sur le conducteur ; Échap ou « Retour au voyage » pour revenir.
-   - Tableau des départs en gare : un vrai tableau 3D (`src/three/models/StationBoard.tsx`, texte en Geist Mono via `<Text>` de drei), de taille réaliste, sur le quai et parallèle à lui. Quatre plans de caméra : train en marche (`RIDE_CAMERA`), arrivée en gare, large (`STATION_CAMERA`), puis `STATION_SETTLE_MS` après l'arrêt, plan d'interaction face au quai (`STATION_VIEW_CAMERA`), et zoom sur le tableau au clic (`BOARD_CAMERA`). Le cadre du tableau luit doucement pour inviter au clic (plus fort au survol). Zoomé, les lignes deviennent cliquables et défilent façon Solari (désactivé avec `prefers-reduced-motion`) ; « × Fermer » ou Échap ramènent au plan d'interaction. Une ligne par projet (heure tirée de l'ordre, « Grandes lignes » / « Régional », voie). Réglages dans le groupe Leva « Tableau ». Bouton « Repartir » dans la barre du haut.
+   - Tableau des départs en gare : un vrai tableau 3D (`src/three/models/StationBoard.tsx`, texte en Geist Mono via `<Text>` de drei), de taille réaliste, sur le quai et parallèle à lui. Quatre plans de caméra : train en marche (`RIDE_CAMERA`), arrivée en gare, large (`STATION_CAMERA`), puis `STATION_SETTLE_MS` après l'arrêt, plan d'interaction face au quai (`STATION_VIEW_CAMERA`), et zoom sur le tableau au clic (`BOARD_CAMERA`). Le cadre du tableau luit doucement pour inviter au clic (plus fort au survol). Zoomé, les lignes deviennent cliquables et défilent façon Solari (désactivé avec `prefers-reduced-motion`) ; « × Fermer » ou Échap ramènent au plan d'interaction. Une ligne par projet (heure tirée de l'ordre, « Grandes lignes » / « Régional », voie). Réglages dans le groupe Leva « Tableau ». Billet « Repartir » en bas de l'écran, qui reste en place tableau zoomé.
    - En gare, le conducteur quitte la cabine : debout sur le quai à gauche du tableau, puis assis au bord du quai à sa droite une fois le tableau zoomé, pour être dans le même plan (poses de `Driver`, réglages `STATION_DRIVER`).
    - Doublure HTML du tableau (`src/three/ui/DeparturesBoard.tsx`), avec les mêmes lignes : c'est l'interface sur téléphone (panneau en bas). Sur ordinateur, elle reste invisible mais lue par les lecteurs d'écran, et apparaît dès qu'elle a le focus (arrivée en gare au clavier, Tab).
    - Détail d'un projet : `<dialog>` natif avec le même contenu que `/projets/<slug>` (composant partagé `src/components/ProjectDetail.tsx`, rendu côté serveur), habillé comme le tableau (classe `.theme-board` de `globals.css`, qui redéfinit les jetons de couleur pour tout le sous-arbre). Même habillage pour le panneau « À propos ».
    - À faire : remplacer le quai provisoire ; faire descendre le conducteur de la cabine plutôt que de le faire disparaître et réapparaître ; cadrer le tableau 3D en portrait (étape 7) ; relier projet ouvert et mode aux URL (étape 4) ; éventuellement, de vraies palettes 3D qui basculent.
-6. **Panneaux de navigation** 3D + navigation HTML.
+6. **Navigation** : billets de train HTML (fait, voir plus haut).
 7. **Finitions** : téléphone, son, fumée, petits secrets.

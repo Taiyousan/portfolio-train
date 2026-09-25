@@ -50,18 +50,6 @@ export const ABOUT_CAMERA: CameraShot = {
   target: [0.016, 0.05, -0.426],
 };
 
-// Navigation planks (models/NavSigns), floating near the ride camera on
-// either side of the train: side -1 is screen-left, side 1 is +z,
-// screen-right. Each sits NAV_SIGNS_SPREAD from NAV_SIGNS_ORIGIN along z. All tunable live in
-// the Leva "Panneaux" group.
-export const NAV_SIGNS: { id: string; label: string; side: 1 | -1 }[] = [
-  { id: "projets", label: "Projets", side: -1 },
-  { id: "about", label: "À propos", side: 1 },
-];
-export const NAV_SIGNS_ORIGIN: Vec3 = [-4.35, 0.9, 0];
-export const NAV_SIGNS_SPREAD = 0.6;
-export const NAV_SIGNS_SCALE = 0.4;
-
 // Station approach (see hooks/useStationApproach). The train stays at z = 0
 // and the world scrolls, so the station is placed by its own z: it appears
 // STATION_DISTANCE ahead, the train brakes so the platform centre stops at
