@@ -7,8 +7,8 @@ import { RAIL_TILE_LENGTH } from "../config/worldScale";
 import {
   CAMERA_POSITION,
   STATION_CAMERA,
-  STATION_CLEAR_X,
-  STATION_SIDE,
+  STOP_CLEAR_X,
+  STOP_SIDE,
 } from "../config/scene";
 import useScrollingLoop from "../hooks/useScrollingLoop";
 import { useTrainContext } from "../state/TrainContext";
@@ -83,8 +83,8 @@ function sideSegments(
   maxX: number,
   clearing: number,
 ): [number, number][] {
-  // Keep the station's side of the track free of props.
-  if (side === STATION_SIDE) return [[Math.max(minX, STATION_CLEAR_X), maxX]];
+  // Keep the stops' side of the track free of props.
+  if (side === STOP_SIDE) return [[Math.max(minX, STOP_CLEAR_X), maxX]];
   if (side !== CAMERA_SIDE) return [[minX, maxX]];
 
   const bandStart = Math.max(minX, CAMERA_DISTANCE - clearing);
@@ -348,11 +348,11 @@ export default function Forest(props: ThreeElements["group"]) {
 
   const tiles = useScrollingLoop(tileCount, TILE_SPACING);
 
-  // Eased 0 → 1 while arriving at / waiting in the station.
+  // Eased 0 → 1 while arriving at / waiting at a stop.
   const { mode } = useTrainContext();
   const cullFactorRef = useRef(0);
   useFrame((_, delta) => {
-    const target = mode === "arriving" || mode === "station" ? 1 : 0;
+    const target = mode === "arriving" || mode === "stopped" ? 1 : 0;
     const next = THREE.MathUtils.damp(
       cullFactorRef.current,
       target,

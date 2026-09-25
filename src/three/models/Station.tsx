@@ -4,7 +4,7 @@ import { animated, useSpring } from "@react-spring/three";
 import * as THREE from "three";
 import { useControls } from "leva";
 import { useTrainContext } from "../state/TrainContext";
-import { STATION_BOARD, STATION_DRIVER, STATION_SIDE } from "../config/scene";
+import { STATION_BOARD, STATION_DRIVER, STOP_SIDE } from "../config/scene";
 import type { StationProject } from "../ui/types";
 import StationBoard, { stationBoardHeight } from "./StationBoard";
 import Driver, { DRIVER_SEAT_DEPTH } from "./Driver";
@@ -30,11 +30,12 @@ const DRIVER_SPRING = { mass: 1, tension: 260, friction: 12, precision: 0.001 };
 
 // Placeholder station built from primitives, on the +x side of the track so
 // the camera (on -x) sees it behind the train. Its group is moved along z by
-// useStationApproach. Track is at y = -0.57 (see TrainScene), so the
+// useStopApproach. Track is at y = -0.57 (see TrainScene), so the
 // platform sits on the ground at that level.
 const Station = forwardRef<THREE.Group, { projects: StationProject[] }>(
   function Station({ projects }, ref) {
-    const { mode, boardFocused } = useTrainContext();
+    const { mode, stop, boardFocused } = useTrainContext();
+    const here = stop === "station";
     // Rotations in degrees in the panel, radians in config and the scene.
     const board = useControls("Tableau", {
       x: { value: STATION_BOARD.x, min: -4, max: 2, step: 0.01 },
@@ -57,7 +58,7 @@ const Station = forwardRef<THREE.Group, { projects: StationProject[] }>(
     // standing left of the departures board, or sitting on the edge right of
     // it while the board is open (so BOARD_CAMERA frames both). Each pops in
     // once the other (or the cab one) has gone.
-    const atStation = mode === "station";
+    const atStation = here && mode === "stopped";
     const standing = atStation && !boardFocused;
     const sitting = atStation && boardFocused;
     const { standingScale } = useSpring({
@@ -79,7 +80,7 @@ const Station = forwardRef<THREE.Group, { projects: StationProject[] }>(
     useFrame(() => {
       const z = groupRef.current?.position.z ?? Infinity;
       const show =
-        mode === "station" || (mode === "arriving" && z < POP_DISTANCE);
+        atStation || (here && mode === "arriving" && z < POP_DISTANCE);
       if (show !== shownRef.current) {
         shownRef.current = show;
         api.start({ scale: show ? 1 : 0 });
@@ -88,7 +89,7 @@ const Station = forwardRef<THREE.Group, { projects: StationProject[] }>(
 
     return (
       <group ref={groupRef} visible={false}>
-        <group position={[3.2 * STATION_SIDE, -0.57, 0]}>
+        <group position={[3.2 * STOP_SIDE, -0.57, 0]}>
           {/* Departures board on the platform, facing the track (-x),
               popping in with the building from its feet. */}
           <animated.group position={[board.x, 0, board.z]} scale={scale}>

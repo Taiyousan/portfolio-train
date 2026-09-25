@@ -2,14 +2,15 @@
 
 Document de travail. Rien n'est tranché : c'est une trace des idées, à reprendre et à rayer au fil des décisions.
 
-Dernière mise à jour : 24/09/2026.
+Dernière mise à jour : 25/09/2026.
 
 ## Le concept
 
 Le train qui roule en forêt est le fil conducteur. Chaque section du portfolio est un lieu ou un moment du voyage :
 
 - **Projets** : le train s'arrête à une gare, où un tableau des départs liste les projets.
-- **À propos** : la caméra zoome sur le conducteur, et les informations s'affichent à côté.
+- **À propos** : le train s'arrête à une seconde station, une maison. Sur la terrasse, le conducteur, sans son képi, travaille à un bureau sur son ordinateur : le conducteur est un rôle, là c'est le développeur au travail.
+- **Zoom sur le conducteur** (mode `custom`) : conservé pour une future activité, il n'affiche rien pour l'instant.
 - **Navigation** : des billets de train en bas de l'écran servent de boutons.
 
 ## Base de code
@@ -53,7 +54,7 @@ Le schéma de `portfolio-2026` s'adapte bien au thème ferroviaire :
 
 ### Machine à états
 
-Un état global `mode` : `ride` → `arriving` → `station` → `departing`, plus `about`. Chaque mode définit :
+Un état global `mode` : `ride` → `arriving` → `stopped` → `departing`, plus `custom` (zoom sur la cabine, en attente d'une activité). Un second état, `stop` (`station` ou `home`), dit à quel arrêt s'appliquent `arriving`, `stopped` et `departing` ; il est fixé par le billet, avant l'arrivée. Chaque mode (et chaque arrêt) définit :
 
 - une vitesse cible du train ;
 - une position de caméra (`cameraControls.setLookAt(..., true)` anime la transition) ;
@@ -85,17 +86,22 @@ Le train est fixe et le monde défile (`useScrollingLoop`), ce qui facilite l'ar
 - Le tableau 3D est du décor ; l'interface consultable est une surcouche HTML dans le même style.
 - Variante : affiches de projets sur le quai.
 
-### À propos : le conducteur
+### À propos : la maison
 
-- Zoom caméra sur la cabine ; le conducteur se tourne ou fait un signe de la main.
-- Ordinateur : texte à côté du personnage.
-- Téléphone : panneau qui monte du bas de l'écran (bottom sheet), conducteur cadré dans la moitié haute.
-- Remplacer le placeholder par un personnage stylisé (casquette, badge).
+- Seconde station (`src/three/models/Home.tsx`), du même côté de la voie que la gare, avec la même approche (`useStopApproach`) : une petite halte en bois avec un panneau au nom du site, une terrasse de plain-pied, la maison derrière (fenêtre éclairée, lanterne).
+- Sur la terrasse, le conducteur descendu de la cabine, sans képi (`Driver` : `cap={false}`, `typing`), tape sur un portable à un bureau. Réglages `HOME_DESK` (groupe Leva « Maison »).
+- Deux plans : `HOME_CAMERA` (large, pendant l'arrivée), puis `HOME_VIEW_CAMERA`, au-dessus du train, le bureau à gauche du cadre.
+- Le panneau « À propos » (`AboutPanel`) s'affiche à l'arrêt : carte à droite sur ordinateur, panneau en bas sur téléphone ; « Repartir » ou Échap pour repartir.
+- Pistes : une tenue « civile » à la maison ; le train qui va directement de la gare à la maison, sans repasser par le trajet en forêt.
+
+### Zoom sur le conducteur (mode `custom`)
+
+- Billet « À venir » ou clic sur le conducteur pendant le trajet : zoom sur la cabine (`CUSTOM_CAMERA`), billet « Retour au voyage » ou Échap pour revenir. Rien d'autre pour l'instant : réservé à une future activité.
 
 ### Navigation
 
 - Essayé puis abandonné : des pancartes 3D en bois flottant de part et d'autre du train (peu lisibles, en doublon avec les boutons HTML), puis un plan de ligne HTML (trop abstrait : « En route » n'est pas une section).
-- Retenu : des **billets de train** en HTML (`src/three/ui/Ticket.tsx`), en bas de l'écran, seulement ceux qui ont un sens là où se trouve le train : « Mes projets » et « Qui suis-je ? » en route, « Voir les projets » (zoom sur le tableau) et « Repartir » en gare (sur ordinateur ; sur téléphone, le tableau HTML a les deux). En haut, seulement le nom (lien vers l'accueil).
+- Retenu : des **billets de train** en HTML (`src/three/ui/Ticket.tsx`), en bas de l'écran, seulement ceux qui ont un sens là où se trouve le train : « Mes projets » (vers la gare) et « Qui suis-je ? » (vers la maison) et « À venir » (mode `custom`) en route, « Voir les projets » (zoom sur le tableau) et « Repartir » en gare (sur ordinateur ; sur téléphone, le tableau HTML a les deux). En haut, seulement le nom (lien vers l'accueil).
 
 ## Interactions en plus
 
@@ -124,8 +130,8 @@ Le train est fixe et le monde défile (`useScrollingLoop`), ce qui facilite l'ar
 4. **Routage** : une URL par section, reliée à l'état `mode` ; `<Canvas>` dans le layout pour qu'il persiste entre les routes.
 5. **Interfaces HTML** : panneau « À propos », tableau des départs, détail d'un projet.
    Fait (`src/three/ui/`), piloté par `mode` en attendant le routage de l'étape 4 :
-   - « À propos » : carte à droite sur ordinateur, panneau en bas sur téléphone ; ouverte aussi par un clic sur le conducteur ; Échap ou « Retour au voyage » pour revenir.
-   - Tableau des départs en gare : un vrai tableau 3D (`src/three/models/StationBoard.tsx`, texte en Geist Mono via `<Text>` de drei), de taille réaliste, sur le quai et parallèle à lui. Quatre plans de caméra : train en marche (`RIDE_CAMERA`), arrivée en gare, large (`STATION_CAMERA`), puis `STATION_SETTLE_MS` après l'arrêt, plan d'interaction face au quai (`STATION_VIEW_CAMERA`), et zoom sur le tableau au clic (`BOARD_CAMERA`). Le cadre du tableau luit doucement pour inviter au clic (plus fort au survol). Zoomé, les lignes deviennent cliquables et défilent façon Solari (désactivé avec `prefers-reduced-motion`) ; « × Fermer » ou Échap ramènent au plan d'interaction. Une ligne par projet (heure tirée de l'ordre, « Grandes lignes » / « Régional », voie). Réglages dans le groupe Leva « Tableau ». Billet « Repartir » en bas de l'écran, qui reste en place tableau zoomé.
+   - « À propos » : carte à droite sur ordinateur, panneau en bas sur téléphone, à l'arrêt à la maison (voir « À propos : la maison ») ; Échap ou « Repartir » pour repartir.
+   - Tableau des départs en gare : un vrai tableau 3D (`src/three/models/StationBoard.tsx`, texte en Geist Mono via `<Text>` de drei), de taille réaliste, sur le quai et parallèle à lui. Quatre plans de caméra : train en marche (`RIDE_CAMERA`), arrivée en gare, large (`STATION_CAMERA`), puis `STOP_SETTLE_MS` après l'arrêt, plan d'interaction face au quai (`STATION_VIEW_CAMERA`), et zoom sur le tableau au clic (`BOARD_CAMERA`). Le cadre du tableau luit doucement pour inviter au clic (plus fort au survol). Zoomé, les lignes deviennent cliquables et défilent façon Solari (désactivé avec `prefers-reduced-motion`) ; « × Fermer » ou Échap ramènent au plan d'interaction. Une ligne par projet (heure tirée de l'ordre, « Grandes lignes » / « Régional », voie). Réglages dans le groupe Leva « Tableau ». Billet « Repartir » en bas de l'écran, qui reste en place tableau zoomé.
    - En gare, le conducteur quitte la cabine : debout sur le quai à gauche du tableau, puis assis au bord du quai à sa droite une fois le tableau zoomé, pour être dans le même plan (poses de `Driver`, réglages `STATION_DRIVER`).
    - Doublure HTML du tableau (`src/three/ui/DeparturesBoard.tsx`), avec les mêmes lignes : c'est l'interface sur téléphone (panneau en bas). Sur ordinateur, elle reste invisible mais lue par les lecteurs d'écran, et apparaît dès qu'elle a le focus (arrivée en gare au clavier, Tab).
    - Détail d'un projet : `<dialog>` natif avec le même contenu que `/projets/<slug>` (composant partagé `src/components/ProjectDetail.tsx`, rendu côté serveur), habillé comme le tableau (classe `.theme-board` de `globals.css`, qui redéfinit les jetons de couleur pour tout le sous-arbre). Même habillage pour le panneau « À propos ».

@@ -11,8 +11,15 @@ import {
 import type { CameraControls } from "@react-three/drei";
 
 // See docs/proto-train.md — one mode drives target speed, camera position
-// and HTML overlay together.
-export type TrainMode = "ride" | "arriving" | "station" | "departing" | "about";
+// and HTML overlay together. arriving / stopped / departing apply to the
+// current stop. "custom" closes in on the driver in the cab: kept for a
+// future activity, it shows nothing yet.
+export type TrainMode =
+  "ride" | "arriving" | "stopped" | "departing" | "custom";
+
+// Where the train stops: the station (projects, departures board) or home
+// (about: the driver, cap off, working at a desk on the terrace).
+export type Stop = "station" | "home";
 
 type TrainContextValue = {
   cameraControlsRef: RefObject<CameraControls | null>;
@@ -25,6 +32,10 @@ type TrainContextValue = {
   setTargetTrainSpeed: (speed: number) => void;
   mode: TrainMode;
   setMode: (mode: TrainMode) => void;
+  // The stop the train is heading to, waiting at or leaving. Set before
+  // switching to "arriving".
+  stop: Stop;
+  setStop: (stop: Stop) => void;
   // Project opened from the departures board (3D rows or their HTML twin),
   // by slug. Only shown while at the station.
   selectedSlug: string | null;
@@ -50,6 +61,7 @@ export function TrainProvider({ children }: { children: ReactNode }) {
   const trainSpeedRef = useRef(3);
   const [targetTrainSpeed, setTargetTrainSpeed] = useState(3);
   const [mode, setMode] = useState<TrainMode>("ride");
+  const [stop, setStop] = useState<Stop>("station");
   const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
   const [boardFocused, setBoardFocused] = useState(false);
 
@@ -62,6 +74,8 @@ export function TrainProvider({ children }: { children: ReactNode }) {
         setTargetTrainSpeed,
         mode,
         setMode,
+        stop,
+        setStop,
         selectedSlug,
         setSelectedSlug,
         boardFocused,

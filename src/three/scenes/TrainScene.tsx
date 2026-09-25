@@ -10,8 +10,9 @@ import { monitor, useControls } from "leva";
 import * as THREE from "three";
 import { useTrainContext } from "../state/TrainContext";
 import useTrainSpeedEasing from "../hooks/useTrainSpeedEasing";
-import useStationApproach from "../hooks/useStationApproach";
+import useStopApproach from "../hooks/useStopApproach";
 import Station from "../models/Station";
+import Home from "../models/Home";
 import Train from "../models/Train";
 import Rails from "../models/Rails";
 import Smoke from "../models/Smoke";
@@ -19,12 +20,11 @@ import Forest from "../models/Forest";
 import ForestFloor from "../models/ForestFloor";
 import type { StationProject } from "../ui/types";
 import {
-  ABOUT_CAMERA,
   BOARD_CAMERA,
+  CUSTOM_CAMERA,
   RIDE_CAMERA,
-  STATION_CAMERA,
-  STATION_SETTLE_MS,
-  STATION_VIEW_CAMERA,
+  STOP_SETTLE_MS,
+  STOP_CAMERAS,
   SUN_POSITION,
 } from "../config/scene";
 
@@ -48,6 +48,7 @@ export default function TrainScene({
     targetTrainSpeed: initialSpeed,
     setTargetTrainSpeed,
     mode,
+    stop,
     boardFocused,
   } = useTrainContext();
 
@@ -71,7 +72,8 @@ export default function TrainScene({
   );
   useTrainSpeedEasing();
   const stationRef = useRef<THREE.Group>(null);
-  useStationApproach(stationRef);
+  const homeRef = useRef<THREE.Group>(null);
+  useStopApproach(stationRef, homeRef);
 
   // Read-only, live in the Leva panel: orbit to a framing you like, then
   // copy these straight into a CameraShot in config/scene.ts. The ref reads
@@ -92,36 +94,37 @@ export default function TrainScene({
     }),
   });
 
-  // At the station, the wide arrival shot holds for a moment before
-  // settling on the platform view (see config/scene).
-  const [stationSettled, setStationSettled] = useState(false);
+  // At a stop, the wide arrival shot holds for a moment before settling on
+  // the stop's view (see config/scene).
+  const [stopSettled, setStopSettled] = useState(false);
   useEffect(() => {
-    if (mode !== "station") return;
-    const timer = setTimeout(() => setStationSettled(true), STATION_SETTLE_MS);
+    if (mode !== "stopped") return;
+    const timer = setTimeout(() => setStopSettled(true), STOP_SETTLE_MS);
     return () => {
       clearTimeout(timer);
-      setStationSettled(false);
+      setStopSettled(false);
     };
   }, [mode]);
 
   useEffect(() => {
-    const atStation = mode === "station";
+    const stopped = mode === "stopped";
+    const shots = STOP_CAMERAS[stop];
     const shot =
-      mode === "about"
-        ? ABOUT_CAMERA
-        : atStation && boardFocused
+      mode === "custom"
+        ? CUSTOM_CAMERA
+        : stopped && stop === "station" && boardFocused
           ? BOARD_CAMERA
-          : atStation && stationSettled
-            ? STATION_VIEW_CAMERA
-            : mode === "arriving" || atStation
-              ? STATION_CAMERA
+          : stopped && stopSettled
+            ? shots.view
+            : mode === "arriving" || stopped
+              ? shots.arrival
               : RIDE_CAMERA;
     cameraControlsRef.current?.setLookAt(
       ...shot.position,
       ...shot.target,
       true,
     );
-  }, [mode, boardFocused, stationSettled, cameraControlsRef]);
+  }, [mode, stop, boardFocused, stopSettled, cameraControlsRef]);
 
   return (
     <>
@@ -178,6 +181,7 @@ export default function TrainScene({
         <Forest position={[0, -0.58, 0]} />
         <Smoke />
         <Station ref={stationRef} projects={projects} />
+        <Home ref={homeRef} />
       </Suspense>
     </>
   );

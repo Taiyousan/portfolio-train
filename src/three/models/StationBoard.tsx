@@ -297,9 +297,15 @@ type Props = ThreeElements["group"] & {
 // out. The HTML board in ui/DeparturesBoard lists the same rows for
 // keyboard, screen readers and phones.
 export default function StationBoard({ projects, legHeight, ...props }: Props) {
-  const { mode, selectedSlug, setSelectedSlug, boardFocused, setBoardFocused } =
-    useTrainContext();
-  const atStation = mode === "station";
+  const {
+    mode,
+    stop,
+    selectedSlug,
+    setSelectedSlug,
+    boardFocused,
+    setBoardFocused,
+  } = useTrainContext();
+  const atStation = mode === "stopped" && stop === "station";
   const open = atStation && boardFocused;
   const inviting = atStation && !open;
   const height = stationBoardHeight(projects.length);

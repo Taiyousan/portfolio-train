@@ -1,7 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { site } from "@/lib/site";
-import { useTrainContext, type TrainMode } from "../state/TrainContext";
+import {
+  useTrainContext,
+  type Stop,
+  type TrainMode,
+} from "../state/TrainContext";
 import { departureTime, trainLine } from "../config/departures";
 import AboutPanel from "./AboutPanel";
 import DeparturesBoard from "./DeparturesBoard";
@@ -10,23 +14,34 @@ import Ticket from "./Ticket";
 import type { StationProject } from "./types";
 
 // Announced to screen readers as the journey moves on.
-const STATUS: Record<TrainMode, string> = {
-  ride: "En route dans la forêt",
-  arriving: "Arrivée en gare",
-  station: "En gare, tableau des départs",
-  departing: "Départ de la gare",
-  about: "Dans la cabine du conducteur",
+const STATUS: Record<Stop, Record<TrainMode, string>> = {
+  station: {
+    ride: "En route dans la forêt",
+    arriving: "Arrivée en gare",
+    stopped: "En gare, tableau des départs",
+    departing: "Départ de la gare",
+    custom: "Dans la cabine du conducteur",
+  },
+  home: {
+    ride: "En route dans la forêt",
+    arriving: "Arrivée à la maison",
+    stopped: "À la maison",
+    departing: "Départ de la maison",
+    custom: "Dans la cabine du conducteur",
+  },
 };
 
 // HTML layer over the canvas. The name in the corner (back to the site's
 // home), then the navigation as train tickets at the bottom, only those that
-// make sense where the train is. The current mode also picks the panel: the
-// about card with the driver, the departures board's HTML twin at the
+// make sense where the train is. The current mode and stop also pick the
+// panel: the about card at home, the departures board's HTML twin at the
 // station, and a project's dialog once a row is picked (on either board).
 export default function Overlay({ projects }: { projects: StationProject[] }) {
   const {
     mode,
     setMode,
+    stop,
+    setStop,
     selectedSlug,
     setSelectedSlug,
     boardFocused,
@@ -44,6 +59,19 @@ export default function Overlay({ projects }: { projects: StationProject[] }) {
     setKeyboardArrival(false);
     setMode("departing");
   };
+  const atStation = mode === "stopped" && stop === "station";
+  const atHome = mode === "stopped" && stop === "home";
+
+  // "custom" (the close-up on the cab) has nothing to show yet: Escape or
+  // the return ticket goes back to the ride.
+  useEffect(() => {
+    if (mode !== "custom") return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMode("ride");
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [mode, setMode]);
 
   return (
     <div className="pointer-events-none absolute inset-0 text-sm text-white">
@@ -60,7 +88,7 @@ export default function Overlay({ projects }: { projects: StationProject[] }) {
           </span>
         </Link>
         <p aria-live="polite" className="sr-only">
-          {STATUS[mode]}
+          {STATUS[stop][mode]}
         </p>
       </header>
 
@@ -77,6 +105,7 @@ export default function Overlay({ projects }: { projects: StationProject[] }) {
             onClick={(e) => {
               // A click fired by Enter/Space has no pointer press count.
               setKeyboardArrival(e.detail === 0);
+              setStop("station");
               setMode("arriving");
             }}
           />
@@ -85,7 +114,34 @@ export default function Overlay({ projects }: { projects: StationProject[] }) {
             title="Qui suis-je ?"
             tilt={1.5}
             delay={120}
-            onClick={() => setMode("about")}
+            onClick={() => {
+              setStop("home");
+              setMode("arriving");
+            }}
+          />
+          {/* Placeholder for a future activity (the close-up on the cab). */}
+          <Ticket
+            kicker="Billet · Prochainement"
+            title="À venir"
+            tilt={-1}
+            delay={240}
+            onClick={() => setMode("custom")}
+          />
+        </nav>
+      )}
+
+      {mode === "custom" && (
+        <nav
+          aria-label="Voyage"
+          className="absolute inset-x-0 bottom-0 flex justify-center p-4 sm:pb-8"
+        >
+          <Ticket
+            kicker="Billet · Retour"
+            title="Retour au voyage"
+            tilt={1.5}
+            delay={600}
+            variant="return"
+            onClick={() => setMode("ride")}
           />
         </nav>
       )}
@@ -94,7 +150,7 @@ export default function Overlay({ projects }: { projects: StationProject[] }) {
           on it works too), and the way out. Once the board is open, only
           the first one fades out, its slot kept so "Repartir" doesn't move.
           On phones, the HTML board's sheet has both. */}
-      {mode === "station" && !selected && (
+      {atStation && !selected && (
         <nav
           aria-label="Voyage"
           className="absolute inset-x-0 bottom-0 hidden justify-center gap-6 pb-8 sm:flex"
@@ -128,9 +184,9 @@ export default function Overlay({ projects }: { projects: StationProject[] }) {
         </nav>
       )}
 
-      {mode === "about" && <AboutPanel onClose={() => setMode("ride")} />}
+      {atHome && <AboutPanel onDepart={depart} />}
 
-      {mode === "station" && (
+      {atStation && (
         <DeparturesBoard
           projects={projects}
           autoFocus={keyboardArrival}
@@ -139,7 +195,7 @@ export default function Overlay({ projects }: { projects: StationProject[] }) {
         />
       )}
 
-      {mode === "station" && selected && (
+      {atStation && selected && (
         <ProjectDialog
           key={selected.slug}
           project={selected}

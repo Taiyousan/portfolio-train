@@ -1,3 +1,5 @@
+import type { Stop } from "../state/TrainContext";
+
 export type Vec3 = [number, number, number];
 
 // Initial camera position, on the -x side of the track, looking at the train.
@@ -20,7 +22,7 @@ export const RIDE_CAMERA: CameraShot = {
 // Station shots, in order (see TrainScene):
 // 1. STATION_CAMERA, wide, while the train pulls in and just after it stops:
 //    the locomotive, the platform and its departures board.
-// 2. STATION_VIEW_CAMERA, STATION_SETTLE_MS after the stop: facing the
+// 2. STATION_VIEW_CAMERA, STOP_SETTLE_MS after the stop: facing the
 //    platform, where the board can be clicked.
 // 3. BOARD_CAMERA once the board is clicked, back to 2 on "× Fermer".
 // All tuned live via the Leva "Camera (lecture seule)" monitor.
@@ -29,7 +31,7 @@ export const STATION_CAMERA: CameraShot = {
   target: [1.6, 0.0, 1.0],
 };
 
-export const STATION_SETTLE_MS = 300;
+export const STOP_SETTLE_MS = 300;
 
 export const STATION_VIEW_CAMERA: CameraShot = {
   position: [0.247, 0.491, 0.067],
@@ -43,27 +45,52 @@ export const BOARD_CAMERA: CameraShot = {
   target: [3.298, 0.216, 1.23],
 };
 
-// Close on the cab where Driver stands (Train.tsx), tuned live in the
-// browser via the Leva "Camera (lecture seule)" monitor.
-export const ABOUT_CAMERA: CameraShot = {
+// Home shots, same sequence as the station's 1 and 2: HOME_CAMERA wide while
+// the train pulls in, then HOME_VIEW_CAMERA from above the train onto the
+// terrace, the desk on the left of the frame (the about panel covers the
+// right on larger screens). Update with HOME_DESK. Keep HOME_CAMERA close
+// to STATION_CAMERA: Forest's cull zone (trees shrunk away in front of the
+// lens while stopping) is sized from it.
+export const HOME_CAMERA: CameraShot = {
+  position: [-2.4, 1.3, -1.6],
+  target: [2.6, 0.1, 0.4],
+};
+
+export const HOME_VIEW_CAMERA: CameraShot = {
+  position: [1.6, 0.38, -0.55],
+  target: [3.8, -0.06, 0.25],
+};
+
+// Wide (arrival) and settled shot of each stop.
+type StopShots = { arrival: CameraShot; view: CameraShot };
+
+export const STOP_CAMERAS: Record<Stop, StopShots> = {
+  station: { arrival: STATION_CAMERA, view: STATION_VIEW_CAMERA },
+  home: { arrival: HOME_CAMERA, view: HOME_VIEW_CAMERA },
+};
+
+// "custom" mode: close on the cab where Driver stands (Train.tsx), tuned
+// live in the browser via the Leva "Camera (lecture seule)" monitor.
+export const CUSTOM_CAMERA: CameraShot = {
   position: [1.641, 0.636, 0.048],
   target: [0.016, 0.05, -0.426],
 };
 
-// Station approach (see hooks/useStationApproach). The train stays at z = 0
-// and the world scrolls, so the station is placed by its own z: it appears
-// STATION_DISTANCE ahead, the train brakes so the platform centre stops at
-// z = 0 after ARRIVE_DURATION seconds. On departure the train just eases back
-// to its cruise speed; the station is hidden once past STATION_EXIT_Z.
-export const STATION_DISTANCE = 14;
+// Approach to a stop (see hooks/useStopApproach), the same for both. The
+// train stays at z = 0 and the world scrolls, so a stop is placed by its own
+// z: it appears STOP_DISTANCE ahead, the train brakes so the platform
+// centre stops at z = 0 after ARRIVE_DURATION seconds. On departure the train
+// just eases back to its cruise speed; the stop is hidden once past
+// STOP_EXIT_Z.
+export const STOP_DISTANCE = 14;
 export const ARRIVE_DURATION = 1.6;
-export const STATION_EXIT_Z = -40;
+export const STOP_EXIT_Z = -40;
 
-// The station is on the side of the track opposite the camera. Forest keeps
-// every prop off that side out to STATION_CLEAR_X so nothing grows in or
-// around the station, whatever the scroll position.
-export const STATION_SIDE = -Math.sign(CAMERA_POSITION[0]);
-export const STATION_CLEAR_X = 5.5;
+// Both stops are on the side of the track opposite the camera. Forest keeps
+// every prop off that side out to STOP_CLEAR_X so nothing grows in or
+// around them, whatever the scroll position.
+export const STOP_SIDE = -Math.sign(CAMERA_POSITION[0]);
+export const STOP_CLEAR_X = 5.5;
 
 // Departures board (models/StationBoard), standing on the platform under
 // the canopy, a real board's size, parallel to the platform. In the
@@ -92,5 +119,19 @@ export const STATION_BOARD = {
 export const STATION_DRIVER = {
   standing: { x: -0.45, z: -0.9 },
   sitting: { z: 1.65 },
+  scale: 0.55,
+};
+
+// Desk on the home terrace (models/Home), with the driver sitting at it, cap
+// off, typing. In the halt's ground frame (origin at the platform centre, at
+// track level): x across the track (+ away from it), z along it. yaw turns
+// the driver and the desk from facing +z, in radians (negative: toward the
+// track, so the camera sees the driver three-quarter on). scale in
+// world units per driver unit, as STATION_DRIVER.scale. Tunable in the Leva
+// "Maison" group (degrees there).
+export const HOME_DESK = {
+  x: 0.95,
+  z: -0.2,
+  yaw: -0.64,
   scale: 0.55,
 };

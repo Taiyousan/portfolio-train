@@ -29,13 +29,13 @@ export default function Train() {
   const { scene } = useGLTF("/models/wagon.glb");
   const scale = usePopIn();
 
-  // While the train waits at the station the driver steps off onto the
-  // platform (see Station): pop out of the cab, then back in once the
-  // platform one has gone.
-  const atStation = mode === "station";
+  // While the train waits at a stop the driver steps off (onto the
+  // platform, see Station, or to the desk, see Home): pop out of the cab,
+  // then back in once the other one has gone.
+  const stopped = mode === "stopped";
   const { driverScale } = useSpring({
-    driverScale: atStation ? 0 : DRIVER_SCALE,
-    delay: atStation ? 0 : DRIVER_SWAP_DELAY_MS,
+    driverScale: stopped ? 0 : DRIVER_SCALE,
+    delay: stopped ? 0 : DRIVER_SWAP_DELAY_MS,
     config: { mass: 1, tension: 260, friction: 12, precision: 0.001 },
   });
 
@@ -114,8 +114,8 @@ export default function Train() {
         <Center>
           <group ref={swayRef}>
             <primitive object={scene} />
-            {/* Clicking the driver while riding opens "about"; the HTML
-                "À propos" button stays the accessible way in. */}
+            {/* Clicking the driver while riding closes in on the cab
+                ("custom" mode, a placeholder for a future activity). */}
             <animated.group
               position={[0.027, -0.41, -1.46]}
               scale={driverScale}
@@ -124,7 +124,7 @@ export default function Train() {
                 onClick={(e) => {
                   if (mode !== "ride") return;
                   e.stopPropagation();
-                  setMode("about");
+                  setMode("custom");
                 }}
                 onPointerOver={(e) => {
                   e.stopPropagation();

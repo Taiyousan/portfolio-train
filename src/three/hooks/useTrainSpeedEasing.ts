@@ -9,8 +9,8 @@ export default function useTrainSpeedEasing(smoothTime = 0.6) {
   const { trainSpeedRef, targetTrainSpeed, mode } = useTrainContext();
 
   useFrame((_, delta) => {
-    // Braking and the stop are driven by useStationApproach.
-    if (mode === "arriving" || mode === "station") return;
+    // Braking and the stop are driven by useStopApproach.
+    if (mode === "arriving" || mode === "stopped") return;
     trainSpeedRef.current = THREE.MathUtils.damp(
       trainSpeedRef.current,
       targetTrainSpeed,
