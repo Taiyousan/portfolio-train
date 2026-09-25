@@ -101,7 +101,13 @@ Le train est fixe et le monde défile (`useScrollingLoop`), ce qui facilite l'ar
 ### Navigation
 
 - Essayé puis abandonné : des pancartes 3D en bois flottant de part et d'autre du train (peu lisibles, en doublon avec les boutons HTML), puis un plan de ligne HTML (trop abstrait : « En route » n'est pas une section).
-- Retenu : des **billets de train** en HTML (`src/three/ui/Ticket.tsx`), en bas de l'écran, seulement ceux qui ont un sens là où se trouve le train : « Mes projets » (vers la gare) et « Qui suis-je ? » (vers la maison) et « À venir » (mode `custom`) en route, « Voir les projets » (zoom sur le tableau) et « Repartir » en gare (sur ordinateur ; sur téléphone, le tableau HTML a les deux). En haut, seulement le nom (lien vers l'accueil).
+- Retenu : des **billets de train** en HTML (`src/three/ui/Ticket.tsx`), en bas de l'écran, seulement ceux qui ont un sens là où se trouve le train : « Mes projets » (vers la gare) et « Qui suis-je ? » (vers la maison) et « À venir » (mode `custom`) en route, « Voir les projets » (zoom sur le tableau) et « Repartir » en gare (sur ordinateur ; sur téléphone, le tableau HTML a les deux). En haut, le nom (lien vers l'accueil) et le choix de la saison.
+
+### Saisons
+
+- Bouton HTML en haut à droite (`src/three/ui/SeasonSwitch.tsx`) : été (la scène d'origine) ou hiver (sol et sapins enneigés, neige sur les toits, flocons qui dérivent avec la vitesse du train, lumière et ciel plus froids). Simple habillage : rien d'autre ne dépend de la saison.
+- Une palette et quelques réglages par saison dans `src/three/config/seasons.ts` ; la scène passe de l'une à l'autre en fondu (`src/three/hooks/useSeason.ts`), instantanément avec `prefers-reduced-motion` (et sans flocons).
+- À venir : printemps et automne. Les sapins ne changent pas au fil des saisons : il faudra des feuillus (feuilles rousses qui tombent, fleurs). Piste : saison par défaut selon la date réelle.
 
 ## Interactions en plus
 

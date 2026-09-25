@@ -9,6 +9,7 @@ import {
   type RefObject,
 } from "react";
 import type { CameraControls } from "@react-three/drei";
+import { SEASONS, type Season } from "../config/seasons";
 
 // See docs/proto-train.md — one mode drives target speed, camera position
 // and HTML overlay together. arriving / stopped / departing apply to the
@@ -20,6 +21,9 @@ export type TrainMode =
 // Where the train stops: the station (projects, departures board) or home
 // (about: the driver, cap off, working at a desk on the terrace).
 export type Stop = "station" | "home";
+
+// How far the scene has blended into each season, summing to 1.
+export type SeasonWeights = Record<Season, number>;
 
 type TrainContextValue = {
   cameraControlsRef: RefObject<CameraControls | null>;
@@ -44,6 +48,12 @@ type TrainContextValue = {
   // click on it) and its rows can be picked.
   boardFocused: boolean;
   setBoardFocused: (focused: boolean) => void;
+  // Season picked with the switch (see config/seasons). The scene blends
+  // into it gradually: seasonWeightsRef, eased once per frame by
+  // useSeasonEasing and read from useFrame, like trainSpeedRef.
+  season: Season;
+  setSeason: (season: Season) => void;
+  seasonWeightsRef: RefObject<SeasonWeights>;
 };
 
 const TrainContext = createContext<TrainContextValue | null>(null);
@@ -64,6 +74,12 @@ export function TrainProvider({ children }: { children: ReactNode }) {
   const [stop, setStop] = useState<Stop>("station");
   const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
   const [boardFocused, setBoardFocused] = useState(false);
+  const [season, setSeason] = useState<Season>("summer");
+  const seasonWeightsRef = useRef(
+    Object.fromEntries(
+      SEASONS.map((other) => [other, other === "summer" ? 1 : 0]),
+    ) as SeasonWeights,
+  );
 
   return (
     <TrainContext.Provider
@@ -80,6 +96,9 @@ export function TrainProvider({ children }: { children: ReactNode }) {
         setSelectedSlug,
         boardFocused,
         setBoardFocused,
+        season,
+        setSeason,
+        seasonWeightsRef,
       }}
     >
       {children}

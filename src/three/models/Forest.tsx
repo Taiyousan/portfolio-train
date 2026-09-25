@@ -12,6 +12,9 @@ import {
 } from "../config/scene";
 import useScrollingLoop from "../hooks/useScrollingLoop";
 import { useTrainContext } from "../state/TrainContext";
+import { useSeasonColor, useSeasonValue } from "../hooks/useSeason";
+import { createSnowCapMaterial } from "../shaders/snowCap";
+import type { SeasonColor } from "../config/seasons";
 
 // Matches the rails' rendered tile length so the forest scrolls in the same
 // world-space units as the track, and tree distances stay relative to the
@@ -32,11 +35,45 @@ type TreeGeometries = {
   trunk: THREE.BufferGeometry;
   foliageLow: THREE.BufferGeometry;
   foliageHigh: THREE.BufferGeometry;
+  snowCapLow: THREE.BufferGeometry;
+  snowCapHigh: THREE.BufferGeometry;
   bush: THREE.BufferGeometry;
   rock: THREE.BufferGeometry;
 };
 
 type Transform = { x: number; z: number; scale: number; rotationY: number };
+
+// Foliage cones: radius, height, and base height above the ground.
+const FOLIAGE_LOW = { radius: 0.9, height: 1.8, base: 1.4 };
+const FOLIAGE_HIGH = { radius: 0.6, height: 1.4, base: 3.0 };
+// Snow caps (winter) cover this much of each cone from its tip, a little
+// wider so they sit on it, their tip just above the cone's.
+const SNOW_CAP_COVER = 0.6;
+const SNOW_CAP_FLARE = 1.12;
+const SNOW_CAP_LIFT = 0.03;
+
+type Cone = typeof FOLIAGE_LOW;
+
+function snowCapGeometry({ radius, height }: Cone) {
+  const capHeight = height * SNOW_CAP_COVER;
+  const cap = new THREE.ConeGeometry(
+    radius * SNOW_CAP_COVER * SNOW_CAP_FLARE,
+    capHeight,
+    7,
+  );
+  // Tip at the origin: the snowCap shader grows it from there.
+  cap.translate(0, -capHeight / 2, 0);
+  return cap;
+}
+
+function snowCapApex({ height, base }: Cone) {
+  return base + height + SNOW_CAP_LIFT;
+}
+
+type SnowCapMaterials = {
+  low: THREE.MeshStandardMaterial;
+  high: THREE.MeshStandardMaterial;
+};
 
 // A stylized low-poly pine: trunk + two stacked cones.
 function useTreeGeometries(): TreeGeometries {
@@ -44,11 +81,22 @@ function useTreeGeometries(): TreeGeometries {
     const trunk = new THREE.CylinderGeometry(0.08, 0.14, 1.4, 6);
     trunk.translate(0, 0.7, 0);
 
-    const foliageLow = new THREE.ConeGeometry(0.9, 1.8, 7);
-    foliageLow.translate(0, 1.4 + 0.9, 0);
+    const foliageLow = new THREE.ConeGeometry(
+      FOLIAGE_LOW.radius,
+      FOLIAGE_LOW.height,
+      7,
+    );
+    foliageLow.translate(0, FOLIAGE_LOW.base + FOLIAGE_LOW.height / 2, 0);
 
-    const foliageHigh = new THREE.ConeGeometry(0.6, 1.4, 7);
-    foliageHigh.translate(0, 1.4 + 1.6 + 0.7, 0);
+    const foliageHigh = new THREE.ConeGeometry(
+      FOLIAGE_HIGH.radius,
+      FOLIAGE_HIGH.height,
+      7,
+    );
+    foliageHigh.translate(0, FOLIAGE_HIGH.base + FOLIAGE_HIGH.height / 2, 0);
+
+    const snowCapLow = snowCapGeometry(FOLIAGE_LOW);
+    const snowCapHigh = snowCapGeometry(FOLIAGE_HIGH);
 
     const bush = new THREE.IcosahedronGeometry(0.5, 0);
     bush.translate(0, 0.4, 0);
@@ -56,7 +104,15 @@ function useTreeGeometries(): TreeGeometries {
     const rock = new THREE.DodecahedronGeometry(0.35, 0);
     rock.translate(0, 0.18, 0);
 
-    return { trunk, foliageLow, foliageHigh, bush, rock };
+    return {
+      trunk,
+      foliageLow,
+      foliageHigh,
+      snowCapLow,
+      snowCapHigh,
+      bush,
+      rock,
+    };
   }, []);
 }
 
@@ -192,13 +248,15 @@ function InstancedClutter({
 }: {
   geometry: THREE.BufferGeometry;
   transforms: Transform[];
-  color: string;
+  color: SeasonColor;
   roughness?: number;
   cull: CullRefs;
 }) {
   const ref = useRef<THREE.InstancedMesh>(null);
+  const materialRef = useRef<THREE.MeshStandardMaterial>(null);
   useEffect(() => setInstanceTransforms(ref.current, transforms), [transforms]);
   useStationCull([ref], transforms, cull);
+  useSeasonColor(materialRef, color);
 
   return (
     <instancedMesh
@@ -208,31 +266,44 @@ function InstancedClutter({
       receiveShadow
       frustumCulled={false}
     >
-      <meshStandardMaterial color={color} roughness={roughness} />
+      <meshStandardMaterial ref={materialRef} roughness={roughness} />
     </instancedMesh>
   );
 }
 
-// Three InstancedMeshes (trunk + two foliage cones) sharing the same transforms.
+// InstancedMeshes (trunk, two foliage cones and their snow caps) sharing
+// the same transforms.
 function InstancedTrees({
   geometries,
+  snowCaps,
   transforms,
   cull,
 }: {
   geometries: TreeGeometries;
+  snowCaps: SnowCapMaterials;
   transforms: Transform[];
   cull: CullRefs;
 }) {
   const trunkRef = useRef<THREE.InstancedMesh>(null);
   const lowRef = useRef<THREE.InstancedMesh>(null);
   const highRef = useRef<THREE.InstancedMesh>(null);
+  const capLowRef = useRef<THREE.InstancedMesh>(null);
+  const capHighRef = useRef<THREE.InstancedMesh>(null);
+  const lowMaterialRef = useRef<THREE.MeshStandardMaterial>(null);
+  const highMaterialRef = useRef<THREE.MeshStandardMaterial>(null);
 
   useEffect(() => {
-    setInstanceTransforms(trunkRef.current, transforms);
-    setInstanceTransforms(lowRef.current, transforms);
-    setInstanceTransforms(highRef.current, transforms);
+    [trunkRef, lowRef, highRef, capLowRef, capHighRef].forEach((ref) =>
+      setInstanceTransforms(ref.current, transforms),
+    );
   }, [transforms]);
-  useStationCull([trunkRef, lowRef, highRef], transforms, cull);
+  useStationCull(
+    [trunkRef, lowRef, highRef, capLowRef, capHighRef],
+    transforms,
+    cull,
+  );
+  useSeasonColor(lowMaterialRef, "foliageLow");
+  useSeasonColor(highMaterialRef, "foliageHigh");
 
   return (
     <>
@@ -250,7 +321,7 @@ function InstancedTrees({
         castShadow
         frustumCulled={false}
       >
-        <meshStandardMaterial color="#25422b" roughness={0.8} />
+        <meshStandardMaterial ref={lowMaterialRef} roughness={0.8} />
       </instancedMesh>
       <instancedMesh
         ref={highRef}
@@ -258,8 +329,20 @@ function InstancedTrees({
         castShadow
         frustumCulled={false}
       >
-        <meshStandardMaterial color="#2f4f35" roughness={0.8} />
+        <meshStandardMaterial ref={highMaterialRef} roughness={0.8} />
       </instancedMesh>
+      {/* No shadows: the snowCap shader's growth doesn't reach the depth
+          pass, so the caps would cast full-size shadows in summer. */}
+      <instancedMesh
+        ref={capLowRef}
+        args={[geometries.snowCapLow, snowCaps.low, transforms.length]}
+        frustumCulled={false}
+      />
+      <instancedMesh
+        ref={capHighRef}
+        args={[geometries.snowCapHigh, snowCaps.high, transforms.length]}
+        frustumCulled={false}
+      />
     </>
   );
 }
@@ -268,12 +351,14 @@ type Counts = { trees: number; bushes: number; rocks: number };
 
 function ForestTile({
   geometries,
+  snowCaps,
   density,
   spread,
   clearing,
   cull,
 }: {
   geometries: TreeGeometries;
+  snowCaps: SnowCapMaterials;
   density: Counts;
   spread: Counts;
   clearing: number;
@@ -297,17 +382,22 @@ function ForestTile({
 
   return (
     <>
-      <InstancedTrees geometries={geometries} transforms={trees} cull={cull} />
+      <InstancedTrees
+        geometries={geometries}
+        snowCaps={snowCaps}
+        transforms={trees}
+        cull={cull}
+      />
       <InstancedClutter
         geometry={geometries.bush}
         transforms={bushes}
-        color="#2e4a26"
+        color="bush"
         cull={cull}
       />
       <InstancedClutter
         geometry={geometries.rock}
         transforms={rocks}
-        color="#5c5850"
+        color="rock"
         roughness={1}
         cull={cull}
       />
@@ -318,6 +408,30 @@ function ForestTile({
 // Tiles of procedural pines scroll along z, looping like the rails.
 export default function Forest(props: ThreeElements["group"]) {
   const geometries = useTreeGeometries();
+
+  // Shared by every tile, so one uniform grows the snow on all the trees.
+  const snowCaps = useMemo(
+    () => ({
+      low: createSnowCapMaterial(snowCapApex(FOLIAGE_LOW)),
+      high: createSnowCapMaterial(snowCapApex(FOLIAGE_HIGH)),
+    }),
+    [],
+  );
+  const snowCapMaterials = useMemo(
+    () => ({ low: snowCaps.low.material, high: snowCaps.high.material }),
+    [snowCaps],
+  );
+  useEffect(
+    () => () => {
+      snowCaps.low.material.dispose();
+      snowCaps.high.material.dispose();
+    },
+    [snowCaps],
+  );
+  useSeasonValue("snow", (snow) => {
+    snowCaps.low.setGrow(snow);
+    snowCaps.high.setGrow(snow);
+  });
 
   const {
     tileCount,
@@ -368,6 +482,7 @@ export default function Forest(props: ThreeElements["group"]) {
         <group key={index} ref={ref} position={position}>
           <ForestTile
             geometries={geometries}
+            snowCaps={snowCapMaterials}
             density={density}
             spread={spread}
             clearing={clearing}

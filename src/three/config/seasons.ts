@@ -1,0 +1,96 @@
+// Seasons the scene can be switched to (see ui/SeasonSwitch). Only a look:
+// colours, light, sky and snow; nothing else in the scene depends on them.
+// Switching blends every value below from one season to the next (see
+// hooks/useSeason). "summer" is the original dusk scene.
+export const SEASONS = ["summer", "winter"] as const;
+export type Season = (typeof SEASONS)[number];
+
+export const SEASON_LABELS: Record<Season, string> = {
+  summer: "Été",
+  winter: "Hiver",
+};
+
+// Snow on the trees, roofs and ground, and falling flakes.
+export const SNOW_COLOR = "#eef2f6";
+
+type SeasonLook = {
+  colors: {
+    // Fog and scene background.
+    haze: string;
+    ambient: string;
+    sun: string;
+    ground: string;
+    foliageLow: string;
+    foliageHigh: string;
+    bush: string;
+    rock: string;
+  };
+  values: {
+    ambientIntensity: number;
+    // Multiply the Leva "Scene" lightIntensity and fogDensity.
+    sunScale: number;
+    fogScale: number;
+    // Snow is bright: raised so the bloom doesn't flood it.
+    bloomThreshold: number;
+    // drei <Sky> uniforms.
+    turbidity: number;
+    rayleigh: number;
+    mieCoefficient: number;
+    // 0 → 1: snow on the trees and roofs, then falling flakes.
+    snow: number;
+    snowfall: number;
+  };
+};
+
+export type SeasonColor = keyof SeasonLook["colors"];
+export type SeasonValue = keyof SeasonLook["values"];
+
+export const SEASON_LOOKS: Record<Season, SeasonLook> = {
+  summer: {
+    colors: {
+      haze: "#3a2a1f",
+      ambient: "#4a5a7a",
+      sun: "#ffb56b",
+      ground: "#1c2b16",
+      foliageLow: "#25422b",
+      foliageHigh: "#2f4f35",
+      bush: "#2e4a26",
+      rock: "#5c5850",
+    },
+    values: {
+      ambientIntensity: 0.25,
+      sunScale: 1,
+      fogScale: 1,
+      bloomThreshold: 0.3,
+      turbidity: 10,
+      rayleigh: 1.2,
+      mieCoefficient: 0.05,
+      snow: 0,
+      snowfall: 0,
+    },
+  },
+  // Cold dusk: blue-grey haze, a paler sun, snow everywhere.
+  winter: {
+    colors: {
+      haze: "#5b6072",
+      ambient: "#8a9ac0",
+      sun: "#ffc9a0",
+      ground: "#dfe5ec",
+      foliageLow: "#1f3a2c",
+      foliageHigh: "#274436",
+      bush: "#d3dbe4",
+      rock: "#8e9096",
+    },
+    values: {
+      ambientIntensity: 0.45,
+      sunScale: 0.75,
+      fogScale: 1.3,
+      bloomThreshold: 0.8,
+      turbidity: 4,
+      rayleigh: 2.5,
+      mieCoefficient: 0.02,
+      snow: 1,
+      snowfall: 1,
+    },
+  },
+};

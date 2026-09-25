@@ -6,7 +6,9 @@ import * as THREE from "three";
 import { useControls } from "leva";
 import { site } from "@/lib/site";
 import { useTrainContext } from "../state/TrainContext";
+import { useSeasonValue } from "../hooks/useSeason";
 import { HOME_DESK, STOP_SIDE } from "../config/scene";
+import { SNOW_COLOR } from "../config/seasons";
 import Driver, { DRIVER_SEAT_HEIGHT } from "./Driver";
 
 // Same face as the departures board (see StationBoard).
@@ -68,6 +70,35 @@ const DESK_TOP = DRIVER_SEAT_HEIGHT + 0.2;
 const DESK_WIDTH = 0.8;
 const DESK_DEPTH = 0.42;
 const DESK_Z = 0.42;
+
+// Snow on the roof (winter): the roof's prism again, scaled from the middle
+// of its base so it pokes out of the slopes as the snow cover grows, and
+// kept a little shorter so the gable ends stay bare.
+function RoofSnow() {
+  const ref = useRef<THREE.Group>(null);
+  useSeasonValue("snow", (snow) => {
+    const group = ref.current;
+    if (!group) return;
+    group.visible = snow > 0.001;
+    const grow = 0.97 + 0.07 * snow;
+    group.scale.set(grow, grow, 0.99);
+  });
+
+  return (
+    <group ref={ref} position={[0, WALL_HEIGHT, 0]} visible={false}>
+      <mesh
+        position={[0, (ROOF_RADIUS * ROOF_FLATTEN) / 2, 0]}
+        rotation-x={-Math.PI / 2}
+        scale={[1, 1, ROOF_FLATTEN]}
+      >
+        <cylinderGeometry
+          args={[ROOF_RADIUS, ROOF_RADIUS, HOUSE_LENGTH + 0.2, 3]}
+        />
+        <meshStandardMaterial color={SNOW_COLOR} roughness={0.9} flatShading />
+      </mesh>
+    </group>
+  );
+}
 
 function DeskSetup() {
   return (
@@ -336,6 +367,7 @@ const Home = forwardRef<THREE.Group>(function Home(_, ref) {
               flatShading
             />
           </mesh>
+          <RoofSnow />
           {/* Door and lit window on the terrace side */}
           <mesh position={[-HOUSE_WIDTH / 2 - 0.01, DECK_HEIGHT + 0.3, DOOR_Z]}>
             <boxGeometry args={[0.02, 0.6, 0.35]} />

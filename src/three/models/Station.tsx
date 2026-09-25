@@ -8,6 +8,7 @@ import { STATION_BOARD, STATION_DRIVER, STOP_SIDE } from "../config/scene";
 import type { StationProject } from "../ui/types";
 import StationBoard, { stationBoardHeight } from "./StationBoard";
 import Driver, { DRIVER_SEAT_DEPTH } from "./Driver";
+import SnowCover from "./SnowCover";
 
 const PLATFORM_LENGTH = 4.4;
 const PLATFORM_WIDTH = 1.4;
@@ -19,7 +20,11 @@ const BUILDING_LENGTH = 3.4;
 const BUILDING_HEIGHT = 1.1;
 const POST_XS = [-0.4, 0.4] as const;
 const POST_ZS = [-1.9, 1.9] as const;
+const CANOPY_WIDTH = 1.6;
 const CANOPY_LENGTH = 4.2;
+const CANOPY_Y = PLATFORM_HEIGHT + 1.3;
+const CANOPY_THICKNESS = 0.1;
+const ROOF_THICKNESS = 0.3;
 const NAME_BOARD_Z = -1.2;
 const toDeg = THREE.MathUtils.radToDeg;
 const toRad = THREE.MathUtils.degToRad;
@@ -157,10 +162,16 @@ const Station = forwardRef<THREE.Group, { projects: StationProject[] }>(
             )),
           )}
           {/* Canopy */}
-          <mesh position={[0, PLATFORM_HEIGHT + 1.3, 0]} castShadow>
-            <boxGeometry args={[1.6, 0.1, CANOPY_LENGTH]} />
+          <mesh position={[0, CANOPY_Y, 0]} castShadow>
+            <boxGeometry
+              args={[CANOPY_WIDTH, CANOPY_THICKNESS, CANOPY_LENGTH]}
+            />
             <meshStandardMaterial color="#5a2f2a" roughness={0.7} />
           </mesh>
+          <SnowCover
+            top={[0, CANOPY_Y + CANOPY_THICKNESS / 2, 0]}
+            size={[CANOPY_WIDTH, 0.05, CANOPY_LENGTH]}
+          />
           {/* Station building, just behind the platform */}
           <animated.group
             position={[PLATFORM_WIDTH / 2 + BUILDING_WIDTH / 2, 0, 0]}
@@ -176,12 +187,23 @@ const Station = forwardRef<THREE.Group, { projects: StationProject[] }>(
               />
               <meshStandardMaterial color="#c9b79c" roughness={0.9} />
             </mesh>
-            <mesh position={[0, BUILDING_HEIGHT + 0.15, 0]} castShadow>
+            <mesh
+              position={[0, BUILDING_HEIGHT + ROOF_THICKNESS / 2, 0]}
+              castShadow
+            >
               <boxGeometry
-                args={[BUILDING_WIDTH + 0.2, 0.3, BUILDING_LENGTH + 0.2]}
+                args={[
+                  BUILDING_WIDTH + 0.2,
+                  ROOF_THICKNESS,
+                  BUILDING_LENGTH + 0.2,
+                ]}
               />
               <meshStandardMaterial color="#5a2f2a" roughness={0.7} />
             </mesh>
+            <SnowCover
+              top={[0, BUILDING_HEIGHT + ROOF_THICKNESS, 0]}
+              size={[BUILDING_WIDTH + 0.2, 0.06, BUILDING_LENGTH + 0.2]}
+            />
             {/* Door on the platform side */}
             <mesh position={[-BUILDING_WIDTH / 2 - 0.01, 0.4, 0]}>
               <boxGeometry args={[0.02, 0.8, 0.5]} />

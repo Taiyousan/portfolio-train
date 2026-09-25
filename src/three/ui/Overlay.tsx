@@ -10,6 +10,7 @@ import { departureTime, trainLine } from "../config/departures";
 import AboutPanel from "./AboutPanel";
 import DeparturesBoard from "./DeparturesBoard";
 import ProjectDialog from "./ProjectDialog";
+import SeasonSwitch from "./SeasonSwitch";
 import Ticket from "./Ticket";
 import type { StationProject } from "./types";
 
@@ -87,6 +88,7 @@ export default function Overlay({ projects }: { projects: StationProject[] }) {
             Développeur front-end
           </span>
         </Link>
+        <SeasonSwitch />
         <p aria-live="polite" className="sr-only">
           {STATUS[stop][mode]}
         </p>

@@ -1,4 +1,11 @@
-import { Suspense, useEffect, useRef, useState } from "react";
+import {
+  Suspense,
+  useEffect,
+  useRef,
+  useState,
+  type ComponentRef,
+} from "react";
+import { useFrame } from "@react-three/fiber";
 import { CameraControls, Environment, Html, Sky } from "@react-three/drei";
 import {
   EffectComposer,
@@ -8,9 +15,15 @@ import {
 } from "@react-three/postprocessing";
 import { monitor, useControls } from "leva";
 import * as THREE from "three";
+import type { BloomEffect } from "postprocessing";
 import { useTrainContext } from "../state/TrainContext";
 import useTrainSpeedEasing from "../hooks/useTrainSpeedEasing";
 import useStopApproach from "../hooks/useStopApproach";
+import {
+  mixColor,
+  mixValue,
+  useSeasonEasing,
+} from "../hooks/useSeason";
 import Station from "../models/Station";
 import Home from "../models/Home";
 import Train from "../models/Train";
@@ -18,6 +31,7 @@ import Rails from "../models/Rails";
 import Smoke from "../models/Smoke";
 import Forest from "../models/Forest";
 import ForestFloor from "../models/ForestFloor";
+import Snowfall from "../models/Snowfall";
 import type { StationProject } from "../ui/types";
 import {
   BOARD_CAMERA,
@@ -50,6 +64,7 @@ export default function TrainScene({
     mode,
     stop,
     boardFocused,
+    seasonWeightsRef,
   } = useTrainContext();
 
   const {
@@ -74,6 +89,48 @@ export default function TrainScene({
   const stationRef = useRef<THREE.Group>(null);
   const homeRef = useRef<THREE.Group>(null);
   useStopApproach(stationRef, homeRef);
+
+  // Season look (config/seasons): haze, light, sky and bloom follow the
+  // blended palette. Leva's fog and light settings scale with it.
+  useSeasonEasing();
+  const fogRef = useRef<THREE.FogExp2>(null);
+  const ambientRef = useRef<THREE.AmbientLight>(null);
+  const sunRef = useRef<THREE.DirectionalLight>(null);
+  const skyRef = useRef<ComponentRef<typeof Sky>>(null);
+  const bloomRef = useRef<BloomEffect>(null);
+  useFrame(({ scene }) => {
+    const weights = seasonWeightsRef.current;
+    if (scene.background instanceof THREE.Color) {
+      mixColor(weights, "haze", scene.background);
+    }
+    const fog = fogRef.current;
+    if (fog) {
+      mixColor(weights, "haze", fog.color);
+      fog.density = fogDensity * mixValue(weights, "fogScale");
+    }
+    const ambient = ambientRef.current;
+    if (ambient) {
+      mixColor(weights, "ambient", ambient.color);
+      ambient.intensity = mixValue(weights, "ambientIntensity");
+    }
+    const sun = sunRef.current;
+    if (sun) {
+      mixColor(weights, "sun", sun.color);
+      sun.intensity = lightIntensity * mixValue(weights, "sunScale");
+    }
+    const sky = skyRef.current?.material;
+    if (sky) {
+      sky.uniforms.turbidity.value = mixValue(weights, "turbidity");
+      sky.uniforms.rayleigh.value = mixValue(weights, "rayleigh");
+      sky.uniforms.mieCoefficient.value = mixValue(weights, "mieCoefficient");
+    }
+    if (bloomRef.current) {
+      bloomRef.current.luminanceMaterial.threshold = mixValue(
+        weights,
+        "bloomThreshold",
+      );
+    }
+  });
 
   // Read-only, live in the Leva panel: orbit to a framing you like, then
   // copy these straight into a CameraShot in config/scene.ts. The ref reads
@@ -128,12 +185,12 @@ export default function TrainScene({
 
   return (
     <>
-      <fogExp2 attach="fog" args={["#3a2a1f", 0.04]} density={fogDensity} />
+      {/* Colours and intensities are set every frame from the season. */}
+      <fogExp2 ref={fogRef} attach="fog" args={["#3a2a1f", 0.04]} />
 
-      <ambientLight intensity={0.25} color="#4a5a7a" />
+      <ambientLight ref={ambientRef} />
       <directionalLight
-        intensity={lightIntensity}
-        color="#ffb56b"
+        ref={sunRef}
         position={SUN_POSITION}
         castShadow
         shadow-mapSize={[2048, 2048]}
@@ -145,18 +202,13 @@ export default function TrainScene({
         shadow-camera-far={150}
       />
       <Environment preset="sunset" background={false} />
-      <Sky
-        sunPosition={SUN_POSITION}
-        turbidity={10}
-        rayleigh={1.2}
-        mieCoefficient={0.05}
-        mieDirectionalG={0.9}
-      />
+      <Sky ref={skyRef} sunPosition={SUN_POSITION} mieDirectionalG={0.9} />
 
       <CameraControls ref={cameraControlsRef} />
 
       <EffectComposer>
         <Bloom
+          ref={bloomRef}
           luminanceThreshold={0.3}
           luminanceSmoothing={0.9}
           intensity={bloomIntensity}
@@ -180,6 +232,7 @@ export default function TrainScene({
         <Rails position={[0, -0.57, 0]} />
         <Forest position={[0, -0.58, 0]} />
         <Smoke />
+        <Snowfall />
         <Station ref={stationRef} projects={projects} />
         <Home ref={homeRef} />
       </Suspense>
