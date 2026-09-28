@@ -6,7 +6,7 @@ import { useTrainContext } from "../state/TrainContext";
 import useFlapText from "../hooks/useFlapText";
 import { departureTime, ROW_FLAP_DELAY_MS } from "../config/departures";
 import type { StationProject } from "../ui/types";
-import { STATION_COLORS } from "./StationDecor";
+import { STATION_COLORS } from "./StationPrimitives";
 import SnowCover from "./SnowCover";
 
 // Troika (drei <Text>) reads woff/ttf/otf, not woff2. Same face as the HTML

@@ -1,8 +1,24 @@
-import { useMemo, type ReactNode } from "react";
-import { RoundedBox, Text } from "@react-three/drei";
+import { useMemo, useState, type ReactNode } from "react";
+import { Text } from "@react-three/drei";
 import { animated, type SpringValue } from "@react-spring/three";
 import * as THREE from "three";
 import SnowCover from "./SnowCover";
+import { useStationClick } from "../hooks/useStationProp";
+import {
+  Block,
+  Cylinder,
+  FLOWER_COLORS,
+  STATION_COLORS as COLORS,
+  type Vec3,
+} from "./StationPrimitives";
+import {
+  Bench,
+  Clock,
+  Lamp,
+  Luggage,
+  Planter,
+  TrashCan,
+} from "./StationProps";
 
 // The station's platform, building and props, built from rounded
 // primitives, cartoon style: soft edges everywhere (RoundedBox, bevelled
@@ -11,7 +27,7 @@ import SnowCover from "./SnowCover";
 // along the track (the platform from -11.7 to 11.7); scaled into the
 // station's ground frame by StationPlacement.
 
-type Vec3 = [number, number, number];
+const FONT = "/fonts/geist-mono-600.woff";
 
 const PLATFORM_TOP = 1.6;
 const PLATFORM_DEPTH = 17.5;
@@ -33,40 +49,6 @@ export function stationPlatformHeight(scale: number) {
   return PLATFORM_TOP * scale;
 }
 
-// Shared with the departures board (StationBoard), so it looks part of the
-// station.
-export const STATION_COLORS = {
-  platform: "#b3a288",
-  platformSide: "#8f7d66",
-  edge: "#e2b54c",
-  wall: "#efdfbf",
-  plinth: "#a8876a",
-  roof: "#a4493a",
-  wood: "#7b5b3e",
-  darkWood: "#4a3526",
-  iron: "#34353b",
-  benchWood: "#c08552",
-  bin: "#4f7d4c",
-  pot: "#b8643f",
-  bush: "#5d8f4a",
-  bushLight: "#78a857",
-  suitcase: "#b5533c",
-  trunk: "#5f86a0",
-  strap: "#5a3a26",
-  sign: "#f1e8d4",
-  ink: "#3b2a20",
-  light: "#ffcf87",
-};
-const COLORS = STATION_COLORS;
-const FLOWER_COLORS = ["#f08a5d", "#f5d36b", "#e2769a", "#fff3e0"];
-const FONT = "/fonts/geist-mono-600.woff";
-
-// Lamps: post height (the lantern sits on top), and their warm light's
-// intensity and reach (world units).
-const LAMP_HEIGHT = 4.6;
-const LAMP_INTENSITY = 4;
-const LAMP_DISTANCE = 2.5;
-
 // Parts popping in at a stop, each with its own spring (see Station, which
 // staggers them in this order).
 export const STATION_FITTINGS = [
@@ -78,66 +60,6 @@ export const STATION_FITTINGS = [
   "trashCan",
 ] as const;
 type Fitting = (typeof STATION_FITTINGS)[number];
-
-function Block({
-  size,
-  position,
-  rotation,
-  radius = 0.2,
-  color,
-  emissive,
-}: {
-  size: Vec3;
-  position?: Vec3;
-  rotation?: Vec3;
-  radius?: number;
-  color: string;
-  emissive?: number;
-}) {
-  return (
-    <RoundedBox
-      args={size}
-      radius={Math.min(radius, ...size.map((d) => d / 2 - 0.001))}
-      smoothness={3}
-      position={position}
-      rotation={rotation}
-      castShadow
-      receiveShadow
-    >
-      <meshStandardMaterial
-        color={color}
-        roughness={0.75}
-        emissive={emissive ? color : "#000000"}
-        emissiveIntensity={emissive ?? 0}
-      />
-    </RoundedBox>
-  );
-}
-
-function Cylinder({
-  radius,
-  height,
-  position,
-  rotation,
-  color,
-  top = radius,
-  segments = 16,
-}: {
-  radius: number;
-  height: number;
-  position?: Vec3;
-  rotation?: Vec3;
-  color: string;
-  top?: number;
-  segments?: number;
-}) {
-  return (
-    <mesh position={position} rotation={rotation} castShadow receiveShadow>
-      <cylinderGeometry args={[top, radius, height, segments]} />
-      <meshStandardMaterial color={color} roughness={0.75} />
-    </mesh>
-  );
-}
 
 // A group popping in with `pop`, scaled from `feet`.
 function Pop({
@@ -289,8 +211,15 @@ function useHouseGeometry() {
   }, []);
 }
 
-// A lit window in the front wall, facing the track (-x).
-function Window({ position }: { position: Vec3 }) {
+// Glass of the building's windows, lit from inside or not.
+function glass(lit: boolean) {
+  return lit
+    ? { color: COLORS.light, emissive: 1.1 }
+    : { color: COLORS.glassOff, emissive: 0 };
+}
+
+// A window in the front wall, facing the track (-x).
+function Window({ position, lit }: { position: Vec3; lit: boolean }) {
   return (
     <group position={position}>
       <Block size={[0.3, 2.2, 1.9]} radius={0.12} color={COLORS.wood} />
@@ -298,8 +227,7 @@ function Window({ position }: { position: Vec3 }) {
         size={[0.2, 1.8, 1.5]}
         position={[-0.08, 0, 0]}
         radius={0.08}
-        color={COLORS.light}
-        emissive={1.1}
+        {...glass(lit)}
       />
       {/* Mullions */}
       <Block
@@ -375,53 +303,6 @@ function WindowBox({ position }: { position: Vec3 }) {
   );
 }
 
-function Clock({ position }: { position: Vec3 }) {
-  return (
-    <group position={position}>
-      {/* Bracket down from the canopy */}
-      <Cylinder
-        radius={0.06}
-        height={0.5}
-        position={[0, 0.95, 0]}
-        color={COLORS.iron}
-      />
-      <group rotation-z={Math.PI / 2}>
-        <Cylinder radius={0.7} height={0.3} color={COLORS.iron} segments={24} />
-        <Cylinder
-          radius={0.58}
-          height={0.32}
-          color={COLORS.sign}
-          segments={24}
-        />
-      </group>
-      {/* Hands on the track side (-x), each turning about the dial's
-          centre (a turn about x reads clockwise from the track): ten past
-          ten. A short tail past the pivot, and a cap over it. */}
-      {CLOCK_HANDS.map(({ angle, length, width, x }) => (
-        <group key={x} position={[x, 0, 0]} rotation-x={angle}>
-          <Block
-            size={[0.04, length, width]}
-            position={[0, length / 2 - 0.08, 0]}
-            radius={0.02}
-            color={COLORS.ink}
-          />
-        </group>
-      ))}
-      <mesh position={[-0.25, 0, 0]}>
-        <sphereGeometry args={[0.06, 10, 8]} />
-        <meshStandardMaterial color={COLORS.ink} />
-      </mesh>
-    </group>
-  );
-}
-
-const CLOCK_HANDS = [
-  // Hour: just past 10.
-  { angle: -THREE.MathUtils.degToRad(55), length: 0.38, width: 0.08, x: -0.19 },
-  // Minute: on 2.
-  { angle: THREE.MathUtils.degToRad(60), length: 0.52, width: 0.06, x: -0.22 },
-];
-
 function Building() {
   const house = useHouseGeometry();
   const half = BUILDING.depth / 2;
@@ -431,9 +312,15 @@ function Building() {
   const roofRise = (half + EAVE) * Math.tan(BUILDING.pitch);
   const canopyDepth = BUILDING.x - CANOPY.front;
   const canopyTilt = 0.08;
+  // Its windows go dark on a click, and light up again on the next one, or
+  // when the train leaves.
+  const [lit, setLit] = useState(true);
+  const { bind, atStation } = useStationClick(() => setLit((on) => !on));
+  if (!atStation && !lit) setLit(true);
+  const { color: glassColor, emissive: glassGlow } = glass(lit);
 
   return (
-    <group>
+    <group {...bind}>
       {/* Plinth, walls and gables */}
       <Block
         size={[BUILDING.depth + 0.3, 0.6, BUILDING.length + 0.3]}
@@ -501,7 +388,7 @@ function Building() {
       </mesh>
       {[-3.2, 3.2].map((z) => (
         <group key={z}>
-          <Window position={[FRONT - 0.05, base + 2.4, z]} />
+          <Window position={[FRONT - 0.05, base + 2.4, z]} lit={lit} />
           <WindowBox position={[FRONT - 0.45, base + 0.95, z]} />
         </group>
       ))}
@@ -514,9 +401,9 @@ function Building() {
         <mesh position={[0, -0.1, 0]}>
           <cylinderGeometry args={[0.6, 0.6, 0.2, 24]} />
           <meshStandardMaterial
-            color={COLORS.light}
-            emissive={COLORS.light}
-            emissiveIntensity={1.1}
+            color={glassColor}
+            emissive={glassColor}
+            emissiveIntensity={glassGlow}
           />
         </mesh>
       </group>
@@ -577,211 +464,6 @@ function Building() {
     </group>
   );
 }
-
-// ---------------------------------------------------------------- props
-
-function Bench({ position }: { position: Vec3 }) {
-  const length = 3.4;
-  return (
-    <group position={position}>
-      {[-0.25, 0.25].map((x) => (
-        <Block
-          key={x}
-          size={[0.42, 0.14, length]}
-          position={[x, 1, 0]}
-          radius={0.06}
-          color={COLORS.benchWood}
-        />
-      ))}
-      {[1.4, 1.85].map((y) => (
-        <Block
-          key={y}
-          size={[0.13, 0.36, length]}
-          position={[0.55, y, 0]}
-          rotation={[0, 0, 0.12]}
-          radius={0.06}
-          color={COLORS.benchWood}
-        />
-      ))}
-      {[-1.4, 1.4].map((z) => (
-        <group key={z}>
-          <Block
-            size={[1, 0.12, 0.14]}
-            position={[0.05, 0.9, z]}
-            radius={0.05}
-            color={COLORS.iron}
-          />
-          <Block
-            size={[0.12, 0.95, 0.14]}
-            position={[-0.35, 0.45, z]}
-            radius={0.05}
-            color={COLORS.iron}
-          />
-          <Block
-            size={[0.12, 2.05, 0.14]}
-            position={[0.45, 1.0, z]}
-            rotation={[0, 0, 0.12]}
-            radius={0.05}
-            color={COLORS.iron}
-          />
-        </group>
-      ))}
-    </group>
-  );
-}
-
-function Luggage({ position }: { position: Vec3 }) {
-  return (
-    <group position={position}>
-      <Block
-        size={[0.95, 0.75, 1.3]}
-        position={[0, 0.375, 0]}
-        radius={0.15}
-        color={COLORS.trunk}
-      />
-      <Block
-        size={[0.97, 0.77, 0.14]}
-        position={[0, 0.375, -0.35]}
-        radius={0.05}
-        color={COLORS.strap}
-      />
-      <Block
-        size={[0.97, 0.77, 0.14]}
-        position={[0, 0.375, 0.35]}
-        radius={0.05}
-        color={COLORS.strap}
-      />
-      <group position={[0.05, 0.75, 0.05]} rotation-y={0.3}>
-        <Block
-          size={[0.5, 1.05, 1.1]}
-          position={[0, 0.525, 0]}
-          radius={0.14}
-          color={COLORS.suitcase}
-        />
-        <mesh position={[0, 1.12, 0]} rotation-y={Math.PI / 2} castShadow>
-          <torusGeometry args={[0.2, 0.05, 8, 16, Math.PI]} />
-          <meshStandardMaterial color={COLORS.strap} roughness={0.6} />
-        </mesh>
-      </group>
-    </group>
-  );
-}
-
-function TrashCan({ position }: { position: Vec3 }) {
-  return (
-    <group position={position}>
-      <Cylinder
-        radius={0.42}
-        top={0.48}
-        height={1.2}
-        position={[0, 0.6, 0]}
-        color={COLORS.bin}
-      />
-      <mesh position={[0, 1.2, 0]} rotation-x={Math.PI / 2} castShadow>
-        <torusGeometry args={[0.48, 0.07, 8, 20]} />
-        <meshStandardMaterial color={COLORS.iron} roughness={0.6} />
-      </mesh>
-      <mesh position={[0, 1.22, 0]} scale={[1, 0.45, 1]} castShadow>
-        <sphereGeometry args={[0.46, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2]} />
-        <meshStandardMaterial color={COLORS.bin} roughness={0.7} />
-      </mesh>
-    </group>
-  );
-}
-
-function Lamp({ position, pop }: { position: Vec3; pop: SpringValue<number> }) {
-  return (
-    <group position={position}>
-      <Cylinder
-        radius={0.3}
-        top={0.22}
-        height={0.3}
-        position={[0, 0.15, 0]}
-        color={COLORS.iron}
-      />
-      <Cylinder
-        radius={0.09}
-        height={LAMP_HEIGHT}
-        position={[0, LAMP_HEIGHT / 2, 0]}
-        color={COLORS.iron}
-      />
-      <group position={[0, LAMP_HEIGHT + 0.4, 0]}>
-        <Block
-          size={[0.5, 0.65, 0.5]}
-          radius={0.12}
-          color={COLORS.light}
-          emissive={2}
-        />
-        <Cylinder
-          radius={0.5}
-          top={0.12}
-          height={0.35}
-          position={[0, 0.48, 0]}
-          color={COLORS.iron}
-          segments={4}
-          rotation={[0, Math.PI / 4, 0]}
-        />
-        <mesh position={[0, 0.72, 0]}>
-          <sphereGeometry args={[0.1, 10, 8]} />
-          <meshStandardMaterial color={COLORS.iron} />
-        </mesh>
-        <Block
-          size={[0.62, 0.08, 0.62]}
-          position={[0, -0.36, 0]}
-          radius={0.03}
-          color={COLORS.iron}
-        />
-        {/* Lit as the lamp pops in. */}
-        <animated.pointLight
-          color={COLORS.light}
-          intensity={pop.to((v) => Math.max(v, 0) * LAMP_INTENSITY)}
-          distance={LAMP_DISTANCE}
-        />
-      </group>
-    </group>
-  );
-}
-
-function Planter({ position, size = 1 }: { position: Vec3; size?: number }) {
-  return (
-    <group position={position} scale={size}>
-      <Cylinder
-        radius={0.6}
-        top={0.8}
-        height={1}
-        position={[0, 0.5, 0]}
-        color={COLORS.pot}
-        segments={20}
-      />
-      <mesh position={[0, 1.35, 0]} castShadow receiveShadow>
-        <sphereGeometry args={[0.95, 16, 12]} />
-        <meshStandardMaterial color={COLORS.bush} roughness={0.85} />
-      </mesh>
-      <mesh position={[0.35, 1.75, 0.3]} castShadow>
-        <sphereGeometry args={[0.55, 14, 10]} />
-        <meshStandardMaterial color={COLORS.bushLight} roughness={0.85} />
-      </mesh>
-      {/* A ring of small flowers dotted over the top of the bush. */}
-      {PLANTER_FLOWERS.map((angle, i) => (
-        <mesh
-          key={angle}
-          position={[
-            Math.cos(angle) * 0.7,
-            1.95 - (i % 2) * 0.25,
-            Math.sin(angle) * 0.7,
-          ]}
-          castShadow
-        >
-          <sphereGeometry args={[0.13, 10, 8]} />
-          <meshStandardMaterial color={FLOWER_COLORS[i % 3]} roughness={0.6} />
-        </mesh>
-      ))}
-    </group>
-  );
-}
-
-// Angles (radians) of the flowers around a planter's bush, unevenly spaced.
-const PLANTER_FLOWERS = [0.3, 1.4, 2.3, 3.3, 4.2, 5.3];
 
 // ---------------------------------------------------------------- station
 
