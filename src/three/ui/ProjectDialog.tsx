@@ -8,11 +8,13 @@ type Props = {
   onClose: () => void;
 };
 
-// A project's detail over the scene, dressed as a panel of the departures
-// board: dark frame, amber split-flap heading. The shared ProjectDetail
-// inside follows through the .theme-board tokens. A native modal <dialog>:
-// focus trap, Escape to close and focus returned to the board row come for
-// free.
+// A project's detail over the scene, dressed as the ticket handed out once
+// a destination is picked on the board: the board's split-flap strip on
+// top, then printed card stock below a perforation, with a notch cut at
+// each end. The shared ProjectDetail inside follows through the
+// .theme-ticket tokens. Only the card scrolls, so the notches stay put. A
+// native modal <dialog>: focus trap, Escape to close and focus returned to
+// the board row come for free.
 export default function ProjectDialog({ project, line, onClose }: Props) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   useEffect(() => dialogRef.current?.showModal(), []);
@@ -26,11 +28,12 @@ export default function ProjectDialog({ project, line, onClose }: Props) {
       onClick={(e) => {
         if (e.target === e.currentTarget) e.currentTarget.close();
       }}
-      className="theme-board pointer-events-auto m-auto max-h-[90dvh] w-[min(48rem,calc(100%-2rem))] rounded-xl border-4 border-board bg-background p-0 text-foreground shadow-2xl transition duration-300 backdrop:bg-black/70 starting:scale-95 starting:opacity-0"
+      // The masks would clip a box shadow: a drop shadow follows the notches.
+      className="theme-ticket pointer-events-auto m-auto max-h-[90dvh] w-[min(48rem,calc(100%-2rem))] flex-col overflow-visible border-0 bg-transparent p-0 text-foreground drop-shadow-2xl transition duration-300 backdrop:bg-black/70 open:flex starting:scale-95 starting:opacity-0"
     >
       {/* Split-flap header, as on the board: a dark hinge line runs through
           the time/line and the destination. */}
-      <header className="sticky top-0 z-10 bg-board-flap px-6 pt-5 pb-4 text-board-ink sm:px-10">
+      <header className="notch-bottom shrink-0 rounded-t-xl bg-board-flap px-6 pt-5 pb-4 text-board-ink sm:px-10">
         <div className="flex items-start justify-between gap-4">
           <p className="font-mono text-xs tracking-wider uppercase opacity-80">
             {line}
@@ -55,7 +58,8 @@ export default function ProjectDialog({ project, line, onClose }: Props) {
         </h2>
       </header>
 
-      <div className="px-6 pt-6 pb-8 sm:px-10 sm:pb-10">
+      {/* Card stock, past the perforation. */}
+      <div className="notch-top min-h-0 overflow-y-auto rounded-b-xl border-t-2 border-dashed border-ticket-ink/30 bg-background px-6 pt-6 pb-8 sm:px-10 sm:pb-10">
         <p className="text-lg text-muted">{project.summary}</p>
         {project.detail}
       </div>

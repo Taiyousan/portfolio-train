@@ -47,8 +47,8 @@
 }
 
 /* Re-themes a subtree in the departures board's palette (train prototype
-   panels): shared components styled with the tokens above, such as
-   ProjectDetail, follow along without knowing about it. */
+   panels): components styled with the tokens above follow along without
+   knowing about it. */
 .theme-board {
   --background: #1d1a14;
   --foreground: #eee4cf;
@@ -57,6 +57,47 @@
   --accent: var(--board-ink);
   --on-accent: var(--board);
   color-scheme: dark;
+}
+
+/* Re-themes a subtree as a printed train ticket (train prototype project
+   dialog): the shared ProjectDetail follows along, in ink on card stock
+   with the stamp as accent. Cream whatever the colour scheme, like the
+   ticket buttons. */
+.theme-ticket {
+  --background: var(--ticket);
+  --foreground: var(--ticket-ink);
+  --muted: #6a5a45;
+  --line: #d6c69f;
+  --accent: var(--ticket-stamp);
+  --on-accent: var(--ticket);
+  color-scheme: light;
+}
+
+/* Half notches cut at the two ends of a horizontal seam: at the bottom
+   corners of the part above (.notch-bottom), at the top corners of the part
+   below (.notch-top). Put together, they make two round notches on either
+   side of the perforation. */
+.notch-bottom,
+.notch-top {
+  --notch: 0.75rem;
+  --notch-y: 100%;
+  mask:
+    radial-gradient(
+        circle at 0 var(--notch-y),
+        #0000 var(--notch),
+        #000 calc(var(--notch) + 0.5px)
+      )
+      left / 51% 100% no-repeat,
+    radial-gradient(
+        circle at 100% var(--notch-y),
+        #0000 var(--notch),
+        #000 calc(var(--notch) + 0.5px)
+      )
+      right / 51% 100% no-repeat;
+}
+
+.notch-top {
+  --notch-y: 0;
 }
 
 /* Train ticket shape (three/ui/Ticket): rounded corners, and two notches
