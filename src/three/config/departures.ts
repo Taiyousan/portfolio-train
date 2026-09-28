@@ -1,5 +1,3 @@
-import type { Project } from "@/lib/projects";
-
 // Projects are listed as departures, in content order, FIRST_DEPARTURE and
 // then every DEPARTURE_INTERVAL minutes. Shared by the 3D station board and
 // its HTML twin so both always show the same timetable.
@@ -14,8 +12,4 @@ export function departureTime(index: number) {
   const hh = String(Math.floor(minutes / 60) % 24).padStart(2, "0");
   const mm = String(minutes % 60).padStart(2, "0");
   return `${hh}:${mm}`;
-}
-
-export function trainLine(type: Project["type"]) {
-  return type === "pro" ? "Grandes lignes" : "Régional";
 }

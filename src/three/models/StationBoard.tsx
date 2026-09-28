@@ -4,11 +4,7 @@ import { useFrame, type ThreeElements } from "@react-three/fiber";
 import type * as THREE from "three";
 import { useTrainContext } from "../state/TrainContext";
 import useFlapText from "../hooks/useFlapText";
-import {
-  departureTime,
-  ROW_FLAP_DELAY_MS,
-  trainLine,
-} from "../config/departures";
+import { departureTime, ROW_FLAP_DELAY_MS } from "../config/departures";
 import type { StationProject } from "../ui/types";
 
 // Troika (drei <Text>) reads woff/ttf/otf, not woff2. Same face as the HTML
@@ -62,7 +58,7 @@ const LAYER = { frame: 0.01, flap: 0.012, text: 0.008, hinge: 0.014 };
 const MAIN_Y = 0.025;
 // Once the board is open, titles start settling as the camera arrives.
 const FLAP_START_MS = 350;
-// Then each row's technos and train line light up, once its title has
+// Then each row's technos light up, once its title has
 // roughly settled, with a short neon-tube flicker: [ms from start, opacity]
 // steps, the last one held. Off at once when the board closes.
 const LIGHT_DELAY_MS = 450;
@@ -114,7 +110,7 @@ function Row({ project, index, y, active, onSelect }: RowProps) {
   // pointer cursor is reset on mode change by Train.
   const lit = hovered && active;
 
-  // Technos and train line, lit only while the board is open.
+  // Technos, lit only while the board is open.
   const lightRefs = useRef<(FadeText | null)[]>([]);
   const lightStart = useRef<number | null>(null);
   const [reducedMotion] = useState(
@@ -207,21 +203,7 @@ function Row({ project, index, y, active, onSelect }: RowProps) {
       </Text>
       <Text
         font={FONT}
-        position={[RIGHT, 0.055, LAYER.text]}
-        fontSize={SMALL_SIZE}
-        anchorX="right"
-        anchorY="middle"
-        color={COLORS.inkDim}
-        ref={(text: FadeText | null) => {
-          lightRefs.current[1] = text;
-        }}
-        visible={false}
-      >
-        {trainLine(project.type).toUpperCase()}
-      </Text>
-      <Text
-        font={FONT}
-        position={[RIGHT, -0.035, LAYER.text]}
+        position={[RIGHT, MAIN_Y, LAYER.text]}
         fontSize={SMALL_SIZE}
         anchorX="right"
         anchorY="middle"

@@ -13,7 +13,6 @@ export default function ProtoTrainPage() {
     slug: project.slug,
     title: project.title,
     summary: project.summary,
-    type: project.type,
     technos: project.technos,
     detail: <ProjectDetail project={project} />,
   }));

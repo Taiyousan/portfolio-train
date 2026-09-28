@@ -6,5 +6,5 @@ import type { Project } from "@/lib/projects";
 // the content readers use node:fs and can't run in this client tree.
 export type StationProject = Pick<
   Project,
-  "slug" | "title" | "summary" | "type" | "technos"
+  "slug" | "title" | "summary" | "technos"
 > & { detail: ReactNode };

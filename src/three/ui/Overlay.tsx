@@ -6,7 +6,7 @@ import {
   type Stop,
   type TrainMode,
 } from "../state/TrainContext";
-import { departureTime, trainLine } from "../config/departures";
+import { departureTime } from "../config/departures";
 import AboutPanel from "./AboutPanel";
 import DeparturesBoard from "./DeparturesBoard";
 import ProjectDialog from "./ProjectDialog";
@@ -201,7 +201,7 @@ export default function Overlay({ projects }: { projects: StationProject[] }) {
         <ProjectDialog
           key={selected.slug}
           project={selected}
-          line={`${departureTime(selectedIndex)} · ${trainLine(selected.type)} · Voie ${selectedIndex + 1}`}
+          line={`${departureTime(selectedIndex)} · Voie ${selectedIndex + 1}`}
           onClose={() => setSelectedSlug(null)}
         />
       )}

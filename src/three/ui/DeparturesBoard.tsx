@@ -1,9 +1,5 @@
 import { useEffect, useRef } from "react";
-import {
-  departureTime,
-  ROW_FLAP_DELAY_MS,
-  trainLine,
-} from "../config/departures";
+import { departureTime, ROW_FLAP_DELAY_MS } from "../config/departures";
 import FlapText from "./FlapText";
 import type { StationProject } from "./types";
 
@@ -74,9 +70,8 @@ export default function DeparturesBoard({
                   Dessert : {project.technos.join(" · ")}
                 </span>
               </span>
-              <span className="col-start-2 font-mono text-xs text-board-ink/70 uppercase sm:col-start-auto sm:text-right">
-                {trainLine(project.type)}
-                <span className="hidden sm:block">Voie {i + 1}</span>
+              <span className="hidden font-mono text-xs text-board-ink/70 uppercase sm:block">
+                Voie {i + 1}
               </span>
             </button>
           </li>
