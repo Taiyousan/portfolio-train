@@ -194,6 +194,10 @@ export default function TrainScene({
         position={SUN_POSITION}
         castShadow
         shadow-mapSize={[2048, 2048]}
+        // Low sun, flat-shaded faces: without these, faces facing it shadow
+        // themselves in stripes (shadow acne).
+        shadow-bias={-0.0005}
+        shadow-normalBias={0.03}
         shadow-camera-left={-50}
         shadow-camera-right={50}
         shadow-camera-top={50}
