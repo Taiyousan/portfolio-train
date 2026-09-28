@@ -34,15 +34,15 @@ export const STATION_CAMERA: CameraShot = {
 export const STOP_SETTLE_MS = 300;
 
 export const STATION_VIEW_CAMERA: CameraShot = {
-  position: [-2.73, 1.73, -2.981],
-  target: [2.071, 0.307, -0.47],
+  position: [0.481, 0.676, -1.699],
+  target: [2.154, 0.153, -0.719],
 };
 
 // Square to the board, near enough for its rows to read, with the driver
 // sitting beside it. Update with STATION_BOARD / STATION_DRIVER.
 export const BOARD_CAMERA: CameraShot = {
-  position: [0.996, 0.268, 1.23],
-  target: [3.298, 0.216, 1.23],
+  position: [1.675, 0.151, 1.086],
+  target: [3.106, 0.119, 1.086],
 };
 
 // Home shots, same sequence as the station's 1 and 2: HOME_CAMERA wide while
@@ -116,11 +116,11 @@ export const STATION_PLACEMENT = {
 export const STATION_BOARD = {
   x: -0.41,
   z: 0.85,
-  lift: 0.4,
+  lift: 0.45,
   yaw: 0,
   tilt: 0,
   roll: 0,
-  scale: 0.45,
+  scale: 0.28,
 };
 
 // Driver on the platform while the train waits (models/Station), in the
@@ -131,7 +131,7 @@ export const STATION_BOARD = {
 // Train's Resize applies its own).
 export const STATION_DRIVER = {
   standing: { x: -0.45, z: -0.9 },
-  sitting: { z: 1.65 },
+  sitting: { z: 1.4 },
   scale: 0.55,
 };
 
