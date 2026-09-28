@@ -2,7 +2,7 @@
 
 Document de travail. Rien n'est tranché : c'est une trace des idées, à reprendre et à rayer au fil des décisions.
 
-Dernière mise à jour : 25/09/2026.
+Dernière mise à jour : 28/09/2026.
 
 ## Le concept
 
@@ -141,6 +141,13 @@ Le train est fixe et le monde défile (`useScrollingLoop`), ce qui facilite l'ar
    - En gare, le conducteur quitte la cabine : debout sur le quai à gauche du tableau, puis assis au bord du quai à sa droite une fois le tableau zoomé, pour être dans le même plan (poses de `Driver`, réglages `STATION_DRIVER`).
    - Doublure HTML du tableau (`src/three/ui/DeparturesBoard.tsx`), avec les mêmes lignes : c'est l'interface sur téléphone (panneau en bas). Sur ordinateur, elle reste invisible mais lue par les lecteurs d'écran, et apparaît dès qu'elle a le focus (arrivée en gare au clavier, Tab).
    - Détail d'un projet : `<dialog>` natif avec le même contenu que `/projets/<slug>` (composant partagé `src/components/ProjectDetail.tsx`, rendu côté serveur), habillé en billet remis après le choix sur le tableau : bande à volets en tête, puis carton crème sous une perforation encochée (classe `.theme-ticket` de `globals.css`, qui redéfinit les jetons de couleur pour tout le sous-arbre ; encoches `.notch-top` / `.notch-bottom`). Le panneau « À propos » garde l'habillage du tableau (`.theme-board`).
-   - À faire : remplacer le quai provisoire ; faire descendre le conducteur de la cabine plutôt que de le faire disparaître et réapparaître ; cadrer le tableau 3D en portrait (étape 7) ; relier projet ouvert et mode aux URL (étape 4) ; éventuellement, de vraies palettes 3D qui basculent.
+   - Gare (`src/three/models/StationDecor.tsx`) : construite en primitives arrondies (`RoundedBox`, extrusions biseautées), style 3D cartoon, palette chaude de la maison. Bâtiment à toit rouge et cheminée, fenêtres éclairées et jardinières, auvent avec panneau « GARE » et horloge, escalier à rambardes, banc, bagages, poubelle, pots fleuris, deux lampadaires allumés. Le tableau des départs reprend la même DA (cadre en bois arrondi, petit toit, poteaux ronds). À l'arrêt, le bâtiment et chaque élément apparaissent l'un après l'autre avec un rebond, le tableau en dernier ; au départ, dans l'ordre inverse, puis le quai s'enfonce. Réglages dans le groupe Leva « Gare ». La forêt reste à distance de toute sa largeur (ramures, buissons).
+   - À faire : faire descendre le conducteur de la cabine plutôt que de le faire disparaître et réapparaître ; cadrer le tableau 3D en portrait (étape 7) ; relier projet ouvert et mode aux URL (étape 4) ; éventuellement, de vraies palettes 3D qui basculent.
 6. **Navigation** : billets de train HTML (fait, voir plus haut).
 7. **Finitions** : téléphone, son, fumée, petits secrets.
+8. **Crédits** : afficher sur le site les crédits des modèles 3D sous licence CC-BY, listés au fil de l'eau dans `assets-src/CREDITS.md` (hors git).
+
+## Modèles 3D
+
+- Les fichiers bruts (modèles complets téléchargés), les scripts qui en extraient ce qui sert et la liste des crédits sont dans `assets-src/`, ignoré par git : tout ce qui est dans `public/` est publié avec le site, donc seuls les `.glb` allégés y vont.
+- Essayé puis abandonné pour la gare : deux modèles Sketchfab (le second extrait, recoloré et biseauté via Blender). Une gare construite en primitives arrondies (`StationDecor`) rend mieux et reste dans la DA de la maison.

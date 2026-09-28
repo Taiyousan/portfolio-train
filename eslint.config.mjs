@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Raw 3D sources and their tooling (not versioned).
+    "assets-src/**",
   ]),
 ]);
 

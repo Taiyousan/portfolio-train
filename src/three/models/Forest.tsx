@@ -46,6 +46,16 @@ type Transform = { x: number; z: number; scale: number; rotationY: number };
 // Foliage cones: radius, height, and base height above the ground.
 const FOLIAGE_LOW = { radius: 0.9, height: 1.8, base: 1.4 };
 const FOLIAGE_HIGH = { radius: 0.6, height: 1.4, base: 3.0 };
+// Random prop scale range, and how far each kind reaches out from its centre
+// at the largest (low foliage, bush and rock radii), so the stops' side is
+// kept clear of their whole width, not just their centre.
+const MIN_SCALE = 0.6;
+const MAX_SCALE = 1.5;
+const REACH = {
+  trees: FOLIAGE_LOW.radius * MAX_SCALE,
+  bushes: 0.5 * MAX_SCALE,
+  rocks: 0.35 * MAX_SCALE,
+};
 // Snow caps (winter) cover this much of each cone from its tip, a little
 // wider so they sit on it, their tip just above the cone's.
 const SNOW_CAP_COVER = 0.6;
@@ -138,9 +148,12 @@ function sideSegments(
   minX: number,
   maxX: number,
   clearing: number,
+  reach: number,
 ): [number, number][] {
-  // Keep the stops' side of the track free of props.
-  if (side === STOP_SIDE) return [[Math.max(minX, STOP_CLEAR_X), maxX]];
+  // Keep the stops' side of the track free of props, their full width.
+  if (side === STOP_SIDE) {
+    return [[Math.max(minX, STOP_CLEAR_X + reach), maxX]];
+  }
   if (side !== CAMERA_SIDE) return [[minX, maxX]];
 
   const bandStart = Math.max(minX, CAMERA_DISTANCE - clearing);
@@ -155,16 +168,17 @@ function randomTransforms(
   count: number,
   [minX, maxX]: [number, number],
   clearing: number,
+  reach: number,
 ): Transform[] {
   const items: Transform[] = [];
   for (let side = -1; side <= 1; side += 2) {
-    const segments = sideSegments(side, minX, maxX, clearing);
+    const segments = sideSegments(side, minX, maxX, clearing, reach);
     if (segments.length === 0) continue;
     for (let i = 0; i < count; i++) {
       items.push({
         x: side * pickInSegments(segments),
         z: (Math.random() - 0.5) * TILE_SPACING,
-        scale: 0.6 + Math.random() * 0.9,
+        scale: MIN_SCALE + Math.random() * (MAX_SCALE - MIN_SCALE),
         rotationY: Math.random() * Math.PI * 2,
       });
     }
@@ -366,17 +380,32 @@ function ForestTile({
 }) {
   const trees = useMemo(
     () =>
-      randomTransforms(density.trees, [MIN_X.trees, spread.trees], clearing),
+      randomTransforms(
+        density.trees,
+        [MIN_X.trees, spread.trees],
+        clearing,
+        REACH.trees,
+      ),
     [density.trees, spread.trees, clearing],
   );
   const bushes = useMemo(
     () =>
-      randomTransforms(density.bushes, [MIN_X.bushes, spread.bushes], clearing),
+      randomTransforms(
+        density.bushes,
+        [MIN_X.bushes, spread.bushes],
+        clearing,
+        REACH.bushes,
+      ),
     [density.bushes, spread.bushes, clearing],
   );
   const rocks = useMemo(
     () =>
-      randomTransforms(density.rocks, [MIN_X.rocks, spread.rocks], clearing),
+      randomTransforms(
+        density.rocks,
+        [MIN_X.rocks, spread.rocks],
+        clearing,
+        REACH.rocks,
+      ),
     [density.rocks, spread.rocks, clearing],
   );
 

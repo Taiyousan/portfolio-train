@@ -37,7 +37,7 @@ Ranger par nature de chose, pas par page :
 
 - **Nouvelle page** : `src/app/<url>/page.tsx`. Texte long → MDX dans `content/`, pas en dur.
 - **Nouveau type de contenu** (blog, expériences) : dossier dans `content/` + schéma zod et lecteur dans `src/lib/` sur le modèle de `projects.ts` + pages.
-- **Modèles 3D** : `public/models/`.
+- **Modèles 3D** : `public/models/` (seulement les `.glb` allégés, tout y est publié). Les sources brutes, les scripts d'extraction et la liste des crédits à afficher (`CREDITS.md`) vont dans `assets-src/`, hors git.
 
 ### Structure 3D
 

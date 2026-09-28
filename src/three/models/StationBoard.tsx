@@ -1,20 +1,22 @@
-import { useEffect, useRef, useState } from "react";
-import { Text } from "@react-three/drei";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { RoundedBox, Text } from "@react-three/drei";
 import { useFrame, type ThreeElements } from "@react-three/fiber";
-import type * as THREE from "three";
+import * as THREE from "three";
 import { useTrainContext } from "../state/TrainContext";
 import useFlapText from "../hooks/useFlapText";
 import { departureTime, ROW_FLAP_DELAY_MS } from "../config/departures";
 import type { StationProject } from "../ui/types";
+import { STATION_COLORS } from "./StationDecor";
+import SnowCover from "./SnowCover";
 
 // Troika (drei <Text>) reads woff/ttf/otf, not woff2. Same face as the HTML
 // board's font-mono.
 const FONT = "/fonts/geist-mono-600.woff";
 
-// Same palette as the --board* tokens in globals.css, so the 3D board and
-// its HTML twin look alike.
+// The face: same palette as the --board* tokens in globals.css, so the 3D
+// board and its HTML twin look alike. The woodwork around it takes the
+// station's (STATION_COLORS).
 const COLORS = {
-  frame: "#0b0a08",
   board: "#16140f",
   flap: "#26231c",
   flapHover: "#3a3526",
@@ -41,8 +43,14 @@ const PADDING = 0.1;
 const HEADER_HEIGHT = 0.3;
 const ROW_HEIGHT = 0.2;
 const ROW_GAP = 0.025;
-const FRAME = 0.05;
-const DEPTH = 0.08;
+// The board's woodwork, dressed like the station (StationDecor): a rounded
+// wooden frame, round posts, and a little pitched roof.
+const FRAME = 0.09;
+const DEPTH = 0.12;
+const RIM_DEPTH = 0.04;
+const RIM_BEVEL = 0.02;
+const POST_RADIUS = 0.045;
+const ROOF = { pitch: 0.45, half: 0.26, thickness: 0.05, overhang: 0.12 };
 const TIME_WIDTH = 0.34;
 const LINE_WIDTH = 0.52;
 const TITLE_SIZE = 0.075;
@@ -82,6 +90,49 @@ const TITLE_MAX_WIDTH = RIGHT - LINE_WIDTH - TITLE_X - INSET;
 
 export function stationBoardHeight(rows: number) {
   return 2 * PADDING + HEADER_HEIGHT + rows * ROW_HEIGHT + (rows - 1) * ROW_GAP;
+}
+
+// A rounded rectangle centred on the origin, traced into `path`.
+function roundedRect<T extends THREE.Path>(
+  path: T,
+  width: number,
+  height: number,
+  radius: number,
+) {
+  const x = -width / 2;
+  const y = -height / 2;
+  path.moveTo(x + radius, y);
+  path.lineTo(x + width - radius, y);
+  path.quadraticCurveTo(x + width, y, x + width, y + radius);
+  path.lineTo(x + width, y + height - radius);
+  path.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+  path.lineTo(x + radius, y + height);
+  path.quadraticCurveTo(x, y + height, x, y + height - radius);
+  path.lineTo(x, y + radius);
+  path.quadraticCurveTo(x, y, x + radius, y);
+  return path;
+}
+
+// The frame's rim: a rounded ring around the board face, extruded toward the
+// viewer with a soft bevel.
+function useRimGeometry(height: number) {
+  return useMemo(() => {
+    const shape = roundedRect(
+      new THREE.Shape(),
+      WIDTH + 2 * FRAME,
+      height + 2 * FRAME,
+      FRAME,
+    );
+    shape.holes.push(roundedRect(new THREE.Path(), WIDTH, height, 0.02));
+    return new THREE.ExtrudeGeometry(shape, {
+      depth: RIM_DEPTH,
+      bevelEnabled: true,
+      bevelThickness: RIM_BEVEL,
+      bevelSize: RIM_BEVEL,
+      bevelSegments: 3,
+      curveSegments: 6,
+    });
+  }, [height]);
 }
 
 // The troika mesh behind drei's <Text>; its fillOpacity applies on the next
@@ -293,6 +344,9 @@ export default function StationBoard({ projects, legHeight, ...props }: Props) {
   const height = stationBoardHeight(projects.length);
   const top = height / 2;
   const headerY = top - PADDING - HEADER_HEIGHT / 2;
+  const rim = useRimGeometry(height);
+  const roofWidth = WIDTH + 2 * FRAME + 2 * ROOF.overhang;
+  const ridgeY = top + FRAME + ROOF.half * Math.sin(ROOF.pitch) + 0.02;
 
   const [hovered, setHovered] = useState(false);
   const [reducedMotion] = useState(
@@ -349,41 +403,110 @@ export default function StationBoard({ projects, legHeight, ...props }: Props) {
         if (inviting) document.body.style.cursor = "";
       }}
     >
-      {/* Frame, then the board face just in front of it. */}
-      <mesh
+      {/* Wooden back, the board face just in front of it, and the rounded
+          rim around the face, which glows to invite a click. */}
+      <RoundedBox
+        args={[WIDTH + 2 * FRAME, height + 2 * FRAME, DEPTH]}
+        radius={0.04}
+        smoothness={3}
         position={[0, 0, -DEPTH / 2 - LAYER.frame]}
         castShadow
         receiveShadow
       >
-        <boxGeometry args={[WIDTH + 2 * FRAME, height + 2 * FRAME, DEPTH]} />
+        <meshStandardMaterial color={STATION_COLORS.darkWood} roughness={0.8} />
+      </RoundedBox>
+      <mesh>
+        <planeGeometry args={[WIDTH, height]} />
+        <meshStandardMaterial color={COLORS.board} roughness={0.8} />
+      </mesh>
+      <mesh geometry={rim} castShadow receiveShadow>
         <meshStandardMaterial
           ref={frameMaterialRef}
-          color={COLORS.frame}
+          color={STATION_COLORS.wood}
           emissive={COLORS.glow}
           emissiveIntensity={0}
           roughness={0.7}
         />
       </mesh>
-      <mesh>
-        <planeGeometry args={[WIDTH, height]} />
-        <meshStandardMaterial color={COLORS.board} roughness={0.8} />
-      </mesh>
 
-      {/* Legs */}
+      {/* Little pitched roof over the board, like the station's. */}
       {[-1, 1].map((side) => (
-        <mesh
+        <group
           key={side}
           position={[
-            side * (WIDTH / 2 - 0.3),
-            -top - legHeight / 2,
-            -DEPTH / 2,
+            0,
+            ridgeY - (ROOF.half / 2) * Math.sin(ROOF.pitch),
+            -DEPTH / 2 + side * (ROOF.half / 2) * Math.cos(ROOF.pitch),
           ]}
-          castShadow
+          rotation-x={side * ROOF.pitch}
         >
-          <boxGeometry args={[0.07, legHeight, 0.07]} />
-          <meshStandardMaterial color={COLORS.frame} roughness={0.7} />
-        </mesh>
+          <RoundedBox
+            args={[roofWidth, ROOF.thickness, ROOF.half + 0.04]}
+            radius={0.02}
+            smoothness={3}
+            castShadow
+            receiveShadow
+          >
+            <meshStandardMaterial
+              color={STATION_COLORS.roof}
+              roughness={0.75}
+            />
+          </RoundedBox>
+          <SnowCover
+            top={[0, ROOF.thickness / 2, 0]}
+            size={[roofWidth, ROOF.thickness * 0.8, ROOF.half + 0.04]}
+          />
+        </group>
       ))}
+      <mesh
+        position={[0, ridgeY + 0.01, -DEPTH / 2]}
+        rotation-z={Math.PI / 2}
+        castShadow
+      >
+        <cylinderGeometry args={[0.03, 0.03, roofWidth + 0.02, 12]} />
+        <meshStandardMaterial color={STATION_COLORS.darkWood} roughness={0.7} />
+      </mesh>
+      {/* Fills the gap between the frame's top and the roof. */}
+      <RoundedBox
+        args={[WIDTH + 2 * FRAME, ridgeY - top - FRAME, DEPTH]}
+        radius={0.02}
+        smoothness={3}
+        position={[
+          0,
+          (ridgeY + top + FRAME) / 2 - 0.01,
+          -DEPTH / 2 - LAYER.frame,
+        ]}
+        castShadow
+      >
+        <meshStandardMaterial color={STATION_COLORS.darkWood} roughness={0.8} />
+      </RoundedBox>
+
+      {/* Round wooden posts, on flared feet */}
+      {[-1, 1].map((side) => {
+        const x = side * (WIDTH / 2 - 0.3);
+        return (
+          <group key={side} position={[x, -top, -DEPTH / 2]}>
+            <mesh position={[0, -legHeight / 2, 0]} castShadow>
+              <cylinderGeometry
+                args={[POST_RADIUS, POST_RADIUS, legHeight, 12]}
+              />
+              <meshStandardMaterial
+                color={STATION_COLORS.darkWood}
+                roughness={0.7}
+              />
+            </mesh>
+            <mesh position={[0, -legHeight + 0.03, 0]} castShadow>
+              <cylinderGeometry
+                args={[POST_RADIUS * 1.4, POST_RADIUS * 2, 0.06, 12]}
+              />
+              <meshStandardMaterial
+                color={STATION_COLORS.darkWood}
+                roughness={0.7}
+              />
+            </mesh>
+          </group>
+        );
+      })}
 
       <Text
         font={FONT}

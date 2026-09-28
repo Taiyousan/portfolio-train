@@ -227,7 +227,12 @@ const Home = forwardRef<THREE.Group>(function Home(_, ref) {
 
   useFrame(() => {
     const z = groupRef.current?.position.z ?? Infinity;
-    const show = atHome || (here && mode === "arriving" && z < POP_DISTANCE);
+    // z > 0: on the first "arriving" frame this can run before
+    // useStopApproach moves the stop out to STOP_DISTANCE, while it's
+    // still where it was left (0 at first, STOP_EXIT_Z after a
+    // departure): that frame must not count as close.
+    const approaching = z > 0 && z < POP_DISTANCE;
+    const show = atHome || (here && mode === "arriving" && approaching);
     if (show !== shownRef.current) {
       shownRef.current = show;
       api.start({ scale: show ? 1 : 0 });

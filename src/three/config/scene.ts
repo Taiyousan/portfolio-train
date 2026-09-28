@@ -22,8 +22,8 @@ export const RIDE_CAMERA: CameraShot = {
 // Station shots, in order (see TrainScene):
 // 1. STATION_CAMERA, wide, while the train pulls in and just after it stops:
 //    the locomotive, the platform and its departures board.
-// 2. STATION_VIEW_CAMERA, STOP_SETTLE_MS after the stop: facing the
-//    platform, where the board can be clicked.
+// 2. STATION_VIEW_CAMERA, STOP_SETTLE_MS after the stop: three-quarter
+//    view over the train onto the station, where the board can be clicked.
 // 3. BOARD_CAMERA once the board is clicked, back to 2 on "× Fermer".
 // All tuned live via the Leva "Camera (lecture seule)" monitor.
 export const STATION_CAMERA: CameraShot = {
@@ -34,8 +34,8 @@ export const STATION_CAMERA: CameraShot = {
 export const STOP_SETTLE_MS = 300;
 
 export const STATION_VIEW_CAMERA: CameraShot = {
-  position: [0.247, 0.491, 0.067],
-  target: [1.938, 0.415, 0.061],
+  position: [-2.73, 1.73, -2.981],
+  target: [2.071, 0.307, -0.47],
 };
 
 // Square to the board, near enough for its rows to read, with the driver
@@ -86,24 +86,37 @@ export const STOP_DISTANCE = 14;
 export const ARRIVE_DURATION = 1.6;
 export const STOP_EXIT_Z = -40;
 
-// Both stops are on the side of the track opposite the camera. Forest keeps
-// every prop off that side out to STOP_CLEAR_X so nothing grows in or
-// around them, whatever the scroll position.
+// Both stops are on the side of the track opposite the camera, and reach out
+// to STOP_CLEAR_X from it (the station's roof, at its back, is the
+// furthest). Forest keeps every prop off that side out to there, their
+// whole width (foliage, bush) included, so nothing grows into a stop,
+// whatever the scroll position.
 export const STOP_SIDE = -Math.sign(CAMERA_POSITION[0]);
-export const STOP_CLEAR_X = 5.5;
+export const STOP_CLEAR_X = 5.6;
 
-// Departures board (models/StationBoard), standing on the platform under
-// the canopy, a real board's size, parallel to the platform. In the
-// station's ground frame (origin at the platform centre, at track level):
-// x across the track (+ away from it), z along it, lift = gap between the
-// ground and the board's bottom edge (the platform is 0.35 high). Rotations
+// Station (models/StationDecor) in its ground frame (origin at the platform
+// centre, at track level; x across the track, + away from it; z along it):
+// scale in world units per station unit, edgeX = x of the platform's
+// track-side edge, z = shift along the track. Tunable in the Leva "Gare"
+// group.
+export const STATION_PLACEMENT = {
+  scale: 0.17,
+  edgeX: -0.7,
+  z: 0,
+};
+
+// Departures board (models/StationBoard), standing on the platform in front
+// of the canopy, a real board's size, parallel to the platform. In the
+// station's ground frame (same as STATION_PLACEMENT): x across the track
+// (+ away from it), z along it, lift = gap between the ground and the
+// board's bottom edge (the platform is about 0.27 high). Rotations
 // in radians, about the board's feet: yaw = turn from facing the track
 // squarely, then tilt (+ tips the top forward) and roll in the board's own
 // frame. Tunable in the Leva "Tableau" group (degrees there).
 export const STATION_BOARD = {
   x: -0.41,
   z: 0.85,
-  lift: 0.47,
+  lift: 0.4,
   yaw: 0,
   tilt: 0,
   roll: 0,
