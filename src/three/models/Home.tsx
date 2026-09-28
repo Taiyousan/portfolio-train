@@ -49,6 +49,9 @@ const toRad = THREE.MathUtils.degToRad;
 // Matches Train's delay, so the driver leaves the cab before appearing here.
 const DRIVER_SWAP_DELAY_MS = 250;
 const DRIVER_SPRING = { mass: 1, tension: 260, friction: 12, precision: 0.001 };
+const POP_SPRING = { mass: 1, tension: 220, friction: 9, precision: 0.001 };
+// On departure, the halt itself sinks away this long after the house.
+const BASE_DEPOP_DELAY_MS = 250;
 
 const COLORS = {
   halt: "#7b5b3e",
@@ -203,8 +206,14 @@ const Home = forwardRef<THREE.Group>(function Home(_, ref) {
   // train stops, and shrink away as soon as it departs (see Station).
   const [{ scale }, api] = useSpring(() => ({
     scale: 0,
-    config: { mass: 1, tension: 220, friction: 9, precision: 0.001 },
+    config: POP_SPRING,
   }));
+  // The halt and terrace sink away just after them (see Station).
+  const [{ base }, baseApi] = useSpring(() => ({
+    base: 1,
+    config: { ...POP_SPRING, clamp: true },
+  }));
+  const sunkRef = useRef(false);
   // The driver, stepped off the cab (see Train), pops in at the desk once
   // the cab one has gone.
   const { driverScale } = useSpring({
@@ -222,6 +231,15 @@ const Home = forwardRef<THREE.Group>(function Home(_, ref) {
     if (show !== shownRef.current) {
       shownRef.current = show;
       api.start({ scale: show ? 1 : 0 });
+      if (!show) {
+        sunkRef.current = true;
+        baseApi.start({ base: 0, delay: BASE_DEPOP_DELAY_MS });
+      }
+    }
+    if (sunkRef.current && here && mode === "arriving") {
+      sunkRef.current = false;
+      baseApi.stop();
+      baseApi.set({ base: 1 });
     }
   });
 
@@ -230,7 +248,7 @@ const Home = forwardRef<THREE.Group>(function Home(_, ref) {
 
   return (
     <group ref={groupRef} visible={false}>
-      <group position={[HALT_X * STOP_SIDE, -0.57, 0]}>
+      <animated.group position={[HALT_X * STOP_SIDE, -0.57, 0]} scale={base}>
         {/* Halt: a short wooden platform by the track */}
         <mesh position={[0, DECK_HEIGHT / 2, 0]} castShadow receiveShadow>
           <boxGeometry args={[HALT_WIDTH, DECK_HEIGHT, HALT_LENGTH]} />
@@ -390,7 +408,7 @@ const Home = forwardRef<THREE.Group>(function Home(_, ref) {
             />
           </mesh>
         </animated.group>
-      </group>
+      </animated.group>
     </group>
   );
 });

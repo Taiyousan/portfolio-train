@@ -32,6 +32,9 @@ const toRad = THREE.MathUtils.degToRad;
 // Matches Train's delay, so the driver leaves the cab before appearing here.
 const DRIVER_SWAP_DELAY_MS = 250;
 const DRIVER_SPRING = { mass: 1, tension: 260, friction: 12, precision: 0.001 };
+const POP_SPRING = { mass: 1, tension: 220, friction: 9, precision: 0.001 };
+// On departure, the station itself sinks away this long after its fittings.
+const BASE_DEPOP_DELAY_MS = 250;
 
 // Placeholder station built from primitives, on the +x side of the track so
 // the camera (on -x) sees it behind the train. Its group is moved along z by
@@ -57,8 +60,16 @@ const Station = forwardRef<THREE.Group, { projects: StationProject[] }>(
     // base so it grows out of the ground.
     const [{ scale }, api] = useSpring(() => ({
       scale: 0,
-      config: { mass: 1, tension: 220, friction: 9, precision: 0.001 },
+      config: POP_SPRING,
     }));
+    // The rest of the station is already there as it slides in, but shrinks
+    // into the ground on departure, just after the building. Clamped so it
+    // doesn't overshoot into a negative (mirrored) scale.
+    const [{ base }, baseApi] = useSpring(() => ({
+      base: 1,
+      config: { ...POP_SPRING, clamp: true },
+    }));
+    const sunkRef = useRef(false);
     // The driver, stepped off the cab (see Train), waits on the platform:
     // standing left of the departures board, or sitting on the edge right of
     // it while the board is open (so BOARD_CAMERA frames both). Each pops in
@@ -89,12 +100,22 @@ const Station = forwardRef<THREE.Group, { projects: StationProject[] }>(
       if (show !== shownRef.current) {
         shownRef.current = show;
         api.start({ scale: show ? 1 : 0 });
+        if (!show) {
+          sunkRef.current = true;
+          baseApi.start({ base: 0, delay: BASE_DEPOP_DELAY_MS });
+        }
+      }
+      // Back to full size, out of sight, before sliding in again.
+      if (sunkRef.current && here && mode === "arriving") {
+        sunkRef.current = false;
+        baseApi.stop();
+        baseApi.set({ base: 1 });
       }
     });
 
     return (
       <group ref={groupRef} visible={false}>
-        <group position={[3.2 * STOP_SIDE, -0.57, 0]}>
+        <animated.group position={[3.2 * STOP_SIDE, -0.57, 0]} scale={base}>
           {/* Departures board on the platform, facing the track (-x),
               popping in with the building from its feet. */}
           <animated.group position={[board.x, 0, board.z]} scale={scale}>
@@ -216,7 +237,7 @@ const Station = forwardRef<THREE.Group, { projects: StationProject[] }>(
             <boxGeometry args={[0.04, 0.3, 1.6]} />
             <meshStandardMaterial color="#e8e2d4" roughness={0.6} />
           </mesh>
-        </group>
+        </animated.group>
       </group>
     );
   },
