@@ -12,11 +12,13 @@ import {
   type Vec3,
 } from "./StationPrimitives";
 
-// The station's props (see StationDecor, which places them), each playing a
-// little animation when clicked while the train waits: the clock spins its
-// hands, a lamp blinks out, the bin tips over, the suitcase opens, the bench
-// and planters hop. With reduced motion, movements jump straight to their
-// end (or are left out when they are only a flourish). Same units as
+// The props of the station and the home (see StationDecor and HomeDecor,
+// which place them), each playing a little animation when clicked while the
+// train waits there: the clock spins its hands, a lamp blinks out, the bin
+// tips over, the suitcase opens, the mailbox opens on its letters, the
+// ping-pong paddle plays a little rally with its ball, the bench and
+// planters hop. With reduced motion, movements jump straight to their end
+// (or are left out when they are only a flourish). Same units as
 // StationDecor.
 
 const TAU = Math.PI * 2;
@@ -186,12 +188,16 @@ const LANTERN_OFF = new THREE.Color(COLORS.glassOff);
 const LANTERN_ON = new THREE.Color(COLORS.light);
 
 // Lit as it pops in (`pop`, its fitting's spring).
+// `brightness` scales its light and its lantern's glow (dimmer by a
+// house's wall than out on the platform).
 export function Lamp({
   position,
   pop,
+  brightness = 1,
 }: {
   position: Vec3;
   pop: SpringValue<number>;
+  brightness?: number;
 }) {
   const lightRef = useRef<THREE.PointLight>(null);
   const lanternRef = useRef<THREE.MeshStandardMaterial>(null);
@@ -205,12 +211,13 @@ export function Lamp({
       }
       const light = lightRef.current;
       if (light) {
-        light.intensity = Math.max(pop.get(), 0) * LAMP_INTENSITY * level;
+        light.intensity =
+          Math.max(pop.get(), 0) * LAMP_INTENSITY * brightness * level;
       }
       const lantern = lanternRef.current;
       if (lantern) {
         lantern.color.lerpColors(LANTERN_OFF, LANTERN_ON, level);
-        lantern.emissiveIntensity = LAMP_GLOW * level;
+        lantern.emissiveIntensity = LAMP_GLOW * brightness * level;
       }
     },
   );
@@ -243,7 +250,7 @@ export function Lamp({
               color={COLORS.light}
               roughness={0.75}
               emissive={COLORS.light}
-              emissiveIntensity={LAMP_GLOW}
+              emissiveIntensity={LAMP_GLOW * brightness}
             />
           </RoundedBox>
           <Cylinder
@@ -758,6 +765,436 @@ export function Luggage({ position }: { position: Vec3 }) {
         </group>
       </group>
       <HintOrb hint={hint} position={[0, 1.6, 0]} />
+    </group>
+  );
+}
+
+// ---------------------------------------------------------------- mailbox
+
+const MAILBOX = {
+  post: 1.45,
+  length: 1,
+  height: 0.65,
+  width: 0.6,
+  // Wall thickness, corner radius, and the rounding of its edges.
+  wall: 0.06,
+  corner: 0.18,
+  bevel: 0.015,
+};
+
+// A rounded rectangle, `width` (x) by `height` (y), centred on the origin.
+function roundedRect<T extends THREE.Path>(
+  path: T,
+  width: number,
+  height: number,
+  radius: number,
+) {
+  const x = width / 2 - radius;
+  const y = height / 2 - radius;
+  path.moveTo(-x, -height / 2);
+  path.lineTo(x, -height / 2);
+  path.absarc(x, -y, radius, -Math.PI / 2, 0, false);
+  path.lineTo(width / 2, y);
+  path.absarc(x, y, radius, 0, Math.PI / 2, false);
+  path.lineTo(-x, height / 2);
+  path.absarc(-x, y, radius, Math.PI / 2, Math.PI, false);
+  path.lineTo(-width / 2, -y);
+  path.absarc(-x, -y, radius, Math.PI, Math.PI * 1.5, false);
+  return path;
+}
+
+// The mailbox's body, a hollow tube open at both ends (its section: a
+// rounded rectangle with a hole), and a plate of the same outline closing
+// it (the back, and the door). Both with rounded edges, along x, centred on
+// it and on z; the body centred on y, the plate from y = 0 up. Built once,
+// shared by every mailbox (hence dispose={null} on the meshes).
+let mailboxGeometries: {
+  body: THREE.BufferGeometry;
+  plate: THREE.BufferGeometry;
+} | null = null;
+
+function getMailboxGeometries() {
+  if (!mailboxGeometries) {
+    const { length, height, width, wall, corner, bevel } = MAILBOX;
+    // The bevel grows the outline outward, and the hole inward, by `bevel`.
+    const outline = () =>
+      roundedRect(
+        new THREE.Shape(),
+        width - 2 * bevel,
+        height - 2 * bevel,
+        corner - bevel,
+      );
+    const extrude = (shape: THREE.Shape, depth: number) => {
+      const geometry = new THREE.ExtrudeGeometry(shape, {
+        depth,
+        bevelEnabled: true,
+        bevelThickness: bevel,
+        bevelSize: bevel,
+        bevelSegments: 2,
+        curveSegments: 10,
+      });
+      geometry.translate(0, 0, -depth / 2);
+      // Extruded along z: turned so it runs along x.
+      geometry.rotateY(Math.PI / 2);
+      return geometry;
+    };
+    const section = outline();
+    section.holes.push(
+      roundedRect(
+        new THREE.Path(),
+        width - 2 * wall + 2 * bevel,
+        height - 2 * wall + 2 * bevel,
+        corner - wall + bevel,
+      ),
+    );
+    const plate = extrude(outline(), wall - 2 * bevel);
+    plate.translate(0, height / 2, 0);
+    mailboxGeometries = {
+      body: extrude(section, length - 2 * bevel),
+      plate,
+    };
+  }
+  return mailboxGeometries;
+}
+// Timeline (seconds): the door drops open flat, the letters slide out over
+// it toward the track one after the other, fanning out unevenly, wait a
+// moment, slide back in, and the door closes.
+const MAIL = {
+  door: 0.35,
+  doorAngle: Math.PI / 2,
+  slideAt: 0.2,
+  slideGap: 0.09,
+  slide: 0.45,
+  backAt: 1.5,
+  back: 0.35,
+  closeAt: 1.9,
+  close: 0.3,
+  duration: 2.3,
+};
+// The stacked letters, bottom first, lying on the box's floor, a little
+// askew: size (x along the box, z across), colour, where each rests (x, z,
+// turn about y), how far it slides out (-x) and turns on the way; a stamp
+// on some.
+const LETTERS: {
+  size: [number, number];
+  color: string;
+  out: number;
+  turn: number;
+  rest: { x: number; z: number; yaw: number };
+  stamp?: boolean;
+}[] = [
+  {
+    size: [0.56, 0.3],
+    color: "#d9b98a",
+    out: 0.36,
+    turn: -0.38,
+    rest: { x: -0.2, z: 0.01, yaw: 0.03 },
+  },
+  {
+    size: [0.5, 0.27],
+    color: COLORS.sign,
+    out: 0.52,
+    turn: 0.07,
+    rest: { x: -0.18, z: -0.02, yaw: -0.02 },
+    stamp: true,
+  },
+  {
+    size: [0.52, 0.28],
+    color: "#bcd3e6",
+    out: 0.43,
+    turn: 0.44,
+    rest: { x: -0.21, z: 0.02, yaw: 0.04 },
+  },
+];
+const LETTER_THICKNESS = 0.035;
+
+// A yellow mailbox on a post, its door toward the track (-x), a red flag
+// down on its +z side, and a few letters inside.
+export function Mailbox({ position }: { position: Vec3 }) {
+  const doorRef = useRef<THREE.Group>(null);
+  const letterRefs = useRef<(THREE.Group | null)[]>([]);
+  const { post, length, height, width, wall } = MAILBOX;
+  const middle = post + height / 2;
+  const { body, plate } = getMailboxGeometries();
+  // The letters' floor: the box's, inside.
+  const floor = post + wall;
+  const { bind, pose, hint } = useStationProp(MAIL.duration, (t, jump) => {
+    let door = 0;
+    if (t !== null) {
+      const open = span(t, 0, MAIL.door, jump);
+      const close = span(t, MAIL.closeAt, MAIL.close, jump);
+      door = (jump ? open : easeOutBack(open)) * (1 - easeInOut(close));
+    }
+    if (doorRef.current) doorRef.current.rotation.z = MAIL.doorAngle * door;
+    LETTERS.forEach(({ out: distance, turn, rest }, i) => {
+      const letter = letterRefs.current[i];
+      if (!letter) return;
+      let out = 0;
+      if (t !== null) {
+        const gap = i * MAIL.slideGap;
+        const slide = span(t, MAIL.slideAt + gap, MAIL.slide, jump);
+        const back = span(t, MAIL.backAt + gap / 2, MAIL.back, jump);
+        out = (jump ? slide : easeOutBack(slide)) * (1 - easeInOut(back));
+      }
+      letter.position.x = rest.x - distance * out;
+      letter.rotation.y = rest.yaw + turn * out;
+    });
+  });
+
+  return (
+    <group position={position} {...bind}>
+      <group ref={pose}>
+        <Cylinder
+          radius={0.08}
+          height={post}
+          position={[0, post / 2, 0]}
+          color={COLORS.darkWood}
+        />
+        {/* Hollow body, closed at the back */}
+        <mesh
+          geometry={body}
+          dispose={null}
+          position={[0, middle, 0]}
+          castShadow
+          receiveShadow
+        >
+          <meshStandardMaterial color={COLORS.edge} roughness={0.75} />
+        </mesh>
+        {/* Back: the plate, a little smaller and set in, its edges hidden
+            in the body's walls (not flush with them, which would flicker) */}
+        <mesh
+          geometry={plate}
+          dispose={null}
+          position={[length / 2 - wall / 2 - 0.01, post + 0.015 * height, 0]}
+          scale={[1, 0.97, 0.97]}
+          castShadow
+          receiveShadow
+        >
+          <meshStandardMaterial color={COLORS.edge} roughness={0.75} />
+        </mesh>
+        {/* Door over the whole front, hinged along its bottom edge,
+            dropping flat toward the track */}
+        <group ref={doorRef} position={[-length / 2 - wall / 2, post, 0]}>
+          <mesh geometry={plate} dispose={null} castShadow receiveShadow>
+            <meshStandardMaterial color={COLORS.edge} roughness={0.75} />
+          </mesh>
+          <Block
+            size={[0.05, 0.05, 0.14]}
+            position={[-wall / 2 - 0.015, height - 0.12, 0]}
+            radius={0.02}
+            color={COLORS.iron}
+          />
+        </group>
+        {/* Flag, down along its arm */}
+        <group
+          position={[0.25, middle, width / 2 + 0.04]}
+          rotation-z={-Math.PI / 2}
+        >
+          <Block
+            size={[0.06, 0.55, 0.05]}
+            position={[0, 0.27, 0]}
+            radius={0.02}
+            color={COLORS.iron}
+          />
+          <Block
+            size={[0.26, 0.2, 0.05]}
+            position={[-0.12, 0.45, 0]}
+            radius={0.02}
+            color={COLORS.roof}
+          />
+        </group>
+        {/* Letters, stacked inside, each turning about its centre */}
+        {LETTERS.map(({ size, color, rest, stamp }, i) => (
+          <group
+            key={i}
+            ref={(letter) => {
+              letterRefs.current[i] = letter;
+            }}
+            position={[
+              rest.x,
+              floor + LETTER_THICKNESS * (i + 0.5),
+              rest.z,
+            ]}
+            rotation-y={rest.yaw}
+          >
+            <Block
+              size={[size[0], LETTER_THICKNESS, size[1]]}
+              radius={0.012}
+              color={color}
+            />
+            {stamp && (
+              <Block
+                size={[0.09, 0.01, 0.08]}
+                position={[
+                  -size[0] / 2 + 0.08,
+                  LETTER_THICKNESS / 2,
+                  size[1] / 2 - 0.07,
+                ]}
+                radius={0.004}
+                color={COLORS.roof}
+              />
+            )}
+          </group>
+        ))}
+      </group>
+      <HintOrb hint={hint} position={[0, post + height + 0.6, 0]} />
+    </group>
+  );
+}
+
+// ---------------------------------------------------------------- ping-pong
+
+// A ping-pong paddle left lying on the floor, red side up, its ball beside
+// it; cartoon-sized (about twice a real one).
+const PADDLE = { radius: 0.26, rubber: 0.02, core: 0.03, handle: 0.36 };
+const BALL_RADIUS = 0.07;
+const BALL_REST: Vec3 = [-0.35, BALL_RADIUS, 0.5];
+// Timeline (seconds): the paddle lifts off the floor, the ball hops onto
+// it and bounces on it a few times (the paddle giving at each hit and
+// rocking side to side), hops back to where it lay with a little rebound,
+// and the paddle settles back down. Heights in the prop's units.
+const RALLY = {
+  lift: 0.9,
+  rise: 0.35,
+  hopOnAt: 0.15,
+  hopOn: 0.4,
+  hopOnHeight: 1.1,
+  bounces: 3,
+  bounce: 0.38,
+  bounceHeight: 0.75,
+  hopOff: 0.45,
+  hopOffHeight: 1,
+  rebound: 0.2,
+  reboundHeight: 0.12,
+  settleDelay: 0.15,
+  settle: 0.4,
+  give: 0.07,
+  giveTime: 0.14,
+  rock: 0.12,
+};
+// The ball's first and last touch on the paddle.
+const RALLY_FIRST = RALLY.hopOnAt + RALLY.hopOn;
+const RALLY_LAST = RALLY_FIRST + RALLY.bounces * RALLY.bounce;
+const RALLY_DURATION = RALLY_LAST + RALLY.hopOff + RALLY.rebound + 0.05;
+// A hop's height `p` of the way through it (0 to 1), peaking at 1.
+const arc = (p: number) => 4 * p * (1 - p);
+// Where the ball lies, and scratch space for where it sits on the blade:
+// reused every frame, shared by every paddle (they animate one frame at a
+// time).
+const ballRest = new THREE.Vector3(...BALL_REST);
+const ballOnBlade = new THREE.Vector3();
+
+// Clicked, it plays a little rally on its own. Left still with reduced
+// motion (only a flourish).
+export function PingPong({ position, yaw }: { position: Vec3; yaw: number }) {
+  const paddleRef = useRef<THREE.Group>(null);
+  const ballRef = useRef<THREE.Group>(null);
+  const { bind, pose, hint } = useStationProp(RALLY_DURATION, (t, still) => {
+    const paddle = paddleRef.current;
+    const ball = ballRef.current;
+    if (!paddle || !ball) return;
+    if (t === null || still) {
+      paddle.position.y = 0;
+      paddle.rotation.x = 0;
+      ball.position.copy(ballRest);
+      return;
+    }
+
+    // Paddle: up, giving under each touch of the ball, rocking while the
+    // ball bounces, then back down.
+    const up = easeOutBack(span(t, 0, RALLY.rise));
+    const down = easeInOut(
+      span(t, RALLY_LAST + RALLY.settleDelay, RALLY.settle),
+    );
+    const lift = RALLY.lift * up * (1 - down);
+    const sinceTouch = (t - RALLY_FIRST) % RALLY.bounce;
+    const touching = t >= RALLY_FIRST && t <= RALLY_LAST + RALLY.giveTime;
+    const give = touching
+      ? RALLY.give * Math.sin(Math.PI * clamp01(sinceTouch / RALLY.giveTime))
+      : 0;
+    const rallying = t >= RALLY_FIRST && t <= RALLY_LAST;
+    paddle.position.y = lift - give;
+    paddle.rotation.x = rallying
+      ? RALLY.rock * Math.sin((Math.PI * (t - RALLY_FIRST)) / RALLY.bounce)
+      : 0;
+
+    // Ball: resting on the blade's top (its middle), or hopping from and
+    // back to where it lay.
+    const top = ballOnBlade.set(
+      0,
+      paddle.position.y + 2 * PADDLE.rubber + PADDLE.core + BALL_RADIUS,
+      0,
+    );
+    const rest = ballRest;
+    if (t < RALLY.hopOnAt) {
+      ball.position.copy(rest);
+    } else if (t < RALLY_FIRST) {
+      const p = span(t, RALLY.hopOnAt, RALLY.hopOn);
+      ball.position.lerpVectors(rest, top, p);
+      ball.position.y += RALLY.hopOnHeight * arc(p);
+    } else if (t < RALLY_LAST) {
+      ball.position.copy(top);
+      ball.position.y += RALLY.bounceHeight * arc(sinceTouch / RALLY.bounce);
+    } else if (t < RALLY_LAST + RALLY.hopOff) {
+      const p = span(t, RALLY_LAST, RALLY.hopOff);
+      ball.position.lerpVectors(top, rest, p);
+      ball.position.y += RALLY.hopOffHeight * arc(p);
+    } else {
+      const p = span(t, RALLY_LAST + RALLY.hopOff, RALLY.rebound);
+      ball.position.copy(rest);
+      ball.position.y += RALLY.reboundHeight * arc(p);
+    }
+  });
+  const { radius, rubber, core, handle } = PADDLE;
+  // Bottom up: black rubber, wood (a hair narrower), red rubber.
+  const layers = [
+    { color: COLORS.iron, bottom: 0, height: rubber, inset: 0 },
+    { color: COLORS.benchWood, bottom: rubber, height: core, inset: 0.008 },
+    { color: COLORS.roof, bottom: rubber + core, height: rubber, inset: 0 },
+  ];
+
+  return (
+    <group position={position} {...bind}>
+      <group ref={pose}>
+        <group rotation-y={yaw}>
+          <group ref={paddleRef}>
+            {/* Blade, a little oval */}
+            <group scale={[1, 1, 1.08]}>
+              {layers.map(({ color, bottom, height, inset }) => (
+                <Cylinder
+                  key={color}
+                  radius={radius - inset}
+                  height={height}
+                  position={[0, bottom + height / 2, 0]}
+                  color={color}
+                  segments={28}
+                />
+              ))}
+            </group>
+            {/* Handle, off the blade's edge, a darker band where it's
+                held */}
+            <Block
+              size={[handle, 0.07, 0.1]}
+              position={[radius + handle / 2 - 0.04, rubber + core / 2, 0]}
+              radius={0.03}
+              color={COLORS.lining}
+            />
+            <Block
+              size={[0.14, 0.075, 0.105]}
+              position={[radius + handle - 0.13, rubber + core / 2, 0]}
+              radius={0.03}
+              color={COLORS.wood}
+            />
+          </group>
+        </group>
+        <group ref={ballRef} position={BALL_REST}>
+          <mesh castShadow receiveShadow>
+            <sphereGeometry args={[BALL_RADIUS, 16, 12]} />
+            <meshStandardMaterial color="#f5a142" roughness={0.45} />
+          </mesh>
+        </group>
+      </group>
+      <HintOrb hint={hint} position={[0, 0.9, 0]} />
     </group>
   );
 }

@@ -1,7 +1,6 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useState } from "react";
 import { Text } from "@react-three/drei";
-import { animated, type SpringValue } from "@react-spring/three";
-import * as THREE from "three";
+import type { SpringValue } from "@react-spring/three";
 import SnowCover from "./SnowCover";
 import { useStationClick } from "../hooks/useStationProp";
 import { StationHints } from "../state/StationHints";
@@ -9,8 +8,12 @@ import HintOrb from "./HintOrb";
 import {
   Block,
   Cylinder,
-  FLOWER_COLORS,
+  Pop,
   STATION_COLORS as COLORS,
+  Window,
+  WindowBox,
+  glass,
+  useHouseGeometry,
   type Vec3,
 } from "./StationPrimitives";
 import {
@@ -62,23 +65,6 @@ export const STATION_FITTINGS = [
   "trashCan",
 ] as const;
 type Fitting = (typeof STATION_FITTINGS)[number];
-
-// A group popping in with `pop`, scaled from `feet`.
-function Pop({
-  feet,
-  pop,
-  children,
-}: {
-  feet: Vec3;
-  pop: SpringValue<number>;
-  children: ReactNode;
-}) {
-  return (
-    <animated.group position={feet} scale={pop}>
-      <group position={[-feet[0], -feet[1], -feet[2]]}>{children}</group>
-    </animated.group>
-  );
-}
 
 // ---------------------------------------------------------------- platform
 
@@ -187,126 +173,11 @@ const HOUSE_BEVEL = 0.25;
 const FRONT = BUILDING.x - HOUSE_BEVEL;
 const CANOPY = { front: 5, y: PLATFORM_TOP + 4.7, thickness: 0.3 };
 
-// House-shaped section (walls and gables in one), extruded along z with a
-// rounded bevel.
-function useHouseGeometry() {
-  return useMemo(() => {
-    const half = BUILDING.depth / 2;
-    const ridge = BUILDING.wall + half * Math.tan(BUILDING.pitch);
-    const shape = new THREE.Shape()
-      .moveTo(-half, 0)
-      .lineTo(half, 0)
-      .lineTo(half, BUILDING.wall)
-      .lineTo(0, ridge)
-      .lineTo(-half, BUILDING.wall)
-      .closePath();
-    const bevel = HOUSE_BEVEL;
-    const geometry = new THREE.ExtrudeGeometry(shape, {
-      depth: BUILDING.length - 2 * bevel,
-      bevelEnabled: true,
-      bevelThickness: bevel,
-      bevelSize: bevel,
-      bevelSegments: 3,
-    });
-    geometry.translate(0, 0, -(BUILDING.length - 2 * bevel) / 2);
-    return geometry;
-  }, []);
-}
-
-// Glass of the building's windows, lit from inside or not.
-function glass(lit: boolean) {
-  return lit
-    ? { color: COLORS.light, emissive: 1.1 }
-    : { color: COLORS.glassOff, emissive: 0 };
-}
-
-// A window in the front wall, facing the track (-x).
-function Window({ position, lit }: { position: Vec3; lit: boolean }) {
-  return (
-    <group position={position}>
-      <Block size={[0.3, 2.2, 1.9]} radius={0.12} color={COLORS.wood} />
-      <Block
-        size={[0.2, 1.8, 1.5]}
-        position={[-0.08, 0, 0]}
-        radius={0.08}
-        {...glass(lit)}
-      />
-      {/* Mullions */}
-      <Block
-        size={[0.12, 1.8, 0.1]}
-        position={[-0.2, 0, 0]}
-        radius={0.04}
-        color={COLORS.wood}
-      />
-      <Block
-        size={[0.12, 0.1, 1.5]}
-        position={[-0.2, 0.2, 0]}
-        radius={0.04}
-        color={COLORS.wood}
-      />
-      {/* Sill */}
-      <Block
-        size={[0.6, 0.15, 2.2]}
-        position={[-0.2, -1.15, 0]}
-        radius={0.06}
-        color={COLORS.sign}
-      />
-    </group>
-  );
-}
-
-// A row of little flowers along a window box, their colours and heights
-// varied by `seed`.
-function Flowers({
-  count,
-  spread,
-  y,
-  seed,
-}: {
-  count: number;
-  spread: number;
-  y: number;
-  seed: number;
-}) {
-  return (
-    <>
-      {Array.from({ length: count }, (_, i) => {
-        const t = count === 1 ? 0 : i / (count - 1) - 0.5;
-        const color = FLOWER_COLORS[(i + seed) % FLOWER_COLORS.length];
-        return (
-          <mesh
-            key={i}
-            position={[
-              ((i + seed) % 3) * 0.08 - 0.08,
-              y + ((i * 7 + seed) % 3) * 0.06,
-              t * spread,
-            ]}
-            castShadow
-          >
-            <sphereGeometry args={[0.16, 10, 8]} />
-            <meshStandardMaterial color={color} roughness={0.6} />
-          </mesh>
-        );
-      })}
-    </>
-  );
-}
-
-function WindowBox({ position }: { position: Vec3 }) {
-  return (
-    <group position={position}>
-      <Block size={[0.7, 0.45, 1.9]} radius={0.12} color={COLORS.wood} />
-      <mesh position={[0, 0.3, 0]} scale={[0.5, 0.35, 1.6]} castShadow>
-        <sphereGeometry args={[0.6, 14, 10]} />
-        <meshStandardMaterial color={COLORS.bush} roughness={0.8} />
-      </mesh>
-      <Flowers count={5} spread={1.5} y={0.45} seed={position[2] > 0 ? 1 : 0} />
-    </group>
-  );
-}
-
 function Building() {
-  const house = useHouseGeometry();
+  const house = useHouseGeometry({
+    ...BUILDING,
+    bevel: HOUSE_BEVEL,
+  });
   const half = BUILDING.depth / 2;
   const cx = BUILDING.x + half;
   const base = PLATFORM_TOP;
@@ -317,11 +188,11 @@ function Building() {
   // Its windows go dark on a click, and light up again on the next one, or
   // when the train leaves.
   const [lit, setLit] = useState(true);
-  const { bind, hint, atStation } = useStationClick(
+  const { bind, hint, atStop } = useStationClick(
     () => setLit((on) => !on),
     { wiggle: false },
   );
-  if (!atStation && !lit) setLit(true);
+  if (!atStop && !lit) setLit(true);
   const { color: glassColor, emissive: glassGlow } = glass(lit);
 
   return (
@@ -503,7 +374,7 @@ export default function StationDecor({
 }) {
   return (
     <group position={[placement.edgeX, 0, placement.z]} scale={placement.scale}>
-      <StationHints>
+      <StationHints stop="station">
         <Platform />
         <Pop
           feet={[BUILDING.x + BUILDING.depth / 2, PLATFORM_TOP, 0]}

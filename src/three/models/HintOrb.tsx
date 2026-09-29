@@ -3,10 +3,10 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { useControls } from "leva";
 import { useTrainContext } from "../state/TrainContext";
-import type { HintedProp } from "../state/StationHints";
+import { useStationHints, type HintedProp } from "../state/StationHints";
 
-// A small glowing yellow ball floating over a clickable station prop not
-// clicked yet (see useStationClick), while the train waits at the station.
+// A small glowing yellow ball floating over a clickable prop not clicked yet
+// (see useStationClick), while the train waits at its stop.
 // It grows in and bobs gently, brightens a little while its prop is
 // hovered, and shrinks away once the prop is clicked. Its colour is pushed
 // past white so the scene's bloom makes it glow. Still with reduced
@@ -42,7 +42,9 @@ export default function HintOrb({
     bobSpeed: { value: ORB.bobSpeed, min: 0, max: 5, step: 0.1 },
   });
   const { mode, stop, boardFocused } = useTrainContext();
-  const shown = mode === "stopped" && stop === "station" && !boardFocused;
+  const hints = useStationHints();
+  const shown =
+    hints.hinted && mode === "stopped" && stop === hints.stop && !boardFocused;
   const meshRef = useRef<THREE.Mesh>(null);
   const materialRef = useRef<THREE.MeshBasicMaterial>(null);
   // Each ball bobs out of step with the others.

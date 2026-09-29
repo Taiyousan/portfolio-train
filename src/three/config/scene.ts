@@ -46,10 +46,11 @@ export const BOARD_CAMERA: CameraShot = {
 };
 
 // Home shots, same sequence as the station's 1 and 2: HOME_CAMERA wide while
-// the train pulls in, then HOME_VIEW_CAMERA from above the train onto the
-// terrace, the desk on the left of the frame (the about panel covers the
-// right on larger screens). Update with HOME_DESK. Keep HOME_CAMERA close
-// to STATION_CAMERA: Forest's cull zone (trees shrunk away in front of the
+// the train pulls in, then HOME_VIEW_CAMERA from above the train, three
+// quarters onto the terrace and the house front, the desk in the part of
+// the frame left free (the about panel covers the right on larger
+// screens). Update with HOME_DESK. Keep HOME_CAMERA close to
+// STATION_CAMERA: Forest's cull zone (trees shrunk away in front of the
 // lens while stopping) is sized from it.
 export const HOME_CAMERA: CameraShot = {
   position: [-2.4, 1.3, -1.6],
@@ -57,8 +58,8 @@ export const HOME_CAMERA: CameraShot = {
 };
 
 export const HOME_VIEW_CAMERA: CameraShot = {
-  position: [1.6, 0.38, -0.55],
-  target: [3.8, -0.06, 0.25],
+  position: [0.798, 0.63, -1.054],
+  target: [3.767, -0.124, 0.311],
 };
 
 // Wide (arrival) and settled shot of each stop.
@@ -134,6 +135,11 @@ export const STATION_DRIVER = {
   sitting: { z: 1.4 },
   scale: 0.55,
 };
+
+// Home (models/HomeDecor), in world units per home unit: the station's
+// scale, so the props they share (lamp, planters, windows) are the same
+// size.
+export const HOME_SCALE = 0.17;
 
 // Desk on the home terrace (models/Home), with the driver sitting at it, in a
 // hoodie, typing. In the halt's ground frame (origin at the platform centre, at

@@ -24,30 +24,31 @@ type ClickOptions = {
   // Point the wiggle stretches and rocks about, in the prop's own frame
   // (default its origin, at its feet).
   pivot?: [number, number, number];
-  // Whether it wiggles at all (not the building: it looks wrong).
+  // Whether it wiggles at all (not the building: it looks wrong; nothing
+  // does where the stop's props aren't hinted, see StationHints).
   wiggle?: boolean;
   // Whether it's playing its click animation: no wiggle on hover then.
   isAnimating?: () => boolean;
 };
 
-// Pointer handlers making a station prop clickable while the train waits
-// at the station and the departures board isn't open: a pointer cursor on
-// hover, and `onClick` on click. Both stop propagating, so a prop in front
-// of another (the clock on the building) takes the click alone. `bind`
-// goes on the prop's outer group and `pose` on a group just inside it,
-// which wiggles to hint at the click, and a little on hover. `hint`
-// (hovered, discovered yet) is for its HintOrb.
+// Pointer handlers making a prop clickable while the train waits at its stop
+// (see StationHints) and the departures board isn't open: a pointer cursor on
+// hover, and `onClick` on click. Only the nearest prop along the ray takes
+// either, so a prop in front of another (the clock on the building) takes
+// them alone. `bind` goes on the prop's outer group and `pose` on a group
+// just inside it, which wiggles to hint at the click, and a little on
+// hover. `hint` (hovered, discovered yet) is for its HintOrb.
 export function useStationClick(
   onClick: () => void,
   { pivot = [0, 0, 0], wiggle = true, isAnimating }: ClickOptions = {},
 ) {
   const { mode, stop, boardFocused } = useTrainContext();
-  const atStation = mode === "stopped" && stop === "station";
-  const clickable = atStation && !boardFocused;
+  const hints = useStationHints();
+  const atStop = mode === "stopped" && stop === hints.stop;
+  const clickable = atStop && !boardFocused;
   const [reducedMotion] = useState(
     () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
   );
-  const hints = useStationHints();
   const poseRef = useRef<THREE.Group>(null);
   // The wiggle playing: when it started on the frame clock, and how strong
   // (1 in full); null at rest. On hover it's asked for with its strength,
@@ -62,9 +63,10 @@ export function useStationClick(
     },
   });
   // Only the props that wiggle get the hint wiggle.
+  const wiggles = wiggle && hints.hinted;
   useEffect(() => {
-    if (wiggle) return hints.register(hintedRef.current);
-  }, [hints, wiggle]);
+    if (wiggles) return hints.register(hintedRef.current);
+  }, [hints, wiggles]);
 
   // Whether this prop set the pointer cursor, so it's put back if the prop
   // stops being clickable while hovered (departure, board opened).
@@ -112,6 +114,29 @@ export function useStationClick(
     pose.position.subVectors(pivotPoint, pose.position);
   });
 
+  // The pointer comes onto the prop: a pointer cursor, and a little wiggle
+  // (not while it's already wiggling or playing its click animation).
+  const enter = () => {
+    pointingRef.current = true;
+    hintedRef.current.hovered = true;
+    document.body.style.cursor = "pointer";
+    if (
+      wiggles &&
+      !reducedMotion &&
+      nudgeRef.current === null &&
+      !isAnimating?.()
+    ) {
+      hoverNudgeRef.current = true;
+    }
+  };
+  // Hover follows the nearest prop along the ray only, rather than stopping
+  // the event there: stopped, R3F drops a prop's hover when the pointer
+  // moves from one of its parts to another, and only brings it back on the
+  // next move (the cursor flickering at every seam). Not stopped, it ends
+  // the old part's hover and starts the new one's in the same move.
+  const inFront = (e: ThreeEvent<PointerEvent>) =>
+    e.intersections[0]?.eventObject === e.eventObject;
+
   const bind = {
     onClick: (e: ThreeEvent<MouseEvent>) => {
       if (!clickable) return;
@@ -120,29 +145,22 @@ export function useStationClick(
       onClick();
     },
     onPointerOver: (e: ThreeEvent<PointerEvent>) => {
-      if (!clickable) return;
-      e.stopPropagation();
-      pointingRef.current = true;
-      hintedRef.current.hovered = true;
-      document.body.style.cursor = "pointer";
-      // Not while it's already wiggling or playing its click animation.
-      if (
-        wiggle &&
-        !reducedMotion &&
-        nudgeRef.current === null &&
-        !isAnimating?.()
-      ) {
-        hoverNudgeRef.current = true;
-      }
+      if (clickable && !pointingRef.current && inFront(e)) enter();
     },
-    onPointerOut: () => {
-      if (!pointingRef.current) return;
+    // Coming out from behind a prop in front of it (the clock on the
+    // building) is no new hover: caught here.
+    onPointerMove: (e: ThreeEvent<PointerEvent>) => {
+      if (clickable && !pointingRef.current && inFront(e)) enter();
+    },
+    onPointerOut: (e: ThreeEvent<PointerEvent>) => {
+      // Still on it, only leaving one of its parts.
+      if (!pointingRef.current || inFront(e)) return;
       pointingRef.current = false;
       hintedRef.current.hovered = false;
       document.body.style.cursor = "";
     },
   };
-  return { bind, pose: poseRef, hint: hintedRef, atStation };
+  return { bind, pose: poseRef, hint: hintedRef, atStop };
 }
 
 // A prop playing a `duration`-second animation when clicked, one at a
@@ -159,7 +177,7 @@ export default function useStationProp(
   const [reducedMotion] = useState(
     () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
   );
-  const { bind, pose, hint, atStation } = useStationClick(
+  const { bind, pose, hint, atStop } = useStationClick(
     () => {
       if (startRef.current === null) clickedRef.current = true;
     },
@@ -176,7 +194,7 @@ export default function useStationProp(
       startRef.current = now;
     }
     let t = startRef.current === null ? null : now - startRef.current;
-    if (t !== null && (t >= duration || !atStation)) {
+    if (t !== null && (t >= duration || !atStop)) {
       startRef.current = null;
       t = null;
     }

@@ -1,7 +1,12 @@
+import { useMemo, type ReactNode } from "react";
 import { RoundedBox } from "@react-three/drei";
+import { animated, type SpringValue } from "@react-spring/three";
+import * as THREE from "three";
 
 // Rounded building blocks and palette shared by the station's decor
-// (StationDecor), its props (StationProps) and its departures board.
+// (StationDecor), its props (StationProps) and its departures board, and by
+// the home (HomeDecor), built in the same units: the house shape, windows,
+// window boxes, and the group the fittings pop in with.
 
 export type Vec3 = [number, number, number];
 
@@ -90,5 +95,169 @@ export function Cylinder({
       <cylinderGeometry args={[top, radius, height, segments]} />
       <meshStandardMaterial color={color} roughness={0.75} />
     </mesh>
+  );
+}
+
+// A group popping in with `pop`, scaled from `feet`.
+export function Pop({
+  feet,
+  pop,
+  children,
+}: {
+  feet: Vec3;
+  pop: SpringValue<number>;
+  children: ReactNode;
+}) {
+  return (
+    <animated.group position={feet} scale={pop}>
+      <group position={[-feet[0], -feet[1], -feet[2]]}>{children}</group>
+    </animated.group>
+  );
+}
+
+// House-shaped section (walls and gables in one), `depth` across x and
+// centred on it, from y = 0 to the ridge, extruded along z (`length`,
+// centred) with a rounded `bevel`, which grows it outward by as much all
+// round.
+export function useHouseGeometry({
+  depth,
+  length,
+  wall,
+  pitch,
+  bevel,
+}: {
+  depth: number;
+  length: number;
+  wall: number;
+  pitch: number;
+  bevel: number;
+}) {
+  return useMemo(() => {
+    const half = depth / 2;
+    const ridge = wall + half * Math.tan(pitch);
+    const shape = new THREE.Shape()
+      .moveTo(-half, 0)
+      .lineTo(half, 0)
+      .lineTo(half, wall)
+      .lineTo(0, ridge)
+      .lineTo(-half, wall)
+      .closePath();
+    const geometry = new THREE.ExtrudeGeometry(shape, {
+      depth: length - 2 * bevel,
+      bevelEnabled: true,
+      bevelThickness: bevel,
+      bevelSize: bevel,
+      bevelSegments: 3,
+    });
+    geometry.translate(0, 0, -(length - 2 * bevel) / 2);
+    return geometry;
+  }, [depth, length, wall, pitch, bevel]);
+}
+
+// Window glass, lit from inside (glowing by `glow`) or not.
+export function glass(lit: boolean, glow = 1.1) {
+  return lit
+    ? { color: STATION_COLORS.light, emissive: glow }
+    : { color: STATION_COLORS.glassOff, emissive: 0 };
+}
+
+// A window in a front wall, facing the track (-x): frame, glass, mullions
+// and a sill.
+export function Window({
+  position,
+  lit,
+  glow,
+  frame = STATION_COLORS.wood,
+}: {
+  position: Vec3;
+  lit: boolean;
+  glow?: number;
+  frame?: string;
+}) {
+  return (
+    <group position={position}>
+      <Block size={[0.3, 2.2, 1.9]} radius={0.12} color={frame} />
+      <Block
+        size={[0.2, 1.8, 1.5]}
+        position={[-0.08, 0, 0]}
+        radius={0.08}
+        {...glass(lit, glow)}
+      />
+      {/* Mullions */}
+      <Block
+        size={[0.12, 1.8, 0.1]}
+        position={[-0.2, 0, 0]}
+        radius={0.04}
+        color={frame}
+      />
+      <Block
+        size={[0.12, 0.1, 1.5]}
+        position={[-0.2, 0.2, 0]}
+        radius={0.04}
+        color={frame}
+      />
+      {/* Sill */}
+      <Block
+        size={[0.6, 0.15, 2.2]}
+        position={[-0.2, -1.15, 0]}
+        radius={0.06}
+        color={STATION_COLORS.sign}
+      />
+    </group>
+  );
+}
+
+// A row of little flowers along a window box, their colours and heights
+// varied by `seed`.
+function Flowers({
+  count,
+  spread,
+  y,
+  seed,
+}: {
+  count: number;
+  spread: number;
+  y: number;
+  seed: number;
+}) {
+  return (
+    <>
+      {Array.from({ length: count }, (_, i) => {
+        const t = count === 1 ? 0 : i / (count - 1) - 0.5;
+        const color = FLOWER_COLORS[(i + seed) % FLOWER_COLORS.length];
+        return (
+          <mesh
+            key={i}
+            position={[
+              ((i + seed) % 3) * 0.08 - 0.08,
+              y + ((i * 7 + seed) % 3) * 0.06,
+              t * spread,
+            ]}
+            castShadow
+          >
+            <sphereGeometry args={[0.16, 10, 8]} />
+            <meshStandardMaterial color={color} roughness={0.6} />
+          </mesh>
+        );
+      })}
+    </>
+  );
+}
+
+// A flowered window box, under a Window.
+export function WindowBox({ position }: { position: Vec3 }) {
+  return (
+    <group position={position}>
+      <Block
+        size={[0.7, 0.45, 1.9]}
+        radius={0.12}
+        color={STATION_COLORS.wood}
+      />
+      <mesh position={[0, 0.3, 0]} scale={[0.5, 0.35, 1.6]} castShadow>
+        <sphereGeometry args={[0.6, 14, 10]} />
+        <meshStandardMaterial color={STATION_COLORS.bush} roughness={0.8} />
+      </mesh>
+      <Flowers count={5} spread={1.5} y={0.45} seed={position[2] > 0 ? 1 : 0} />
+    </group>
   );
 }

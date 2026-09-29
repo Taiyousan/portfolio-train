@@ -9,8 +9,8 @@ import { Block, Cylinder, STATION_COLORS } from "./StationPrimitives";
 // while the train waits at the station, or at the desk at home, in a hoodie,
 // typing. Curly hair, a short beard and a moustache. Built as a rig of
 // nested groups (hips, knees, spine, shoulders, elbows, neck) posed every
-// frame: breathing, blinking, glancing around,
-// legs swinging over the platform's edge, and a wave on demand (see
+// frame: breathing, blinking, glancing around, legs swinging over the
+// platform's edge, and a wave or a look at the camera on demand (see
 // DriverHandle). Held still with reduced motion. In driver units: about
 // 0.94 tall standing, cap included, facing +z.
 
@@ -137,6 +137,27 @@ const WAVE = {
 };
 const WAVE_DURATION = WAVE.raise + WAVE.hold + WAVE.lower;
 
+// Look at the camera (seconds and radians): the head turns to it, the
+// shoulders a little with it (`spine`, their share of the turn), holds a
+// moment, brows up, and turns back; typing pauses meanwhile. Only so far
+// (`maxYaw`, `maxPitch`). With reduced motion, the head is just held
+// turned for its length.
+const GLANCE = {
+  turn: 0.3,
+  hold: 1.1,
+  back: 0.4,
+  maxYaw: 1.4,
+  maxPitch: 0.5,
+  spine: 0.3,
+  brows: 0.008,
+};
+const GLANCE_DURATION = GLANCE.turn + GLANCE.hold + GLANCE.back;
+// The head's centre above the hips (the spine's origin), in driver units.
+const HEAD_HEIGHT = NECK_Y + HEAD_Y;
+// Scratch vector for the camera's position, reused every frame (a driver
+// poses one frame at a time).
+const toCamera = new THREE.Vector3();
+
 // Right (-x) then left (+x).
 const SIDES = [-1, 1] as const;
 
@@ -149,6 +170,8 @@ const between = ([min, max]: number[]) => min + Math.random() * (max - min);
 export type DriverHandle = {
   // Waves once (ignored while already waving).
   wave: () => void;
+  // Looks at the camera a moment (ignored while already looking).
+  glance: () => void;
 };
 
 type Props = Omit<ThreeElements["group"], "ref"> & {
@@ -213,6 +236,8 @@ export default function Driver({
     targetPitch: 0,
     waveRequested: false,
     waveStart: null as number | null,
+    glanceRequested: false,
+    glanceStart: null as number | null,
   });
 
   useImperativeHandle(
@@ -222,11 +247,15 @@ export default function Driver({
         const state = stateRef.current;
         if (state.waveStart === null) state.waveRequested = true;
       },
+      glance: () => {
+        const state = stateRef.current;
+        if (state.glanceStart === null) state.glanceRequested = true;
+      },
     }),
     [],
   );
 
-  useFrame(({ clock }, delta) => {
+  useFrame(({ clock, camera }, delta) => {
     const r = rig.current;
     const state = stateRef.current;
     const now = clock.elapsedTime;
@@ -258,6 +287,45 @@ export default function Driver({
       }
     }
 
+    // Look at the camera: 0 at rest, 1 turned to it.
+    if (state.glanceRequested) {
+      state.glanceRequested = false;
+      state.glanceStart = now;
+    }
+    let glance = 0;
+    if (state.glanceStart !== null) {
+      const since = now - state.glanceStart;
+      if (since >= GLANCE_DURATION) {
+        state.glanceStart = null;
+      } else if (reducedMotion) {
+        glance = 1;
+      } else {
+        glance =
+          smoothstep(since / GLANCE.turn) *
+          (1 -
+            smoothstep((since - GLANCE.turn - GLANCE.hold) / GLANCE.back));
+      }
+    }
+    // Where the camera is from the head, in the hips' frame (the spine's
+    // lean and turn left out): the turn about y, and the tip about x (+
+    // down) after it.
+    let glanceYaw = 0;
+    let glancePitch = 0;
+    if (glance > 0 && r.hips) {
+      r.hips.worldToLocal(toCamera.copy(camera.position));
+      toCamera.y -= HEAD_HEIGHT;
+      glanceYaw = THREE.MathUtils.clamp(
+        Math.atan2(toCamera.x, toCamera.z),
+        -GLANCE.maxYaw,
+        GLANCE.maxYaw,
+      );
+      glancePitch = THREE.MathUtils.clamp(
+        -Math.atan2(toCamera.y, Math.hypot(toCamera.x, toCamera.z)),
+        -GLANCE.maxPitch,
+        GLANCE.maxPitch,
+      );
+    }
+
     // Body: breathing swells the chest and lifts the shoulders and head,
     // standing shifts the weight (the hips tilt, the spine leans back
     // against it, the legs stay upright).
@@ -269,7 +337,11 @@ export default function Driver({
     const lean = typing ? TYPING.lean : sitting ? 0.06 : 0;
     r.hips?.position.set(0, sitting ? HIP_SITTING : HIP_STANDING, 0);
     r.hips?.rotation.set(0, 0, shift);
-    r.spine?.rotation.set(lean + 0.01 * breath, 0, -1.4 * shift);
+    r.spine?.rotation.set(
+      lean + 0.01 * breath,
+      GLANCE.spine * glanceYaw * glance,
+      -1.4 * shift,
+    );
     r.chest?.scale.set(1 + 0.6 * IDLE.breath * breath, lift, 1);
 
     // Legs: straight standing; sitting, thighs forward and a little apart,
@@ -304,7 +376,7 @@ export default function Driver({
         sz = -side * 0.12;
         ex =
           -(TYPING.forearm - TYPING.upperArm) -
-          idle * TYPING.tap * Math.max(0, Math.sin(phase));
+          idle * TYPING.tap * Math.max(0, Math.sin(phase)) * (1 - glance);
       } else if (sitting) {
         sx = -(0.5 + lean);
         sz = -side * 0.03;
@@ -340,13 +412,28 @@ export default function Driver({
     const ease = 1 - Math.exp(-IDLE.lookEase * delta);
     state.yaw += (state.targetYaw - state.yaw) * ease;
     state.pitch += (state.targetPitch - state.pitch) * ease;
+    // Or turned to the camera: turned about y last ("YXZ"), so it tips
+    // toward it rather than rolling.
     r.head?.position.set(0, NECK_Y * lift, 0);
     r.head?.rotation.set(
-      state.pitch - lean + (typing ? TYPING.look : 0),
-      state.yaw * (1 - wave),
-      1.4 * shift + WAVE.tilt * wave,
+      THREE.MathUtils.lerp(
+        state.pitch - lean + (typing ? TYPING.look : 0),
+        glancePitch - lean,
+        glance,
+      ),
+      THREE.MathUtils.lerp(
+        state.yaw * (1 - wave),
+        glanceYaw * (1 - GLANCE.spine),
+        glance,
+      ),
+      (1.4 * shift + WAVE.tilt * wave) * (1 - glance),
+      "YXZ",
     );
-    r.brows?.position.set(0, WAVE.brows * wave, 0);
+    r.brows?.position.set(
+      0,
+      WAVE.brows * wave + GLANCE.brows * glance,
+      0,
+    );
 
     // Blinks: the eyes squash shut and open again.
     let open = 1;

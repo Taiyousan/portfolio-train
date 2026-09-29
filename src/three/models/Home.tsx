@@ -1,47 +1,28 @@
 import { forwardRef, useImperativeHandle, useRef } from "react";
-import { useFrame } from "@react-three/fiber";
-import { Text } from "@react-three/drei";
-import { animated, useSpring } from "@react-spring/three";
+import { useFrame, type ThreeEvent } from "@react-three/fiber";
+import {
+  animated,
+  useSpring,
+  useSprings,
+  type SpringValue,
+} from "@react-spring/three";
 import * as THREE from "three";
 import { useControls } from "leva";
-import { site } from "@/lib/site";
 import { useTrainContext } from "../state/TrainContext";
-import { useSeasonValue } from "../hooks/useSeason";
-import { HOME_DESK, STOP_SIDE } from "../config/scene";
-import { SNOW_COLOR } from "../config/seasons";
-import Driver, { DRIVER_SEAT_HEIGHT, DRIVER_TYPING_HANDS } from "./Driver";
+import { StationHints } from "../state/StationHints";
+import { useStationClick } from "../hooks/useStationProp";
+import { HOME_DESK, HOME_SCALE, STOP_SIDE } from "../config/scene";
+import Driver, {
+  DRIVER_SEAT_HEIGHT,
+  DRIVER_TYPING_HANDS,
+  type DriverHandle,
+} from "./Driver";
+import HomeDecor, { HOME_FITTINGS, homeDeckHeight } from "./HomeDecor";
+import { Block, Cylinder, STATION_COLORS as COLORS } from "./StationPrimitives";
 
-// Same face as the departures board (see StationBoard).
-const FONT = "/fonts/geist-mono-600.woff";
-
-// Layout in the halt's ground frame: x across the track (+ away from it),
-// z along it, origin at the platform centre, at track level. From the
-// track: a small wooden halt, the terrace level with it, then the house.
+// The halt's centre, across the track.
 const HALT_X = 2.85;
-const DECK_HEIGHT = 0.3;
-const HALT_WIDTH = 0.7;
-const HALT_LENGTH = 3;
-const TERRACE_START = HALT_WIDTH / 2;
-const TERRACE_WIDTH = 1.25;
-const TERRACE_LENGTH = 2.6;
-const HOUSE_START = TERRACE_START + TERRACE_WIDTH;
-const HOUSE_WIDTH = 1.2;
-const HOUSE_LENGTH = 2.4;
-const WALL_HEIGHT = 1.1;
-// Roof: a triangular prism (3-sided cylinder along z), flattened.
-const ROOF_RADIUS = (HOUSE_WIDTH + 0.2) / Math.sqrt(3);
-const ROOF_FLATTEN = 0.6;
-const DOOR_Z = 0.5;
-const WINDOW_Z = -0.55;
-// Name sign on the halt, seen in the wide arrival shot, out of
-// HOME_VIEW_CAMERA's frame (it would hide the desk). The lantern stands at
-// the terrace's other corner.
-const SIGN_Z = 1.0;
-const LANTERN_Z = -1.1;
-const SIGN_X = 0.1;
-const SIGN_WIDTH = 0.86;
-const SIGN_Y = DECK_HEIGHT + 0.62;
-// The house starts popping once the halt is this close to its stop.
+// The fittings start popping once the halt is this close to its stop.
 const POP_DISTANCE = 2;
 const toDeg = THREE.MathUtils.radToDeg;
 const toRad = THREE.MathUtils.degToRad;
@@ -50,21 +31,13 @@ const toRad = THREE.MathUtils.degToRad;
 const DRIVER_SWAP_DELAY_MS = 250;
 const DRIVER_SPRING = { mass: 1, tension: 260, friction: 12, precision: 0.001 };
 const POP_SPRING = { mass: 1, tension: 220, friction: 9, precision: 0.001 };
-// On departure, the halt itself sinks away this long after the house.
-const BASE_DEPOP_DELAY_MS = 250;
-
-const COLORS = {
-  halt: "#7b5b3e",
-  terrace: "#9c7a52",
-  wood: "#3b2f28",
-  wall: "#d9c7a5",
-  roof: "#4a3b36",
-  sign: "#e8e2d4",
-  ink: "#2a2a2a",
-  // Warm lights inside and on the terrace, caught by the bloom.
-  light: "#ffcf87",
-  screen: "#8fc2ff",
-};
+// The fittings pop one after the other, in this order (the desk last, for
+// the driver to sit at), this far apart; in reverse order on departure.
+const POP_ORDER = [...HOME_FITTINGS, "desk"] as const;
+const POP_STAGGER_MS = 70;
+// On departure, the halt itself sinks away this long after its last
+// fitting.
+const BASE_DEPOP_DELAY_MS = 250 + (POP_ORDER.length - 1) * POP_STAGGER_MS;
 
 // Desk, chair and laptop in driver units (scaled with the driver by
 // HOME_DESK.scale), origin on the floor under the seat, the sitting driver
@@ -79,123 +52,185 @@ const DESK_WIDTH = 0.8;
 const DESK_DEPTH = 0.42;
 const DESK_Z = 0.43;
 const LAPTOP_Z = DRIVER_TYPING_HANDS.z + 0.05;
+const LAPTOP = "#c9ccd1";
+const SCREEN = "#8fc2ff";
 
-// Snow on the roof (winter): the roof's prism again, scaled from the middle
-// of its base so it pokes out of the slopes as the snow cover grows, and
-// kept a little shorter so the gable ends stay bare.
-function RoofSnow() {
-  const ref = useRef<THREE.Group>(null);
-  useSeasonValue("snow", (snow) => {
-    const group = ref.current;
-    if (!group) return;
-    group.visible = snow > 0.001;
-    const grow = 0.97 + 0.07 * snow;
-    group.scale.set(grow, grow, 0.99);
-  });
-
-  return (
-    <group ref={ref} position={[0, WALL_HEIGHT, 0]} visible={false}>
-      <mesh
-        position={[0, (ROOF_RADIUS * ROOF_FLATTEN) / 2, 0]}
-        rotation-x={-Math.PI / 2}
-        scale={[1, 1, ROOF_FLATTEN]}
-      >
-        <cylinderGeometry
-          args={[ROOF_RADIUS, ROOF_RADIUS, HOUSE_LENGTH + 0.2, 3]}
-        />
-        <meshStandardMaterial color={SNOW_COLOR} roughness={0.9} flatShading />
-      </mesh>
-    </group>
-  );
-}
-
+// Rounded like the rest of the home: a chair with a slatted back, a wooden
+// desk on round legs, a laptop, a mug and a little potted plant.
 function DeskSetup() {
+  const seat = DRIVER_SEAT_HEIGHT;
+  const legHeight = DESK_TOP - 0.03;
   return (
     <group>
       {/* Chair */}
-      <mesh castShadow position={[0, DRIVER_SEAT_HEIGHT - 0.02, 0.03]}>
-        <boxGeometry args={[0.32, 0.04, 0.4]} />
-        <meshStandardMaterial color={COLORS.wood} roughness={0.8} />
-      </mesh>
-      <mesh castShadow position={[0, DRIVER_SEAT_HEIGHT + 0.15, -0.17]}>
-        <boxGeometry args={[0.32, 0.3, 0.03]} />
-        <meshStandardMaterial color={COLORS.wood} roughness={0.8} />
-      </mesh>
-      {[-0.13, 0.13].flatMap((x) =>
-        [-0.15, 0.21].map((z) => (
-          <mesh
+      <Block
+        size={[0.34, 0.04, 0.36]}
+        position={[0, seat - 0.02, 0.02]}
+        radius={0.015}
+        color={COLORS.benchWood}
+      />
+      {[0.1, 0.22].map((y) => (
+        <Block
+          key={y}
+          size={[0.32, 0.07, 0.025]}
+          position={[0, seat + y, -0.16]}
+          rotation={[-0.1, 0, 0]}
+          radius={0.012}
+          color={COLORS.benchWood}
+        />
+      ))}
+      {[-0.14, 0.14].map((x) => (
+        <Cylinder
+          key={x}
+          radius={0.014}
+          height={0.26}
+          position={[x, seat + 0.12, -0.16]}
+          color={COLORS.darkWood}
+          segments={8}
+        />
+      ))}
+      {[-0.14, 0.14].flatMap((x) =>
+        [-0.14, 0.18].map((z) => (
+          <Cylinder
             key={`${x}:${z}`}
-            castShadow
-            position={[x, (DRIVER_SEAT_HEIGHT - 0.04) / 2, z]}
-          >
-            <boxGeometry args={[0.03, DRIVER_SEAT_HEIGHT - 0.04, 0.03]} />
-            <meshStandardMaterial color={COLORS.wood} roughness={0.8} />
-          </mesh>
+            radius={0.016}
+            height={seat - 0.04}
+            position={[x, (seat - 0.04) / 2, z]}
+            color={COLORS.darkWood}
+            segments={8}
+          />
         )),
       )}
 
       {/* Desk */}
-      <mesh castShadow receiveShadow position={[0, DESK_TOP - 0.015, DESK_Z]}>
-        <boxGeometry args={[DESK_WIDTH, 0.03, DESK_DEPTH]} />
-        <meshStandardMaterial color={COLORS.terrace} roughness={0.7} />
-      </mesh>
+      <Block
+        size={[DESK_WIDTH, 0.035, DESK_DEPTH]}
+        position={[0, DESK_TOP - 0.0175, DESK_Z]}
+        radius={0.014}
+        color={COLORS.benchWood}
+      />
       {[-1, 1].flatMap((sx) =>
         [-1, 1].map((sz) => (
-          <mesh
+          <Cylinder
             key={`${sx}:${sz}`}
-            castShadow
+            radius={0.018}
+            top={0.014}
+            height={legHeight}
             position={[
-              sx * (DESK_WIDTH / 2 - 0.03),
-              (DESK_TOP - 0.03) / 2,
-              DESK_Z + sz * (DESK_DEPTH / 2 - 0.03),
+              sx * (DESK_WIDTH / 2 - 0.05),
+              legHeight / 2,
+              DESK_Z + sz * (DESK_DEPTH / 2 - 0.05),
             ]}
-          >
-            <boxGeometry args={[0.03, DESK_TOP - 0.03, 0.03]} />
-            <meshStandardMaterial color={COLORS.wood} roughness={0.8} />
-          </mesh>
+            color={COLORS.wood}
+            segments={10}
+          />
         )),
       )}
 
       {/* Laptop, the hands at its front edge, the lid tipped back and its
           screen lit toward the driver. */}
-      <mesh castShadow position={[0, DESK_TOP + 0.0075, LAPTOP_Z]}>
-        <boxGeometry args={[0.3, 0.015, 0.2]} />
-        <meshStandardMaterial color="#c9ccd1" metalness={0.4} roughness={0.4} />
-      </mesh>
+      <Block
+        size={[0.3, 0.016, 0.2]}
+        position={[0, DESK_TOP + 0.008, LAPTOP_Z]}
+        radius={0.006}
+        color={LAPTOP}
+      />
       <group position={[0, DESK_TOP + 0.015, LAPTOP_Z + 0.1]} rotation-x={0.25}>
-        <mesh castShadow position={[0, 0.1, 0]}>
-          <boxGeometry args={[0.3, 0.2, 0.012]} />
-          <meshStandardMaterial
-            color="#c9ccd1"
-            metalness={0.4}
-            roughness={0.4}
-          />
-        </mesh>
-        <mesh position={[0, 0.1, -0.007]}>
-          <boxGeometry args={[0.27, 0.17, 0.002]} />
-          <meshStandardMaterial
-            color={COLORS.screen}
-            emissive={COLORS.screen}
-            emissiveIntensity={1.2}
-          />
+        <Block
+          size={[0.3, 0.2, 0.014]}
+          position={[0, 0.1, 0]}
+          radius={0.006}
+          color={LAPTOP}
+        />
+        <Block
+          size={[0.27, 0.17, 0.004]}
+          position={[0, 0.1, -0.007]}
+          radius={0.0015}
+          color={SCREEN}
+          emissive={1.2}
+        />
+      </group>
+
+      {/* Mug, its handle to the side */}
+      <group position={[0.28, DESK_TOP, 0.34]}>
+        <Cylinder
+          radius={0.035}
+          top={0.038}
+          height={0.08}
+          position={[0, 0.04, 0]}
+          color={COLORS.sign}
+          segments={14}
+        />
+        <mesh position={[0.038, 0.042, 0]} castShadow>
+          <torusGeometry args={[0.02, 0.007, 6, 12]} />
+          <meshStandardMaterial color={COLORS.sign} roughness={0.75} />
         </mesh>
       </group>
 
-      {/* Mug */}
-      <mesh castShadow position={[0.28, DESK_TOP + 0.04, 0.34]}>
-        <cylinderGeometry args={[0.035, 0.035, 0.08, 12]} />
-        <meshStandardMaterial color={COLORS.sign} roughness={0.5} />
-      </mesh>
+      {/* Potted plant on the far corner, past the mug (the laptop stays
+          in sight from the track side, on the driver's right) */}
+      <group position={[0.3, DESK_TOP, 0.56]}>
+        <Cylinder
+          radius={0.03}
+          top={0.04}
+          height={0.055}
+          position={[0, 0.0275, 0]}
+          color={COLORS.pot}
+          segments={14}
+        />
+        <mesh position={[0, 0.08, 0]} castShadow>
+          <sphereGeometry args={[0.047, 12, 10]} />
+          <meshStandardMaterial color={COLORS.bush} roughness={0.85} />
+        </mesh>
+        <mesh position={[0.022, 0.108, 0.015]} castShadow>
+          <sphereGeometry args={[0.027, 10, 8]} />
+          <meshStandardMaterial color={COLORS.bushLight} roughness={0.85} />
+        </mesh>
+      </group>
     </group>
   );
 }
 
-// The second stop, for "about": a small halt by a house, built from
-// primitives like the station and on the same side of the track. On the
-// terrace, the driver sits at a desk in a hoodie, typing: the conductor is a
-// role, this is the developer at work. Its group is moved along z by
-// useStopApproach. Track is at y = -0.57 (see TrainScene), so the halt sits
-// on the ground at that level.
+// Handlers making the whole stop opaque to the pointer where nothing
+// clickable is in front: R3F hands a click to every object along the ray
+// that listens, not just the nearest, so a click on the terrace, a railing
+// or the desk would otherwise reach the house behind or below it. Clicks
+// stop here (a clickable prop in front stops them first). The pointer's
+// moves aren't stopped (R3F would then drop a prop's hover without ending
+// it), only listened to: that puts the stop's every part on the hover's
+// ray, so a prop behind one of them isn't the nearest (see
+// useStationClick).
+const OPAQUE = {
+  onClick: (e: ThreeEvent<MouseEvent>) => e.stopPropagation(),
+  onPointerMove: () => {},
+};
+
+// The driver at the desk, in a hoodie, typing; clicked, a look at the
+// camera.
+function HomeDriver() {
+  const driverRef = useRef<DriverHandle>(null);
+  const { bind } = useStationClick(() => driverRef.current?.glance(), {
+    wiggle: false,
+  });
+  return (
+    <group {...bind}>
+      <Driver
+        ref={driverRef}
+        pose="sitting"
+        outfit="hoodie"
+        typing
+        position={[0, DRIVER_SEAT_HEIGHT, 0]}
+      />
+    </group>
+  );
+}
+
+// The second stop, for "about": a halt by a house (see HomeDecor), on the
+// same side of the track as the station. On the terrace, the driver sits
+// at a desk in a hoodie, typing: the conductor is a role, this is the
+// developer at work. Its group is moved along z by useStopApproach. Track is
+// at y = -0.57 (see TrainScene), so the halt sits on the ground at that
+// level.
 const Home = forwardRef<THREE.Group>(function Home(_, ref) {
   const { mode, stop } = useTrainContext();
   const here = stop === "home";
@@ -208,13 +243,16 @@ const Home = forwardRef<THREE.Group>(function Home(_, ref) {
     scale: { value: HOME_DESK.scale, min: 0.2, max: 1.5, step: 0.01 },
   });
 
-  // The house and the furniture pop in with an elastic overshoot as the
-  // train stops, and shrink away as soon as it departs (see Station).
-  const [{ scale }, api] = useSpring(() => ({
+  // The fittings pop in with an elastic overshoot as the train stops, and
+  // shrink away as soon as it departs, one after the other (see Station).
+  const [popSprings, popApi] = useSprings(POP_ORDER.length, () => ({
     scale: 0,
     config: POP_SPRING,
   }));
-  // The halt and terrace sink away just after them (see Station).
+  const pops = Object.fromEntries(
+    POP_ORDER.map((name, i) => [name, popSprings[i].scale]),
+  ) as Record<(typeof POP_ORDER)[number], SpringValue<number>>;
+  // The halt, terrace and sign sink away just after them (see Station).
   const [{ base }, baseApi] = useSpring(() => ({
     base: 1,
     config: { ...POP_SPRING, clamp: true },
@@ -241,12 +279,17 @@ const Home = forwardRef<THREE.Group>(function Home(_, ref) {
     const show = atHome || (here && mode === "arriving" && approaching);
     if (show !== shownRef.current) {
       shownRef.current = show;
-      api.start({ scale: show ? 1 : 0 });
+      const last = POP_ORDER.length - 1;
+      popApi.start((i) => ({
+        scale: show ? 1 : 0,
+        delay: (show ? i : last - i) * POP_STAGGER_MS,
+      }));
       if (!show) {
         sunkRef.current = true;
         baseApi.start({ base: 0, delay: BASE_DEPOP_DELAY_MS });
       }
     }
+    // Back to full size, out of sight, before sliding in again.
     if (sunkRef.current && here && mode === "arriving") {
       sunkRef.current = false;
       baseApi.stop();
@@ -254,171 +297,38 @@ const Home = forwardRef<THREE.Group>(function Home(_, ref) {
     }
   });
 
-  const deskPosition: [number, number, number] = [desk.x, DECK_HEIGHT, desk.z];
+  const deskPosition: [number, number, number] = [
+    desk.x,
+    homeDeckHeight(HOME_SCALE),
+    desk.z,
+  ];
   const deskRotation: [number, number, number] = [0, toRad(desk.yaw), 0];
 
   return (
     <group ref={groupRef} visible={false}>
       <animated.group position={[HALT_X * STOP_SIDE, -0.57, 0]} scale={base}>
-        {/* Halt: a short wooden platform by the track */}
-        <mesh position={[0, DECK_HEIGHT / 2, 0]} castShadow receiveShadow>
-          <boxGeometry args={[HALT_WIDTH, DECK_HEIGHT, HALT_LENGTH]} />
-          <meshStandardMaterial color={COLORS.halt} roughness={0.9} />
-        </mesh>
-
-        {/* Name sign on two posts, facing the track (-x) */}
-        {[-1, 1].map((side) => (
-          <mesh
-            key={side}
-            castShadow
-            position={[
-              SIGN_X,
-              DECK_HEIGHT + (SIGN_Y - DECK_HEIGHT) / 2,
-              SIGN_Z + (side * SIGN_WIDTH) / 2.4,
-            ]}
-          >
-            <boxGeometry args={[0.05, SIGN_Y - DECK_HEIGHT, 0.05]} />
-            <meshStandardMaterial color={COLORS.wood} roughness={0.8} />
-          </mesh>
-        ))}
-        <mesh castShadow position={[SIGN_X, SIGN_Y, SIGN_Z]}>
-          <boxGeometry args={[0.04, 0.22, SIGN_WIDTH]} />
-          <meshStandardMaterial color={COLORS.sign} roughness={0.6} />
-        </mesh>
-        <Text
-          font={FONT}
-          position={[SIGN_X - 0.021, SIGN_Y, SIGN_Z]}
-          rotation-y={-Math.PI / 2}
-          fontSize={0.07}
-          maxWidth={SIGN_WIDTH - 0.08}
-          textAlign="center"
-          anchorX="center"
-          anchorY="middle"
-          color={COLORS.ink}
-        >
-          {site.name.toUpperCase()}
-        </Text>
-
-        {/* Terrace, level with the halt */}
-        <mesh
-          position={[TERRACE_START + TERRACE_WIDTH / 2, DECK_HEIGHT / 2, 0]}
-          castShadow
-          receiveShadow
-        >
-          <boxGeometry args={[TERRACE_WIDTH, DECK_HEIGHT, TERRACE_LENGTH]} />
-          <meshStandardMaterial color={COLORS.terrace} roughness={0.85} />
-        </mesh>
-        {/* Railing across the far end */}
-        <mesh
-          castShadow
-          position={[
-            TERRACE_START + TERRACE_WIDTH / 2,
-            DECK_HEIGHT + 0.3,
-            TERRACE_LENGTH / 2 - 0.03,
-          ]}
-        >
-          <boxGeometry args={[TERRACE_WIDTH, 0.03, 0.03]} />
-          <meshStandardMaterial color={COLORS.wood} roughness={0.8} />
-        </mesh>
-        {[0.05, 0.5, 0.95].map((t) => (
-          <mesh
-            key={t}
-            castShadow
-            position={[
-              TERRACE_START + t * TERRACE_WIDTH,
-              DECK_HEIGHT + 0.15,
-              TERRACE_LENGTH / 2 - 0.03,
-            ]}
-          >
-            <boxGeometry args={[0.03, 0.3, 0.03]} />
-            <meshStandardMaterial color={COLORS.wood} roughness={0.8} />
-          </mesh>
-        ))}
-        {/* Lantern on a post, at the terrace's corner by the halt */}
-        <mesh
-          castShadow
-          position={[TERRACE_START + 0.1, DECK_HEIGHT + 0.3, LANTERN_Z]}
-        >
-          <boxGeometry args={[0.04, 0.6, 0.04]} />
-          <meshStandardMaterial color={COLORS.wood} roughness={0.8} />
-        </mesh>
-        <mesh position={[TERRACE_START + 0.1, DECK_HEIGHT + 0.65, LANTERN_Z]}>
-          <boxGeometry args={[0.08, 0.1, 0.08]} />
-          <meshStandardMaterial
-            color={COLORS.light}
-            emissive={COLORS.light}
-            emissiveIntensity={2}
-          />
-        </mesh>
-
-        {/* Desk on the terrace, then the driver sitting at it. */}
-        <animated.group
-          position={deskPosition}
-          rotation={deskRotation}
-          scale={scale.to((s) => s * desk.scale)}
-        >
-          <DeskSetup />
-        </animated.group>
-        <animated.group
-          position={deskPosition}
-          rotation={deskRotation}
-          scale={driverScale}
-        >
-          <Driver
-            pose="sitting"
-            outfit="hoodie"
-            typing
-            position={[0, DRIVER_SEAT_HEIGHT, 0]}
-          />
-        </animated.group>
-
-        {/* House, behind the terrace, popping in from the ground */}
-        <animated.group
-          position={[HOUSE_START + HOUSE_WIDTH / 2, 0, 0]}
-          scale={scale}
-        >
-          <mesh position={[0, WALL_HEIGHT / 2, 0]} castShadow receiveShadow>
-            <boxGeometry args={[HOUSE_WIDTH, WALL_HEIGHT, HOUSE_LENGTH]} />
-            <meshStandardMaterial color={COLORS.wall} roughness={0.9} />
-          </mesh>
-          <mesh
-            position={[0, WALL_HEIGHT + (ROOF_RADIUS * ROOF_FLATTEN) / 2, 0]}
-            rotation-x={-Math.PI / 2}
-            scale={[1, 1, ROOF_FLATTEN]}
-            castShadow
-          >
-            <cylinderGeometry
-              args={[ROOF_RADIUS, ROOF_RADIUS, HOUSE_LENGTH + 0.2, 3]}
-            />
-            <meshStandardMaterial
-              color={COLORS.roof}
-              roughness={0.7}
-              flatShading
-            />
-          </mesh>
-          <RoofSnow />
-          {/* Door and lit window on the terrace side */}
-          <mesh position={[-HOUSE_WIDTH / 2 - 0.01, DECK_HEIGHT + 0.3, DOOR_Z]}>
-            <boxGeometry args={[0.02, 0.6, 0.35]} />
-            <meshStandardMaterial color={COLORS.wood} roughness={0.8} />
-          </mesh>
-          <mesh
-            position={[-HOUSE_WIDTH / 2 - 0.005, DECK_HEIGHT + 0.4, WINDOW_Z]}
-          >
-            <boxGeometry args={[0.02, 0.41, 0.56]} />
-            <meshStandardMaterial color={COLORS.wood} roughness={0.8} />
-          </mesh>
-          <mesh
-            position={[-HOUSE_WIDTH / 2 - 0.016, DECK_HEIGHT + 0.4, WINDOW_Z]}
-          >
-            <boxGeometry args={[0.005, 0.35, 0.5]} />
-            <meshStandardMaterial
-              color={COLORS.light}
-              emissive={COLORS.light}
-              emissiveIntensity={1.2}
-            />
-          </mesh>
-        </animated.group>
+        {/* Its props, and the driver, clickable while stopped here, with no
+            hints (see StationHints); clicks on the rest go no further. */}
+        <StationHints stop="home" hinted={false}>
+          <group {...OPAQUE}>
+            <HomeDecor scale={HOME_SCALE} pops={pops} />
+            {/* Desk on the terrace, then the driver sitting at it. */}
+            <animated.group
+              position={deskPosition}
+              rotation={deskRotation}
+              scale={pops.desk.to((s) => s * desk.scale)}
+            >
+              <DeskSetup />
+            </animated.group>
+            <animated.group
+              position={deskPosition}
+              rotation={deskRotation}
+              scale={driverScale}
+            >
+              <HomeDriver />
+            </animated.group>
+          </group>
+        </StationHints>
       </animated.group>
     </group>
   );
