@@ -1,4 +1,4 @@
-import { forwardRef, useImperativeHandle, useRef } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import {
   animated,
@@ -17,7 +17,7 @@ import {
 } from "../config/scene";
 import type { StationProject } from "../ui/types";
 import StationBoard, { stationBoardHeight } from "./StationBoard";
-import Driver, { DRIVER_SEAT_DEPTH } from "./Driver";
+import Driver, { DRIVER_SEAT_DEPTH, type DriverHandle } from "./Driver";
 import StationDecor, {
   STATION_FITTINGS,
   stationPlatformHeight,
@@ -105,6 +105,15 @@ const Station = forwardRef<THREE.Group, { projects: StationProject[] }>(
       delay: sitting ? DRIVER_SWAP_DELAY_MS : 0,
       config: DRIVER_SPRING,
     });
+    // Clicking the standing driver makes it wave.
+    const standingDriverRef = useRef<DriverHandle>(null);
+    const pointingDriverRef = useRef(false);
+    useEffect(() => {
+      if (!standing && pointingDriverRef.current) {
+        pointingDriverRef.current = false;
+        document.body.style.cursor = "";
+      }
+    }, [standing]);
     const groupRef = useRef<THREE.Group>(null);
     useImperativeHandle(ref, () => groupRef.current!, []);
     const shownRef = useRef(false);
@@ -159,7 +168,8 @@ const Station = forwardRef<THREE.Group, { projects: StationProject[] }>(
             </group>
           </animated.group>
           <StationDecor placement={placement} pops={pops} />
-          {/* Driver standing left of the board, facing the track (-x). */}
+          {/* Driver standing left of the board, facing the track (-x),
+              waving when clicked. */}
           <animated.group
             position={[
               STATION_DRIVER.standing.x,
@@ -169,7 +179,25 @@ const Station = forwardRef<THREE.Group, { projects: StationProject[] }>(
             rotation={[0, -Math.PI / 2, 0]}
             scale={standingScale}
           >
-            <Driver />
+            <Driver
+              ref={standingDriverRef}
+              onClick={(e) => {
+                if (!standing) return;
+                e.stopPropagation();
+                standingDriverRef.current?.wave();
+              }}
+              onPointerOver={(e) => {
+                if (!standing) return;
+                e.stopPropagation();
+                pointingDriverRef.current = true;
+                document.body.style.cursor = "pointer";
+              }}
+              onPointerOut={() => {
+                if (!pointingDriverRef.current) return;
+                pointingDriverRef.current = false;
+                document.body.style.cursor = "";
+              }}
+            />
           </animated.group>
           {/* Driver sitting on the track-side edge right of the board,
               facing the track (-x), legs over the edge. */}

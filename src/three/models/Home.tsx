@@ -9,7 +9,7 @@ import { useTrainContext } from "../state/TrainContext";
 import { useSeasonValue } from "../hooks/useSeason";
 import { HOME_DESK, STOP_SIDE } from "../config/scene";
 import { SNOW_COLOR } from "../config/seasons";
-import Driver, { DRIVER_SEAT_HEIGHT } from "./Driver";
+import Driver, { DRIVER_SEAT_HEIGHT, DRIVER_TYPING_HANDS } from "./Driver";
 
 // Same face as the departures board (see StationBoard).
 const FONT = "/fonts/geist-mono-600.woff";
@@ -68,11 +68,17 @@ const COLORS = {
 
 // Desk, chair and laptop in driver units (scaled with the driver by
 // HOME_DESK.scale), origin on the floor under the seat, the sitting driver
-// facing +z: the desk top sits just under the typing hands.
-const DESK_TOP = DRIVER_SEAT_HEIGHT + 0.2;
+// facing +z: the laptop's keyboard sits just under the typing hands, the
+// desk's front edge just past the knees.
+const DESK_TOP =
+  DRIVER_SEAT_HEIGHT +
+  DRIVER_TYPING_HANDS.y -
+  DRIVER_TYPING_HANDS.radius -
+  0.01;
 const DESK_WIDTH = 0.8;
 const DESK_DEPTH = 0.42;
-const DESK_Z = 0.42;
+const DESK_Z = 0.43;
+const LAPTOP_Z = DRIVER_TYPING_HANDS.z + 0.05;
 
 // Snow on the roof (winter): the roof's prism again, scaled from the middle
 // of its base so it pokes out of the slopes as the snow cover grows, and
@@ -152,11 +158,11 @@ function DeskSetup() {
 
       {/* Laptop, the hands at its front edge, the lid tipped back and its
           screen lit toward the driver. */}
-      <mesh castShadow position={[0, DESK_TOP + 0.0075, 0.4]}>
+      <mesh castShadow position={[0, DESK_TOP + 0.0075, LAPTOP_Z]}>
         <boxGeometry args={[0.3, 0.015, 0.2]} />
         <meshStandardMaterial color="#c9ccd1" metalness={0.4} roughness={0.4} />
       </mesh>
-      <group position={[0, DESK_TOP + 0.015, 0.5]} rotation-x={0.25}>
+      <group position={[0, DESK_TOP + 0.015, LAPTOP_Z + 0.1]} rotation-x={0.25}>
         <mesh castShadow position={[0, 0.1, 0]}>
           <boxGeometry args={[0.3, 0.2, 0.012]} />
           <meshStandardMaterial
@@ -186,7 +192,7 @@ function DeskSetup() {
 
 // The second stop, for "about": a small halt by a house, built from
 // primitives like the station and on the same side of the track. On the
-// terrace, the driver sits at a desk, cap off, typing: the conductor is a
+// terrace, the driver sits at a desk in a hoodie, typing: the conductor is a
 // role, this is the developer at work. Its group is moved along z by
 // useStopApproach. Track is at y = -0.57 (see TrainScene), so the halt sits
 // on the ground at that level.
@@ -360,7 +366,7 @@ const Home = forwardRef<THREE.Group>(function Home(_, ref) {
         >
           <Driver
             pose="sitting"
-            cap={false}
+            outfit="hoodie"
             typing
             position={[0, DRIVER_SEAT_HEIGHT, 0]}
           />

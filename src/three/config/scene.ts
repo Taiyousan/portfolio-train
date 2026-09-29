@@ -135,8 +135,8 @@ export const STATION_DRIVER = {
   scale: 0.55,
 };
 
-// Desk on the home terrace (models/Home), with the driver sitting at it, cap
-// off, typing. In the halt's ground frame (origin at the platform centre, at
+// Desk on the home terrace (models/Home), with the driver sitting at it, in a
+// hoodie, typing. In the halt's ground frame (origin at the platform centre, at
 // track level): x across the track (+ away from it), z along it. yaw turns
 // the driver and the desk from facing +z, in radians (negative: toward the
 // track, so the camera sees the driver three-quarter on). scale in
