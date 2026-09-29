@@ -34,7 +34,7 @@ export const STATION_CAMERA: CameraShot = {
 export const STOP_SETTLE_MS = 300;
 
 export const STATION_VIEW_CAMERA: CameraShot = {
-  position: [0.481, 0.676, -1.699],
+  position: [0.409, 0.663, -1.572],
   target: [2.154, 0.153, -0.719],
 };
 

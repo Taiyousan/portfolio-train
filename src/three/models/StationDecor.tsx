@@ -4,6 +4,8 @@ import { animated, type SpringValue } from "@react-spring/three";
 import * as THREE from "three";
 import SnowCover from "./SnowCover";
 import { useStationClick } from "../hooks/useStationProp";
+import { StationHints } from "../state/StationHints";
+import HintOrb from "./HintOrb";
 import {
   Block,
   Cylinder,
@@ -315,7 +317,10 @@ function Building() {
   // Its windows go dark on a click, and light up again on the next one, or
   // when the train leaves.
   const [lit, setLit] = useState(true);
-  const { bind, atStation } = useStationClick(() => setLit((on) => !on));
+  const { bind, hint, atStation } = useStationClick(
+    () => setLit((on) => !on),
+    { wiggle: false },
+  );
   if (!atStation && !lit) setLit(true);
   const { color: glassColor, emissive: glassGlow } = glass(lit);
 
@@ -461,6 +466,11 @@ function Building() {
         </Text>
       </group>
       <Clock position={[CANOPY.front + 1.2, CANOPY.y - 1.25, -2.6]} />
+      {/* Over the roof's ridge. */}
+      <HintOrb
+        hint={hint}
+        position={[cx, base + BUILDING.wall + roofRise + 0.8, 0]}
+      />
     </group>
   );
 }
@@ -493,32 +503,34 @@ export default function StationDecor({
 }) {
   return (
     <group position={[placement.edgeX, 0, placement.z]} scale={placement.scale}>
-      <Platform />
-      <Pop
-        feet={[BUILDING.x + BUILDING.depth / 2, PLATFORM_TOP, 0]}
-        pop={pops.building}
-      >
-        <Building />
-      </Pop>
-      {PLANTERS.map(({ at, size }) => (
-        <Pop key={at.join()} feet={at} pop={pops.planters}>
-          <Planter position={at} size={size} />
+      <StationHints>
+        <Platform />
+        <Pop
+          feet={[BUILDING.x + BUILDING.depth / 2, PLATFORM_TOP, 0]}
+          pop={pops.building}
+        >
+          <Building />
         </Pop>
-      ))}
-      {LAMPS.map((at) => (
-        <Pop key={at.join()} feet={at} pop={pops.lamps}>
-          <Lamp position={at} pop={pops.lamps} />
+        {PLANTERS.map(({ at, size }) => (
+          <Pop key={at.join()} feet={at} pop={pops.planters}>
+            <Planter position={at} size={size} />
+          </Pop>
+        ))}
+        {LAMPS.map((at) => (
+          <Pop key={at.join()} feet={at} pop={pops.lamps}>
+            <Lamp position={at} pop={pops.lamps} />
+          </Pop>
+        ))}
+        <Pop feet={BENCH} pop={pops.bench}>
+          <Bench position={BENCH} />
         </Pop>
-      ))}
-      <Pop feet={BENCH} pop={pops.bench}>
-        <Bench position={BENCH} />
-      </Pop>
-      <Pop feet={LUGGAGE} pop={pops.luggage}>
-        <Luggage position={LUGGAGE} />
-      </Pop>
-      <Pop feet={TRASH_CAN} pop={pops.trashCan}>
-        <TrashCan position={TRASH_CAN} />
-      </Pop>
+        <Pop feet={LUGGAGE} pop={pops.luggage}>
+          <Luggage position={LUGGAGE} />
+        </Pop>
+        <Pop feet={TRASH_CAN} pop={pops.trashCan}>
+          <TrashCan position={TRASH_CAN} />
+        </Pop>
+      </StationHints>
     </group>
   );
 }

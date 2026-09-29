@@ -3,6 +3,7 @@ import { RoundedBox } from "@react-three/drei";
 import type { SpringValue } from "@react-spring/three";
 import * as THREE from "three";
 import useStationProp from "../hooks/useStationProp";
+import HintOrb from "./HintOrb";
 import {
   Block,
   Cylinder,
@@ -61,77 +62,90 @@ const CLOCK_HANG = 1.2;
 export function Clock({ position }: { position: Vec3 }) {
   const bodyRef = useRef<THREE.Group>(null);
   const handRefs = useRef<(THREE.Group | null)[]>([]);
-  const bind = useStationProp(CLOCK_SPIN.duration, (t, reducedMotion) => {
-    const now = new Date();
-    const minutes = now.getMinutes() + now.getSeconds() / 60;
-    const hours = (now.getHours() % 12) + minutes / 60;
-    let spin = 0;
-    let shake = 0;
-    if (t !== null) {
-      spin = easeInOut(span(t, CLOCK_SPIN.spinAt, CLOCK_SPIN.spin));
-      if (!reducedMotion) {
-        const fade = 1 - span(t, 0, CLOCK_SPIN.shake);
-        shake =
-          CLOCK_SPIN.shakeAngle * fade * Math.sin(t * CLOCK_SPIN.shakeSpeed);
+  const { bind, pose, hint } = useStationProp(
+    CLOCK_SPIN.duration,
+    (t, reducedMotion) => {
+      const now = new Date();
+      const minutes = now.getMinutes() + now.getSeconds() / 60;
+      const hours = (now.getHours() % 12) + minutes / 60;
+      let spin = 0;
+      let shake = 0;
+      if (t !== null) {
+        spin = easeInOut(span(t, CLOCK_SPIN.spinAt, CLOCK_SPIN.spin));
+        if (!reducedMotion) {
+          const fade = 1 - span(t, 0, CLOCK_SPIN.shake);
+          shake =
+            CLOCK_SPIN.shakeAngle *
+            fade *
+            Math.sin(t * CLOCK_SPIN.shakeSpeed);
+        }
       }
-    }
-    const [hour, minute] = handRefs.current;
-    if (hour) hour.rotation.x = TAU * (hours / 12 + spin);
-    if (minute) {
-      minute.rotation.x = TAU * (minutes / 60 + CLOCK_SPIN.minuteTurns * spin);
-    }
-    if (bodyRef.current) bodyRef.current.rotation.x = shake;
-  });
+      const [hour, minute] = handRefs.current;
+      if (hour) hour.rotation.x = TAU * (hours / 12 + spin);
+      if (minute) {
+        minute.rotation.x =
+          TAU * (minutes / 60 + CLOCK_SPIN.minuteTurns * spin);
+      }
+      if (bodyRef.current) bodyRef.current.rotation.x = shake;
+    },
+    // Swings about its bracket's top, where it hangs.
+    { pivot: [0, CLOCK_HANG, 0] },
+  );
 
   return (
     <group position={position} {...bind}>
-      <group ref={bodyRef} position={[0, CLOCK_HANG, 0]}>
-        <group position={[0, -CLOCK_HANG, 0]}>
-          {/* Bracket down from the canopy */}
-          <Cylinder
-            radius={0.06}
-            height={0.5}
-            position={[0, 0.95, 0]}
-            color={COLORS.iron}
-          />
-          <group rotation-z={Math.PI / 2}>
+      <group ref={pose}>
+        <group ref={bodyRef} position={[0, CLOCK_HANG, 0]}>
+          <group position={[0, -CLOCK_HANG, 0]}>
+            {/* Bracket down from the canopy */}
             <Cylinder
-              radius={0.7}
-              height={0.3}
+              radius={0.06}
+              height={0.5}
+              position={[0, 0.95, 0]}
               color={COLORS.iron}
-              segments={24}
             />
-            <Cylinder
-              radius={0.58}
-              height={0.32}
-              color={COLORS.sign}
-              segments={24}
-            />
-          </group>
-          {/* Hour then minute hand, each with a short tail past the pivot,
-              and a cap over it. */}
-          {CLOCK_HANDS.map(({ length, width, x }, i) => (
-            <group
-              key={x}
-              position={[x, 0, 0]}
-              ref={(hand) => {
-                handRefs.current[i] = hand;
-              }}
-            >
-              <Block
-                size={[0.04, length, width]}
-                position={[0, length / 2 - 0.08, 0]}
-                radius={0.02}
-                color={COLORS.ink}
+            <group rotation-z={Math.PI / 2}>
+              <Cylinder
+                radius={0.7}
+                height={0.3}
+                color={COLORS.iron}
+                segments={24}
+              />
+              <Cylinder
+                radius={0.58}
+                height={0.32}
+                color={COLORS.sign}
+                segments={24}
               />
             </group>
-          ))}
-          <mesh position={[-0.25, 0, 0]}>
-            <sphereGeometry args={[0.06, 10, 8]} />
-            <meshStandardMaterial color={COLORS.ink} />
-          </mesh>
+            {/* Hour then minute hand, each with a short tail past the pivot,
+                and a cap over it. */}
+            {CLOCK_HANDS.map(({ length, width, x }, i) => (
+              <group
+                key={x}
+                position={[x, 0, 0]}
+                ref={(hand) => {
+                  handRefs.current[i] = hand;
+                }}
+              >
+                <Block
+                  size={[0.04, length, width]}
+                  position={[0, length / 2 - 0.08, 0]}
+                  radius={0.02}
+                  color={COLORS.ink}
+                />
+              </group>
+            ))}
+            <mesh position={[-0.25, 0, 0]}>
+              <sphereGeometry args={[0.06, 10, 8]} />
+              <meshStandardMaterial color={COLORS.ink} />
+            </mesh>
+          </group>
         </group>
       </group>
+      {/* Up over the canopy it hangs from (its underside is just above
+          the bracket), on the track side. */}
+      <HintOrb hint={hint} position={[-0.3, 1.75, 0]} />
     </group>
   );
 }
@@ -181,79 +195,85 @@ export function Lamp({
 }) {
   const lightRef = useRef<THREE.PointLight>(null);
   const lanternRef = useRef<THREE.MeshStandardMaterial>(null);
-  const bind = useStationProp(LAMP_BLINK.duration, (t, reducedMotion) => {
-    let level = 1;
-    if (t !== null) {
-      const steps = reducedMotion ? LAMP_BLINK.reduced : LAMP_BLINK.steps;
-      for (const [at, value] of steps) if (t >= at) level = value;
-    }
-    const light = lightRef.current;
-    if (light) {
-      light.intensity = Math.max(pop.get(), 0) * LAMP_INTENSITY * level;
-    }
-    const lantern = lanternRef.current;
-    if (lantern) {
-      lantern.color.lerpColors(LANTERN_OFF, LANTERN_ON, level);
-      lantern.emissiveIntensity = LAMP_GLOW * level;
-    }
-  });
+  const { bind, pose, hint } = useStationProp(
+    LAMP_BLINK.duration,
+    (t, reducedMotion) => {
+      let level = 1;
+      if (t !== null) {
+        const steps = reducedMotion ? LAMP_BLINK.reduced : LAMP_BLINK.steps;
+        for (const [at, value] of steps) if (t >= at) level = value;
+      }
+      const light = lightRef.current;
+      if (light) {
+        light.intensity = Math.max(pop.get(), 0) * LAMP_INTENSITY * level;
+      }
+      const lantern = lanternRef.current;
+      if (lantern) {
+        lantern.color.lerpColors(LANTERN_OFF, LANTERN_ON, level);
+        lantern.emissiveIntensity = LAMP_GLOW * level;
+      }
+    },
+  );
 
   return (
     <group position={position} {...bind}>
-      <Cylinder
-        radius={0.3}
-        top={0.22}
-        height={0.3}
-        position={[0, 0.15, 0]}
-        color={COLORS.iron}
-      />
-      <Cylinder
-        radius={0.09}
-        height={LAMP_HEIGHT}
-        position={[0, LAMP_HEIGHT / 2, 0]}
-        color={COLORS.iron}
-      />
-      <group position={[0, LAMP_HEIGHT + 0.4, 0]}>
-        <RoundedBox
-          args={[0.5, 0.65, 0.5]}
-          radius={0.12}
-          smoothness={3}
-          castShadow
-        >
-          <meshStandardMaterial
-            ref={lanternRef}
-            color={COLORS.light}
-            roughness={0.75}
-            emissive={COLORS.light}
-            emissiveIntensity={LAMP_GLOW}
-          />
-        </RoundedBox>
+      <group ref={pose}>
         <Cylinder
-          radius={0.5}
-          top={0.12}
-          height={0.35}
-          position={[0, 0.48, 0]}
-          color={COLORS.iron}
-          segments={4}
-          rotation={[0, Math.PI / 4, 0]}
-        />
-        <mesh position={[0, 0.72, 0]}>
-          <sphereGeometry args={[0.1, 10, 8]} />
-          <meshStandardMaterial color={COLORS.iron} />
-        </mesh>
-        <Block
-          size={[0.62, 0.08, 0.62]}
-          position={[0, -0.36, 0]}
-          radius={0.03}
+          radius={0.3}
+          top={0.22}
+          height={0.3}
+          position={[0, 0.15, 0]}
           color={COLORS.iron}
         />
-        <pointLight
-          ref={lightRef}
-          color={COLORS.light}
-          intensity={0}
-          distance={LAMP_DISTANCE}
+        <Cylinder
+          radius={0.09}
+          height={LAMP_HEIGHT}
+          position={[0, LAMP_HEIGHT / 2, 0]}
+          color={COLORS.iron}
         />
+        <group position={[0, LAMP_HEIGHT + 0.4, 0]}>
+          <RoundedBox
+            args={[0.5, 0.65, 0.5]}
+            radius={0.12}
+            smoothness={3}
+            castShadow
+          >
+            <meshStandardMaterial
+              ref={lanternRef}
+              color={COLORS.light}
+              roughness={0.75}
+              emissive={COLORS.light}
+              emissiveIntensity={LAMP_GLOW}
+            />
+          </RoundedBox>
+          <Cylinder
+            radius={0.5}
+            top={0.12}
+            height={0.35}
+            position={[0, 0.48, 0]}
+            color={COLORS.iron}
+            segments={4}
+            rotation={[0, Math.PI / 4, 0]}
+          />
+          <mesh position={[0, 0.72, 0]}>
+            <sphereGeometry args={[0.1, 10, 8]} />
+            <meshStandardMaterial color={COLORS.iron} />
+          </mesh>
+          <Block
+            size={[0.62, 0.08, 0.62]}
+            position={[0, -0.36, 0]}
+            radius={0.03}
+            color={COLORS.iron}
+          />
+          <pointLight
+            ref={lightRef}
+            color={COLORS.light}
+            intensity={0}
+            distance={LAMP_DISTANCE}
+          />
+        </group>
       </group>
+      <HintOrb hint={hint} position={[0, LAMP_HEIGHT + 1.5, 0]} />
     </group>
   );
 }
@@ -368,7 +388,7 @@ export function TrashCan({ position }: { position: Vec3 }) {
   const tipRef = useRef<THREE.Group>(null);
   const lidRef = useRef<THREE.Group>(null);
   const litterRefs = useRef<(THREE.Group | null)[]>([]);
-  const bind = useStationProp(BIN_SPILL.duration, (t, jump) => {
+  const { bind, pose, hint } = useStationProp(BIN_SPILL.duration, (t, jump) => {
     let tip = 0;
     let lid = 0;
     if (t !== null) {
@@ -413,49 +433,52 @@ export function TrashCan({ position }: { position: Vec3 }) {
 
   return (
     <group position={position} {...bind}>
-      {/* Tips about its bottom edge on the -z side. */}
-      <group ref={tipRef} position={[0, 0, -BIN.radius]}>
-        <group position={[0, 0, BIN.radius]}>
-          <Cylinder
-            radius={BIN.radius}
-            top={BIN.top}
-            height={BIN.height}
-            position={[0, BIN.height / 2, 0]}
-            color={COLORS.bin}
-          />
-          <mesh
-            position={[0, BIN.height, 0]}
-            rotation-x={Math.PI / 2}
-            castShadow
-          >
-            <torusGeometry args={[BIN.top, 0.07, 8, 20]} />
-            <meshStandardMaterial color={COLORS.iron} roughness={0.6} />
-          </mesh>
-          <group ref={lidRef} position={[-BIN.top, BIN.height, 0]}>
+      <group ref={pose}>
+        {/* Tips about its bottom edge on the -z side. */}
+        <group ref={tipRef} position={[0, 0, -BIN.radius]}>
+          <group position={[0, 0, BIN.radius]}>
+            <Cylinder
+              radius={BIN.radius}
+              top={BIN.top}
+              height={BIN.height}
+              position={[0, BIN.height / 2, 0]}
+              color={COLORS.bin}
+            />
             <mesh
-              position={[BIN.top, 0.02, 0]}
-              scale={[1, 0.45, 1]}
+              position={[0, BIN.height, 0]}
+              rotation-x={Math.PI / 2}
               castShadow
             >
-              <sphereGeometry
-                args={[0.46, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2]}
-              />
-              <meshStandardMaterial color={COLORS.bin} roughness={0.7} />
+              <torusGeometry args={[BIN.top, 0.07, 8, 20]} />
+              <meshStandardMaterial color={COLORS.iron} roughness={0.6} />
             </mesh>
+            <group ref={lidRef} position={[-BIN.top, BIN.height, 0]}>
+              <mesh
+                position={[BIN.top, 0.02, 0]}
+                scale={[1, 0.45, 1]}
+                castShadow
+              >
+                <sphereGeometry
+                  args={[0.46, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2]}
+                />
+                <meshStandardMaterial color={COLORS.bin} roughness={0.7} />
+              </mesh>
+            </group>
           </group>
         </group>
+        {LITTER.map(({ kind }, i) => (
+          <group
+            key={i}
+            visible={false}
+            ref={(item) => {
+              litterRefs.current[i] = item;
+            }}
+          >
+            <LitterItem kind={kind} />
+          </group>
+        ))}
       </group>
-      {LITTER.map(({ kind }, i) => (
-        <group
-          key={i}
-          visible={false}
-          ref={(item) => {
-            litterRefs.current[i] = item;
-          }}
-        >
-          <LitterItem kind={kind} />
-        </group>
-      ))}
+      <HintOrb hint={hint} position={[0, BIN.height + 0.5, 0]} />
     </group>
   );
 }
@@ -593,138 +616,148 @@ export function Luggage({ position }: { position: Vec3 }) {
   // Where each item rests, read once they're mounted.
   const restRef = useRef<THREE.Vector3[] | null>(null);
   const restYawRef = useRef<number[]>([]);
-  const bind = useStationProp(SUITCASE_OPEN.duration, (t, jump) => {
-    let open = 0;
-    if (t !== null) {
-      const opening = span(t, 0, SUITCASE_OPEN.open, jump);
-      const closing = span(
-        t,
-        SUITCASE_OPEN.closeAt,
-        SUITCASE_OPEN.close,
-        jump,
-      );
-      open = (jump ? opening : easeOutBack(opening)) * (1 - easeIn(closing));
-    }
-    if (lidRef.current) {
-      lidRef.current.rotation.z = -SUITCASE_OPEN.angle * open;
-    }
-
-    const items = itemRefs.current;
-    if (!restRef.current) {
-      restRef.current = items.map(
-        (item) => item?.position.clone() ?? new THREE.Vector3(),
-      );
-      restYawRef.current = items.map((item) => item?.rotation.y ?? 0);
-    }
-    CONTENTS.forEach(({ height, drift, spin }, i) => {
-      const item = items[i];
-      const rest = restRef.current?.[i];
-      if (!item || !rest) return;
-      let lift = 0;
-      let bob = 0;
-      if (t !== null && !jump) {
-        const delay = i * CONTENTS_JUMP.gap;
-        const up = span(t, CONTENTS_JUMP.at + delay, CONTENTS_JUMP.rise);
-        const down = span(t, CONTENTS_JUMP.fallAt + delay, CONTENTS_JUMP.fall);
-        lift = easeOut(up) * (1 - easeIn(down));
-        bob =
-          CONTENTS_JUMP.bob *
-          Math.sin(t * CONTENTS_JUMP.bobSpeed + i) *
-          Math.min(up, 1 - down);
+  const { bind, pose, hint } = useStationProp(
+    SUITCASE_OPEN.duration,
+    (t, jump) => {
+      let open = 0;
+      if (t !== null) {
+        const opening = span(t, 0, SUITCASE_OPEN.open, jump);
+        const closing = span(
+          t,
+          SUITCASE_OPEN.closeAt,
+          SUITCASE_OPEN.close,
+          jump,
+        );
+        open = (jump ? opening : easeOutBack(opening)) * (1 - easeIn(closing));
       }
-      item.position.set(
-        rest.x + drift[0] * lift,
-        rest.y + height * lift + bob,
-        rest.z + drift[1] * lift,
-      );
-      item.rotation.y = restYawRef.current[i] + spin * lift;
-      item.rotation.z = CONTENTS_JUMP.tip * lift;
-      item.scale.setScalar(1 + (CONTENTS_JUMP.grow - 1) * lift);
-    });
-  });
+      if (lidRef.current) {
+        lidRef.current.rotation.z = -SUITCASE_OPEN.angle * open;
+      }
+
+      const items = itemRefs.current;
+      if (!restRef.current) {
+        restRef.current = items.map(
+          (item) => item?.position.clone() ?? new THREE.Vector3(),
+        );
+        restYawRef.current = items.map((item) => item?.rotation.y ?? 0);
+      }
+      CONTENTS.forEach(({ height, drift, spin }, i) => {
+        const item = items[i];
+        const rest = restRef.current?.[i];
+        if (!item || !rest) return;
+        let lift = 0;
+        let bob = 0;
+        if (t !== null && !jump) {
+          const delay = i * CONTENTS_JUMP.gap;
+          const up = span(t, CONTENTS_JUMP.at + delay, CONTENTS_JUMP.rise);
+          const down = span(
+            t,
+            CONTENTS_JUMP.fallAt + delay,
+            CONTENTS_JUMP.fall,
+          );
+          lift = easeOut(up) * (1 - easeIn(down));
+          bob =
+            CONTENTS_JUMP.bob *
+            Math.sin(t * CONTENTS_JUMP.bobSpeed + i) *
+            Math.min(up, 1 - down);
+        }
+        item.position.set(
+          rest.x + drift[0] * lift,
+          rest.y + height * lift + bob,
+          rest.z + drift[1] * lift,
+        );
+        item.rotation.y = restYawRef.current[i] + spin * lift;
+        item.rotation.z = CONTENTS_JUMP.tip * lift;
+        item.scale.setScalar(1 + (CONTENTS_JUMP.grow - 1) * lift);
+      });
+    },
+  );
   const { width, length, depth, lid, wall } = SUITCASE;
 
   return (
     <group position={position} {...bind}>
-      <Block
-        size={[0.95, 0.75, 1.3]}
-        position={[0, 0.375, 0]}
-        radius={0.15}
-        color={COLORS.trunk}
-      />
-      {[-0.35, 0.35].map((z) => (
+      <group ref={pose}>
         <Block
-          key={z}
-          size={[0.97, 0.77, 0.14]}
-          position={[0, 0.375, z]}
-          radius={0.05}
-          color={COLORS.strap}
+          size={[0.95, 0.75, 1.3]}
+          position={[0, 0.375, 0]}
+          radius={0.15}
+          color={COLORS.trunk}
         />
-      ))}
-      <group position={[0.02, 0.77, 0.05]} rotation-y={0.25}>
-        {/* Hollow shell: lined floor, then four walls */}
-        <Block
-          size={[width, wall, length]}
-          position={[0, wall / 2, 0]}
-          radius={0.03}
-          color={COLORS.lining}
-        />
-        {[-1, 1].map((side) => (
-          <group key={side}>
-            <Block
-              size={[wall, depth, length]}
-              position={[(side * (width - wall)) / 2, depth / 2, 0]}
-              radius={0.03}
-              color={COLORS.suitcase}
-            />
-            <Block
-              size={[width, depth, wall]}
-              position={[0, depth / 2, (side * (length - wall)) / 2]}
-              radius={0.03}
-              color={COLORS.suitcase}
-            />
-            {/* Brass latches on the front */}
-            <Block
-              size={[0.03, 0.09, 0.08]}
-              position={[-width / 2 - 0.01, depth, side * 0.33]}
-              radius={0.01}
-              color={COLORS.edge}
-            />
-          </group>
-        ))}
-        {/* Handle on the front */}
-        <Block
-          size={[0.05, 0.05, 0.3]}
-          position={[-width / 2 - 0.07, depth * 0.6, 0]}
-          radius={0.02}
-          color={COLORS.strap}
-        />
-        {[-0.13, 0.13].map((z) => (
+        {[-0.35, 0.35].map((z) => (
           <Block
             key={z}
-            size={[0.08, 0.04, 0.04]}
-            position={[-width / 2 - 0.03, depth * 0.6, z]}
-            radius={0.01}
+            size={[0.97, 0.77, 0.14]}
+            position={[0, 0.375, z]}
+            radius={0.05}
             color={COLORS.strap}
           />
         ))}
-        <SuitcaseContents itemRefs={itemRefs} />
-        {/* Lid, hinged along the back edge, lined inside */}
-        <group ref={lidRef} position={[width / 2, depth, 0]}>
+        <group position={[0.02, 0.77, 0.05]} rotation-y={0.25}>
+          {/* Hollow shell: lined floor, then four walls */}
           <Block
-            size={[width, lid, length]}
-            position={[-width / 2, lid / 2, 0]}
-            radius={0.05}
-            color={COLORS.suitcase}
-          />
-          <Block
-            size={[width - 2 * wall, 0.02, length - 2 * wall]}
-            position={[-width / 2, 0, 0]}
-            radius={0.005}
+            size={[width, wall, length]}
+            position={[0, wall / 2, 0]}
+            radius={0.03}
             color={COLORS.lining}
           />
+          {[-1, 1].map((side) => (
+            <group key={side}>
+              <Block
+                size={[wall, depth, length]}
+                position={[(side * (width - wall)) / 2, depth / 2, 0]}
+                radius={0.03}
+                color={COLORS.suitcase}
+              />
+              <Block
+                size={[width, depth, wall]}
+                position={[0, depth / 2, (side * (length - wall)) / 2]}
+                radius={0.03}
+                color={COLORS.suitcase}
+              />
+              {/* Brass latches on the front */}
+              <Block
+                size={[0.03, 0.09, 0.08]}
+                position={[-width / 2 - 0.01, depth, side * 0.33]}
+                radius={0.01}
+                color={COLORS.edge}
+              />
+            </group>
+          ))}
+          {/* Handle on the front */}
+          <Block
+            size={[0.05, 0.05, 0.3]}
+            position={[-width / 2 - 0.07, depth * 0.6, 0]}
+            radius={0.02}
+            color={COLORS.strap}
+          />
+          {[-0.13, 0.13].map((z) => (
+            <Block
+              key={z}
+              size={[0.08, 0.04, 0.04]}
+              position={[-width / 2 - 0.03, depth * 0.6, z]}
+              radius={0.01}
+              color={COLORS.strap}
+            />
+          ))}
+          <SuitcaseContents itemRefs={itemRefs} />
+          {/* Lid, hinged along the back edge, lined inside */}
+          <group ref={lidRef} position={[width / 2, depth, 0]}>
+            <Block
+              size={[width, lid, length]}
+              position={[-width / 2, lid / 2, 0]}
+              radius={0.05}
+              color={COLORS.suitcase}
+            />
+            <Block
+              size={[width - 2 * wall, 0.02, length - 2 * wall]}
+              position={[-width / 2, 0, 0]}
+              radius={0.005}
+              color={COLORS.lining}
+            />
+          </group>
         </group>
       </group>
+      <HintOrb hint={hint} position={[0, 1.6, 0]} />
     </group>
   );
 }
@@ -751,25 +784,34 @@ function hopPose(t: number, height: number): [number, number] {
 function Hop({
   position,
   height,
+  hintHeight,
   children,
 }: {
   position: Vec3;
   height: number;
+  // Height of its HintOrb, over its top.
+  hintHeight: number;
   children: ReactNode;
 }) {
   const ref = useRef<THREE.Group>(null);
-  const bind = useStationProp(HOP.duration, (t, reducedMotion) => {
-    const group = ref.current;
-    if (!group) return;
-    const [y, stretch] =
-      t === null || reducedMotion ? [0, 1] : hopPose(t, height);
-    group.position.y = position[1] + y;
-    const squash = 1 / Math.sqrt(stretch);
-    group.scale.set(squash, stretch, squash);
-  });
+  const { bind, pose, hint } = useStationProp(
+    HOP.duration,
+    (t, reducedMotion) => {
+      const group = ref.current;
+      if (!group) return;
+      const [y, stretch] =
+        t === null || reducedMotion ? [0, 1] : hopPose(t, height);
+      group.position.y = y;
+      const squash = 1 / Math.sqrt(stretch);
+      group.scale.set(squash, stretch, squash);
+    },
+  );
   return (
-    <group ref={ref} position={position} {...bind}>
-      {children}
+    <group position={position} {...bind}>
+      <group ref={pose}>
+        <group ref={ref}>{children}</group>
+      </group>
+      <HintOrb hint={hint} position={[0, hintHeight, 0]} />
     </group>
   );
 }
@@ -777,7 +819,7 @@ function Hop({
 export function Bench({ position }: { position: Vec3 }) {
   const length = 3.4;
   return (
-    <Hop position={position} height={0.6}>
+    <Hop position={position} height={0.6} hintHeight={2.5}>
       {[-0.25, 0.25].map((x) => (
         <Block
           key={x}
@@ -835,7 +877,7 @@ export function Planter({
   size?: number;
 }) {
   return (
-    <Hop position={position} height={0.8}>
+    <Hop position={position} height={0.8} hintHeight={2.6 * size}>
       <group scale={size}>
         <Cylinder
           radius={0.6}
