@@ -2,7 +2,7 @@
 
 Document de travail. Rien n'est tranché : c'est une trace des idées, à reprendre et à rayer au fil des décisions.
 
-Dernière mise à jour : 28/09/2026.
+Dernière mise à jour : 30/09/2026.
 
 ## Le concept
 
@@ -10,7 +10,7 @@ Le train qui roule en forêt est le fil conducteur. Chaque section du portfolio 
 
 - **Projets** : le train s'arrête à une gare, où un tableau des départs liste les projets.
 - **À propos** : le train s'arrête à une seconde station, une maison. Sur la terrasse, le conducteur, en sweat et sans son képi, travaille à un bureau sur son ordinateur : le conducteur est un rôle, là c'est le développeur au travail.
-- **Zoom sur le conducteur** (mode `custom`) : conservé pour une future activité, il n'affiche rien pour l'instant.
+- **Atelier** (mode `custom`) : le visiteur repeint la locomotive et habille le conducteur.
 - **Navigation** : des billets de train en bas de l'écran servent de boutons.
 
 ## Base de code
@@ -54,7 +54,7 @@ Le schéma de `portfolio-2026` s'adapte bien au thème ferroviaire :
 
 ### Machine à états
 
-Un état global `mode` : `ride` → `arriving` → `stopped` → `departing`, plus `custom` (zoom sur la cabine, en attente d'une activité). Un second état, `stop` (`station` ou `home`), dit à quel arrêt s'appliquent `arriving`, `stopped` et `departing` ; il est fixé par le billet, avant l'arrivée. Chaque mode (et chaque arrêt) définit :
+Un état global `mode` : `ride` → `arriving` → `stopped` → `departing`, plus `custom` (l'atelier). Un second état, `stop` (`station` ou `home`), dit à quel arrêt s'appliquent `arriving`, `stopped` et `departing` ; il est fixé par le billet, avant l'arrivée. Chaque mode (et chaque arrêt) définit :
 
 - une vitesse cible du train ;
 - une position de caméra (`cameraControls.setLookAt(..., true)` anime la transition) ;
@@ -90,19 +90,28 @@ Le train est fixe et le monde défile (`useScrollingLoop`), ce qui facilite l'ar
 
 - Seconde station (`src/three/models/Home.tsx`, décor dans `src/three/models/HomeDecor.tsx`), du même côté de la voie que la gare, avec la même approche (`useStopApproach`). Construite comme la gare, dans ses unités et à son échelle (`HOME_SCALE`), avec ses primitives arrondies et ses accessoires : une halte en planches avec un panneau au nom du site (petit toit) et une boîte aux lettres jaune, une terrasse de plain-pied entre deux rambardes, puis une cabane en bois à bardage, toit d'ardoise et cheminée, fenêtre à volets, porte bleu-vert à vitre éclairée, lanterne murale, lampadaire, deux pots fleuris, et une raquette de ping-pong posée par terre avec sa balle. À l'arrêt, la maison et chaque élément apparaissent l'un après l'autre avec un rebond, le bureau en dernier ; au départ, dans l'ordre inverse, puis la halte s'enfonce. Neige sur le toit, la cheminée et le panneau en hiver.
 - Comme à la gare, le décor réagit au clic, mais sans indices (ni boule jaune, ni secousses) : la maison éteint ses lumières et ferme ses volets (puis l'inverse), le lampadaire clignote, les pots sautent, la boîte aux lettres (creuse : un tube arrondi extrudé, fermé par une plaque, la porte de même forme) s'ouvre et les lettres empilées dedans glissent un peu dehors en éventail irrégulier, puis rentrent. La raquette de ping-pong se soulève et fait rebondir trois fois sa balle avant de la renvoyer à sa place. Un clic sur le conducteur lui fait lever les yeux vers la caméra un instant (`DriverHandle.glance()`) : la tête se tourne, les épaules un peu avec, les sourcils se lèvent et il cesse de taper, puis reprend. Les planchers (halte, terrasse, soubassement, paillasson) arrêtent le pointeur : sans ça, R3F transmet le clic à tout objet traversé par le rayon, et un clic sur le perron allumait la maison derrière. `StationHints` prend l'arrêt concerné (`stop`, les éléments ne sont cliquables qu'à leur arrêt) et `hinted={false}` coupe les indices. Lumières volontairement douces (fenêtres, lanterne murale dont la lumière est décalée devant elle pour ne pas brûler le mur, lampadaire atténué via `brightness`).
-- Sur la terrasse, le conducteur descendu de la cabine, en sweat à capuche et sans képi (`Driver` : `outfit="hoodie"`, `typing`), tape sur un portable à un bureau, calé sur ses mains (`DRIVER_TYPING_HANDS`). Réglages `HOME_DESK` (groupe Leva « Maison »).
+- Sur la terrasse, le conducteur descendu de la cabine, en sweat à capuche et sans képi (`Driver` : `outfit={OUTFITS.hoodie}`, ou le sweat recoloré à l'atelier s'il y a été choisi ; `typing`), tape sur un portable à un bureau, calé sur ses mains (`DRIVER_TYPING_HANDS`). Réglages `HOME_DESK` (groupe Leva « Maison »).
 - Deux plans : `HOME_CAMERA` (large, pendant l'arrivée), puis `HOME_VIEW_CAMERA`, au-dessus du train, de trois quarts sur la terrasse et la façade, le bureau dans la partie du cadre que le panneau laisse libre.
 - Le panneau « À propos » (`AboutPanel`) s'affiche à l'arrêt : carte à droite sur ordinateur, panneau en bas sur téléphone ; « Repartir » ou Échap pour repartir.
 - Pistes : le train qui va directement de la gare à la maison, sans repasser par le trajet en forêt.
 
-### Zoom sur le conducteur (mode `custom`)
+### Atelier (mode `custom`)
 
-- Billet « À venir » ou clic sur le conducteur pendant le trajet : zoom sur la cabine (`CUSTOM_CAMERA`), billet « Retour au voyage » ou Échap pour revenir. Rien d'autre pour l'instant : réservé à une future activité.
+- Billet « L'atelier » ou clic sur le conducteur pendant le trajet ; billet « Retour au voyage » (sur téléphone, le bouton du panneau) ou Échap pour revenir.
+- Panneau `src/three/ui/Workshop.tsx`, habillé en bon d'atelier : bande à volets du tableau en tête, puis carton crème sous une perforation encochée (`.theme-ticket`), comme la fiche projet. Carte à droite sur ordinateur, panneau en bas sur téléphone. Deux onglets :
+  - **Locomotive** : six livrées toutes faites (Express, la livrée d'origine, Forestière, Minuit, Charbon, Tournesol, Lagune), chacune illustrée par une petite loco en SVG à ses couleurs, puis « Sur mesure » : caisse, toit et garnitures (laiton, cuivre, chrome...), en pastilles.
+  - **Conducteur** : trois tenues (uniforme et képi, salopette avec chemise, foulard et casquette, sweat), avec leur vignette, puis la couleur du haut et du bas (le bas colore aussi le képi, la casquette et la salopette).
+  - Pastilles et vignettes sont des boutons radio (flèches du clavier, lecteurs d'écran) ; un lien « D'origine » remet chaque onglet à zéro.
+- Palette volontairement fermée (`src/three/config/livery.ts`) : des teintes prises dans la DA (gare, maison), pas de sélecteur libre, pour que tout mélange reste joli.
+- Les choix sont dans `src/three/state/LiveryContext.tsx`, séparé de `TrainContext`, et mémorisés dans le navigateur (`localStorage`, clé `train-livery`) : simple confort, tout échec de lecture ou d'écriture retombe sur les valeurs d'origine.
+- La scène suit en direct : la locomotive (`Locomotive` lit la livrée ; une nuance plus sombre de la caisse est calculée pour le plancher et les rayons) fait un petit rebond écrasé à chaque changement de peinture, le conducteur tourne la tête vers la caméra à chaque changement de tenue. À l'atelier, il se tourne vers la caméra pour poser, puis revient face à la voie. Le conducteur garde sa tenue sur le quai de la gare.
+- Caméra : un plan par onglet (`CUSTOM_CAMERAS` : toute la locomotive, ou gros plan sur le conducteur par le côté de la cabine), ajusté à l'écran (`workshopShot` dans `TrainScene`, réglages `WORKSHOP_FRAME`) : la caméra recule jusqu'à ce que le sujet tienne dans la place laissée par le panneau, puis un décalage focal (`setFocalOffset` de camera-controls, dont l'axe y pointe vers le bas) l'y centre. Sur téléphone, les tampons de la loco peuvent être rognés plutôt que de reculer la caméra dans la forêt.
+- Pistes : couleur de la fumée, plaque de la cabine au nom du visiteur, sifflet, accessoires (lunettes, écharpe en hiver).
 
 ### Navigation
 
 - Essayé puis abandonné : des pancartes 3D en bois flottant de part et d'autre du train (peu lisibles, en doublon avec les boutons HTML), puis un plan de ligne HTML (trop abstrait : « En route » n'est pas une section).
-- Retenu : des **billets de train** en HTML (`src/three/ui/Ticket.tsx`), en bas de l'écran, seulement ceux qui ont un sens là où se trouve le train : « Mes projets » (vers la gare) et « Qui suis-je ? » (vers la maison) et « À venir » (mode `custom`) en route, « Voir les projets » (zoom sur le tableau) et « Repartir » en gare (sur ordinateur ; sur téléphone, le tableau HTML a les deux). En haut, le nom (lien vers l'accueil) et le choix de la saison.
+- Retenu : des **billets de train** en HTML (`src/three/ui/Ticket.tsx`), en bas de l'écran, seulement ceux qui ont un sens là où se trouve le train : « Mes projets » (vers la gare) et « Qui suis-je ? » (vers la maison) et « L'atelier » (mode `custom`) en route, « Voir les projets » (zoom sur le tableau) et « Repartir » en gare (sur ordinateur ; sur téléphone, le tableau HTML a les deux). En haut, le nom (lien vers l'accueil) et le choix de la saison.
 
 ### Saisons
 
@@ -140,7 +149,7 @@ Le train est fixe et le monde défile (`useScrollingLoop`), ce qui facilite l'ar
    - « À propos » : carte à droite sur ordinateur, panneau en bas sur téléphone, à l'arrêt à la maison (voir « À propos : la maison ») ; Échap ou « Repartir » pour repartir.
    - Tableau des départs en gare : un vrai tableau 3D (`src/three/models/StationBoard.tsx`, texte en Geist Mono via `<Text>` de drei), de taille réaliste, sur le quai et parallèle à lui. Quatre plans de caméra : train en marche (`RIDE_CAMERA`), arrivée en gare, large (`STATION_CAMERA`), puis `STOP_SETTLE_MS` après l'arrêt, plan d'interaction face au quai (`STATION_VIEW_CAMERA`), et zoom sur le tableau au clic (`BOARD_CAMERA`). Le cadre du tableau luit doucement pour inviter au clic (plus fort au survol). Zoomé, les lignes deviennent cliquables et défilent façon Solari (désactivé avec `prefers-reduced-motion`) ; « × Fermer » ou Échap ramènent au plan d'interaction. Une ligne par projet (heure tirée de l'ordre, voie). Réglages dans le groupe Leva « Tableau ». Billet « Repartir » en bas de l'écran, qui reste en place tableau zoomé.
    - En gare, le conducteur quitte la cabine : debout sur le quai à gauche du tableau, puis assis au bord du quai à sa droite une fois le tableau zoomé, pour être dans le même plan (poses de `Driver`, réglages `STATION_DRIVER`). Debout, il salue quand on clique dessus.
-   - Le conducteur (`src/three/models/Driver.tsx`) : personnage cartoon arrondi comme la gare (cheveux bouclés, barbe courte, moustache ; uniforme et képi, ou sweat à la maison), monté sur un squelette de groupes articulés (hanches, genoux, colonne, épaules, coudes, cou) animés à chaque image : respiration, clignements, coups d'œil, jambes qui se balancent assis, frappe au clavier, salut (`DriverHandle.wave()`), regard vers la caméra (`DriverHandle.glance()`). Figé avec `prefers-reduced-motion`.
+   - Le conducteur (`src/three/models/Driver.tsx`) : personnage cartoon arrondi comme la gare (cheveux bouclés, barbe courte, moustache ; uniforme et képi, salopette et casquette, ou sweat, au choix à l'atelier, sweat à la maison), monté sur un squelette de groupes articulés (hanches, genoux, colonne, épaules, coudes, cou) animés à chaque image : respiration, clignements, coups d'œil, jambes qui se balancent assis, frappe au clavier, salut (`DriverHandle.wave()`), regard vers la caméra (`DriverHandle.glance()`). Figé avec `prefers-reduced-motion`.
    - Doublure HTML du tableau (`src/three/ui/DeparturesBoard.tsx`), avec les mêmes lignes : c'est l'interface sur téléphone (panneau en bas). Sur ordinateur, elle reste invisible mais lue par les lecteurs d'écran, et apparaît dès qu'elle a le focus (arrivée en gare au clavier, Tab).
    - Détail d'un projet : `<dialog>` natif avec le même contenu que `/projets/<slug>` (composant partagé `src/components/ProjectDetail.tsx`, rendu côté serveur), habillé en billet remis après le choix sur le tableau : bande à volets en tête, puis carton crème sous une perforation encochée (classe `.theme-ticket` de `globals.css`, qui redéfinit les jetons de couleur pour tout le sous-arbre ; encoches `.notch-top` / `.notch-bottom`). Le panneau « À propos » garde l'habillage du tableau (`.theme-board`).
    - Gare (`src/three/models/StationDecor.tsx`) : construite en primitives arrondies (`RoundedBox`, extrusions biseautées), style 3D cartoon, palette chaude de la maison. Bâtiment à toit rouge et cheminée, fenêtres éclairées et jardinières, auvent avec panneau « GARE » et horloge, escalier à rambardes, banc, bagages, poubelle, pots fleuris, deux lampadaires allumés. Le tableau des départs reprend la même DA (cadre en bois arrondi, petit toit, poteaux ronds). À l'arrêt, le bâtiment et chaque élément apparaissent l'un après l'autre avec un rebond, le tableau en dernier ; au départ, dans l'ordre inverse, puis le quai s'enfonce. Réglages dans le groupe Leva « Gare ». À l'arrêt, le décor réagit au clic (horloge, lampadaires, poubelle, valise, banc, pots, fenêtres du bâtiment) ; pour le signaler, une petite boule jaune lumineuse flotte au-dessus de chaque élément pas encore cliqué (`src/three/models/HintOrb.tsx` : plus vive au survol, elle disparaît au clic), et toutes les 2 à 3,5 s l'un d'eux (sauf le bâtiment) se secoue (`src/three/state/StationHints.tsx`). Au survol, chaque élément se secoue aussi, plus légèrement, sauf s'il joue déjà son animation. Avec `prefers-reduced-motion`, la boule reste immobile et rien ne se secoue. La forêt reste à distance de toute sa largeur (ramures, buissons).

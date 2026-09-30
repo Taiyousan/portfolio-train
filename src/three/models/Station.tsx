@@ -9,6 +9,7 @@ import {
 import * as THREE from "three";
 import { useControls } from "leva";
 import { useTrainContext } from "../state/TrainContext";
+import { useLivery } from "../state/LiveryContext";
 import {
   STATION_BOARD,
   STATION_DRIVER,
@@ -47,6 +48,8 @@ const BASE_DEPOP_DELAY_MS = 250 + (POP_ORDER.length - 1) * POP_STAGGER_MS;
 const Station = forwardRef<THREE.Group, { projects: StationProject[] }>(
   function Station({ projects }, ref) {
     const { mode, stop, boardFocused } = useTrainContext();
+    // Off the train, still in the outfit picked in the workshop.
+    const { outfit } = useLivery();
     const here = stop === "station";
     // Rotations in degrees in the panel, radians in config and the scene.
     const board = useControls("Tableau", {
@@ -181,6 +184,7 @@ const Station = forwardRef<THREE.Group, { projects: StationProject[] }>(
           >
             <Driver
               ref={standingDriverRef}
+              outfit={outfit}
               onClick={(e) => {
                 if (!standing) return;
                 e.stopPropagation();
@@ -210,7 +214,7 @@ const Station = forwardRef<THREE.Group, { projects: StationProject[] }>(
             rotation={[0, -Math.PI / 2, 0]}
             scale={sittingScale}
           >
-            <Driver pose="sitting" />
+            <Driver pose="sitting" outfit={outfit} />
           </animated.group>
         </animated.group>
       </group>

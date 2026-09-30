@@ -12,6 +12,7 @@ import DeparturesBoard from "./DeparturesBoard";
 import ProjectDialog from "./ProjectDialog";
 import SeasonSwitch from "./SeasonSwitch";
 import Ticket from "./Ticket";
+import Workshop from "./Workshop";
 import type { StationProject } from "./types";
 
 // Announced to screen readers as the journey moves on.
@@ -21,14 +22,14 @@ const STATUS: Record<Stop, Record<TrainMode, string>> = {
     arriving: "Arrivée en gare",
     stopped: "En gare, tableau des départs",
     departing: "Départ de la gare",
-    custom: "Dans la cabine du conducteur",
+    custom: "À l'atelier : personnalisation du train et du conducteur",
   },
   home: {
     ride: "En route dans la forêt",
     arriving: "Arrivée à la maison",
     stopped: "À la maison",
     departing: "Départ de la maison",
-    custom: "Dans la cabine du conducteur",
+    custom: "À l'atelier : personnalisation du train et du conducteur",
   },
 };
 
@@ -36,7 +37,8 @@ const STATUS: Record<Stop, Record<TrainMode, string>> = {
 // home), then the navigation as train tickets at the bottom, only those that
 // make sense where the train is. The current mode and stop also pick the
 // panel: the about card at home, the departures board's HTML twin at the
-// station, and a project's dialog once a row is picked (on either board).
+// station, a project's dialog once a row is picked (on either board), and
+// the workshop in "custom" mode.
 export default function Overlay({ projects }: { projects: StationProject[] }) {
   const {
     mode,
@@ -63,8 +65,8 @@ export default function Overlay({ projects }: { projects: StationProject[] }) {
   const atStation = mode === "stopped" && stop === "station";
   const atHome = mode === "stopped" && stop === "home";
 
-  // "custom" (the close-up on the cab) has nothing to show yet: Escape or
-  // the return ticket goes back to the ride.
+  // Out of the workshop ("custom"): Escape, the return ticket or the
+  // panel's own button go back to the ride.
   useEffect(() => {
     if (mode !== "custom") return;
     const onKeyDown = (e: KeyboardEvent) => {
@@ -121,10 +123,9 @@ export default function Overlay({ projects }: { projects: StationProject[] }) {
               setMode("arriving");
             }}
           />
-          {/* Placeholder for a future activity (the close-up on the cab). */}
           <Ticket
-            kicker="Billet · Prochainement"
-            title="À venir"
+            kicker="Billet · Personnaliser"
+            title="L'atelier"
             tilt={-1}
             delay={240}
             onClick={() => setMode("custom")}
@@ -132,10 +133,15 @@ export default function Overlay({ projects }: { projects: StationProject[] }) {
         </nav>
       )}
 
+      {mode === "custom" && <Workshop onLeave={() => setMode("ride")} />}
+
+      {/* On larger screens, centred in the room the workshop's card leaves
+          (its width and right margin); on phones, its sheet has the way
+          back. */}
       {mode === "custom" && (
         <nav
           aria-label="Voyage"
-          className="absolute inset-x-0 bottom-0 flex justify-center p-4 sm:pb-8"
+          className="absolute bottom-0 left-0 hidden justify-center p-4 sm:right-[25.25rem] sm:flex sm:pb-8"
         >
           <Ticket
             kicker="Billet · Retour"

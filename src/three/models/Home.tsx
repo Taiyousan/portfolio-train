@@ -9,9 +9,11 @@ import {
 import * as THREE from "three";
 import { useControls } from "leva";
 import { useTrainContext } from "../state/TrainContext";
+import { useLivery } from "../state/LiveryContext";
 import { StationHints } from "../state/StationHints";
 import { useStationClick } from "../hooks/useStationProp";
 import { HOME_DESK, HOME_SCALE, STOP_SIDE } from "../config/scene";
+import { OUTFITS } from "../config/livery";
 import Driver, {
   DRIVER_SEAT_HEIGHT,
   DRIVER_TYPING_HANDS,
@@ -206,8 +208,9 @@ const OPAQUE = {
 };
 
 // The driver at the desk, in a hoodie, typing; clicked, a look at the
-// camera.
+// camera. The hoodie picked in the workshop, if that's what was picked.
 function HomeDriver() {
+  const { outfit } = useLivery();
   const driverRef = useRef<DriverHandle>(null);
   const { bind } = useStationClick(() => driverRef.current?.glance(), {
     wiggle: false,
@@ -217,7 +220,7 @@ function HomeDriver() {
       <Driver
         ref={driverRef}
         pose="sitting"
-        outfit="hoodie"
+        outfit={outfit.style === "hoodie" ? outfit : OUTFITS.hoodie}
         typing
         position={[0, DRIVER_SEAT_HEIGHT, 0]}
       />

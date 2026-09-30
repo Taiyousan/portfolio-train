@@ -3,12 +3,14 @@ import { useFrame, type ThreeElements } from "@react-three/fiber";
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { Block, Cylinder, STATION_COLORS } from "./StationPrimitives";
+import { DEFAULT_OUTFIT, shade, type Outfit } from "../config/livery";
 
 // A small cartoon driver, rounded like the station (see StationPrimitives):
 // standing in the locomotive cab, standing or sitting on the platform's edge
 // while the train waits at the station, or at the desk at home, in a hoodie,
-// typing. Curly hair, a short beard and a moustache. Built as a rig of
-// nested groups (hips, knees, spine, shoulders, elbows, neck) posed every
+// typing. Dressed as picked in the workshop (see config/livery). Curly
+// hair, a short beard and a moustache. Built as a rig of nested groups
+// (hips, knees, spine, shoulders, elbows, neck) posed every
 // frame: breathing, blinking, glancing around, legs swinging over the
 // platform's edge, and a wave or a look at the camera on demand (see
 // DriverHandle). Held still with reduced motion. In driver units: about
@@ -24,28 +26,30 @@ const COLORS = {
   mouth: "#8a3b30",
   hair: "#33231a",
   beard: "#45322a",
-  cap: "#2b3a5c",
   visor: "#1c1d24",
+  neckerchief: STATION_COLORS.roof,
 };
 
-// The conductor's uniform, or the developer's hoodie, jeans and sneakers at
-// home: `top` for the body and sleeves, `trim` for the cuffs (and the
-// hoodie's pocket).
-const OUTFITS = {
-  uniform: {
-    top: "#3d5a8a",
-    trim: COLORS.gold,
-    trousers: "#2b3a5c",
-    shoes: STATION_COLORS.iron,
-  },
-  hoodie: {
-    top: "#2f6f73",
-    trim: "#275d61",
-    trousers: "#4a6689",
-    shoes: STATION_COLORS.sign,
-  },
-};
-type Outfit = (typeof OUTFITS)[keyof typeof OUTFITS];
+// What an outfit (see config/livery) dresses the rig in: `top` for the
+// body and sleeves, `trim` for the cuffs (and the hoodie's pocket),
+// `trousers` for the legs (and the overalls' bib, and the caps). Shoes
+// go with the style: polished with the uniform, work boots with the
+// overalls, sneakers with the hoodie.
+type Clothes = { top: string; trim: string; trousers: string; shoes: string };
+
+function dress({ style, top, bottom }: Outfit): Clothes {
+  return {
+    top,
+    trim: style === "uniform" ? COLORS.gold : shade(top, 0.85),
+    trousers: bottom,
+    shoes:
+      style === "uniform"
+        ? STATION_COLORS.iron
+        : style === "overalls"
+          ? STATION_COLORS.darkWood
+          : STATION_COLORS.sign,
+  };
+}
 
 // Rig: legs from the hips down, then the spine's joints above the hips.
 const HIP_X = 0.07;
@@ -158,6 +162,8 @@ const HEAD_HEIGHT = NECK_Y + HEAD_Y;
 // poses one frame at a time).
 const toCamera = new THREE.Vector3();
 
+const HALF_PI = Math.PI / 2;
+
 // Right (-x) then left (+x).
 const SIDES = [-1, 1] as const;
 
@@ -179,9 +185,9 @@ type Props = Omit<ThreeElements["group"], "ref"> & {
   // "standing": feet at the origin. "sitting": seat at the origin, facing
   // +z, legs dangling below it past z = DRIVER_SEAT_DEPTH.
   pose?: "standing" | "sitting";
-  // The conductor's uniform and cap, or at home, where the driver is just
-  // the developer, a hoodie, bareheaded.
-  outfit?: keyof typeof OUTFITS;
+  // The conductor's uniform and cap by default (see config/livery's
+  // OUTFITS); at home, where the driver is just the developer, a hoodie.
+  outfit?: Outfit;
   // Hands over a keyboard in front, tapping (see DRIVER_TYPING_HANDS).
   typing?: boolean;
 };
@@ -202,12 +208,12 @@ type Rig = {
 export default function Driver({
   ref,
   pose = "standing",
-  outfit = "uniform",
+  outfit = DEFAULT_OUTFIT,
   typing = false,
   ...props
 }: Props) {
   const sitting = pose === "sitting";
-  const clothes = OUTFITS[outfit];
+  const clothes = dress(outfit);
   const rig = useRef<Rig>({
     hips: null,
     spine: null,
@@ -489,8 +495,10 @@ export default function Driver({
               rig.current.chest = g;
             }}
           >
-            {outfit === "hoodie" ? (
+            {outfit.style === "hoodie" ? (
               <Hoodie color={clothes.top} trim={clothes.trim} />
+            ) : outfit.style === "overalls" ? (
+              <Overalls shirt={clothes.top} denim={clothes.trousers} />
             ) : (
               <Uniform color={clothes.top} />
             )}
@@ -500,7 +508,7 @@ export default function Driver({
               key={side}
               side={side}
               clothes={clothes}
-              ribbed={outfit === "hoodie"}
+              ribbed={outfit.style !== "uniform"}
               shoulderRef={(g) => {
                 rig.current.shoulders[i] = g;
               }}
@@ -522,7 +530,8 @@ export default function Driver({
               color={COLORS.skin}
             />
             <Head
-              cap={outfit === "uniform"}
+              hat={HATS[outfit.style]}
+              hatColor={clothes.trousers}
               eyeRef={(i, g) => {
                 rig.current.eyes[i] = g;
               }}
@@ -546,7 +555,7 @@ function Leg({
   kneeRef,
 }: {
   side: number;
-  clothes: Outfit;
+  clothes: Clothes;
   hipRef: GroupRef;
   kneeRef: GroupRef;
 }) {
@@ -679,8 +688,79 @@ function Hoodie({ color, trim }: { color: string; trim: string }) {
   );
 }
 
+// Overalls over a shirt: the bib up the chest, held by straps curving over
+// the shoulders from brass buttons, a pocket on it, and a neckerchief
+// knotted at the neck.
+function Overalls({ shirt, denim }: { shirt: string; denim: string }) {
+  return (
+    <>
+      <Body color={shirt} />
+      <Block
+        size={[0.305, 0.08, 0.215]}
+        position={[0, 0.02, 0]}
+        radius={0.03}
+        color={denim}
+      />
+      <Block
+        size={[0.19, 0.17, 0.03]}
+        position={[0, 0.115, 0.093]}
+        radius={0.012}
+        color={denim}
+      />
+      <Block
+        size={[0.08, 0.05, 0.012]}
+        position={[0, 0.13, 0.109]}
+        radius={0.005}
+        color={shade(denim, 0.85)}
+      />
+      {SIDES.map((side) => (
+        <group key={side} position={[side * 0.07, 0, 0]}>
+          {/* Strap up from the bib, then over the rounded shoulder: half a
+              torus about the body's top edge, flattened into a band. */}
+          <Block
+            size={[0.035, 0.04, 0.016]}
+            position={[0, 0.2, 0.1]}
+            radius={0.006}
+            color={denim}
+          />
+          <mesh
+            castShadow
+            position={[0, 0.195, 0]}
+            rotation={[0, -Math.PI / 2, 0]}
+            scale={[1, 1, 2.2]}
+          >
+            <torusGeometry args={[0.1, 0.008, 6, 16, Math.PI]} />
+            <meshStandardMaterial color={denim} roughness={0.85} />
+          </mesh>
+          <mesh position={[0, 0.19, 0.112]}>
+            <sphereGeometry args={[0.013, 8, 6]} />
+            <meshStandardMaterial
+              color={COLORS.gold}
+              metalness={0.5}
+              roughness={0.35}
+            />
+          </mesh>
+        </group>
+      ))}
+      <mesh
+        castShadow
+        position={[0, 0.278, 0]}
+        rotation-x={Math.PI / 2 + 0.15}
+      >
+        <torusGeometry args={[0.058, 0.02, 8, 20]} />
+        <meshStandardMaterial color={COLORS.neckerchief} roughness={0.85} />
+      </mesh>
+      <mesh position={[0, 0.235, 0.07]} rotation={[0.35, 0, Math.PI]}>
+        <coneGeometry args={[0.04, 0.07, 3]} />
+        <meshStandardMaterial color={COLORS.neckerchief} roughness={0.85} />
+      </mesh>
+    </>
+  );
+}
+
 // Shoulder to hand, hanging down (-y) at rest: a gold stripe at the cuff
-// of the uniform, a ribbed cuff on the hoodie.
+// of the uniform, a ribbed cuff on the hoodie (a rolled one on the
+// overalls' shirt).
 function Arm({
   side,
   clothes,
@@ -689,7 +769,7 @@ function Arm({
   elbowRef,
 }: {
   side: number;
-  clothes: Outfit;
+  clothes: Clothes;
   ribbed: boolean;
   shoulderRef: GroupRef;
   elbowRef: GroupRef;
@@ -842,17 +922,29 @@ function beardShell() {
   return geometry;
 }
 
+// What each outfit wears on its head, if anything (see Head).
+type Hat = "kepi" | "engineer" | null;
+
+const HATS: Record<Outfit["style"], Hat> = {
+  uniform: "kepi",
+  overalls: "engineer",
+  hoodie: null,
+};
+
 // Round head, centred HEAD_Y above the neck joint: dot eyes with a
 // highlight, brows, button nose, a thin moustache, a smile above a short
 // beard, ears, and curly hair over a dark base tipped back off the face.
-// Topped with the conductor's cap (crown, dark band with a gold stripe,
-// badge, glossy visor), worn a little askew.
+// Topped, worn a little askew, with the conductor's cap (crown, dark band
+// with a gold stripe, badge, glossy visor), or an engine driver's soft
+// round cap (puffed crown, band, cloth visor), in `hatColor`.
 function Head({
-  cap,
+  hat,
+  hatColor,
   eyeRef,
   browsRef,
 }: {
-  cap: boolean;
+  hat: Hat;
+  hatColor: string;
   eyeRef: (i: number, group: THREE.Group | null) => void;
   browsRef: GroupRef;
 }) {
@@ -925,18 +1017,18 @@ function Head({
         />
         <meshStandardMaterial color={COLORS.hair} roughness={0.9} />
       </mesh>
-      <mesh castShadow geometry={hairCurls(cap)} dispose={null}>
+      <mesh castShadow geometry={hairCurls(hat !== null)} dispose={null}>
         <meshStandardMaterial color={COLORS.hair} roughness={0.95} />
       </mesh>
 
-      {cap && (
+      {hat === "kepi" && (
         <group rotation={[-0.05, 0, 0.08]}>
           <Cylinder
             radius={0.143}
             top={0.158}
             height={0.1}
             position={[0, 0.13, 0]}
-            color={COLORS.cap}
+            color={hatColor}
             segments={24}
           />
           <Cylinder
@@ -970,6 +1062,42 @@ function Head({
               args={[0.11, 0.11, 0.014, 20, 1, false, -Math.PI / 2, Math.PI]}
             />
             <meshStandardMaterial color={COLORS.visor} roughness={0.35} />
+          </mesh>
+        </group>
+      )}
+
+      {hat === "engineer" && (
+        <group rotation={[-0.08, 0, -0.07]}>
+          <mesh castShadow position={[0, 0.11, -0.005]} scale={[1, 0.62, 1]}>
+            <sphereGeometry
+              args={[0.158, 24, 12, 0, Math.PI * 2, 0, HALF_PI]}
+            />
+            <meshStandardMaterial color={hatColor} roughness={0.85} />
+          </mesh>
+          <Cylinder
+            radius={0.147}
+            height={0.036}
+            position={[0, 0.1, 0]}
+            color={shade(hatColor, 0.8)}
+            segments={24}
+          />
+          <mesh position={[0, 0.208, -0.005]}>
+            <sphereGeometry args={[0.016, 8, 6]} />
+            <meshStandardMaterial color={hatColor} roughness={0.85} />
+          </mesh>
+          <mesh
+            castShadow
+            position={[0, 0.088, 0.08]}
+            rotation={[0.28, 0, 0]}
+            scale={[1, 1, 0.75]}
+          >
+            <cylinderGeometry
+              args={[0.1, 0.1, 0.012, 20, 1, false, -HALF_PI, Math.PI]}
+            />
+            <meshStandardMaterial
+              color={shade(hatColor, 0.8)}
+              roughness={0.8}
+            />
           </mesh>
         </group>
       )}

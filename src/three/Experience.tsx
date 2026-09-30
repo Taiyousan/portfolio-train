@@ -3,6 +3,7 @@
 import { Canvas } from "@react-three/fiber";
 import { Leva } from "leva";
 import { TrainProvider } from "./state/TrainContext";
+import { LiveryProvider } from "./state/LiveryContext";
 import useDebugMode from "./hooks/useDebugMode";
 import TrainScene from "./scenes/TrainScene";
 import { CAMERA_POSITION } from "./config/scene";
@@ -22,22 +23,24 @@ export default function Experience({
 
   return (
     <TrainProvider>
-      {/* Always mounted: without a <Leva>, useControls auto-mounts its own
-          visible panel. */}
-      <Leva collapsed hidden={!debug} />
-      <Canvas
-        shadows="percentage"
-        camera={{
-          fov: 45,
-          near: 0.3,
-          far: 150,
-          position: CAMERA_POSITION,
-        }}
-      >
-        <color args={["#3a2a1f"]} attach="background" />
-        <TrainScene projects={projects} />
-      </Canvas>
-      <Overlay projects={projects} />
+      <LiveryProvider>
+        {/* Always mounted: without a <Leva>, useControls auto-mounts its own
+            visible panel. */}
+        <Leva collapsed hidden={!debug} />
+        <Canvas
+          shadows="percentage"
+          camera={{
+            fov: 45,
+            near: 0.3,
+            far: 150,
+            position: CAMERA_POSITION,
+          }}
+        >
+          <color args={["#3a2a1f"]} attach="background" />
+          <TrainScene projects={projects} />
+        </Canvas>
+        <Overlay projects={projects} />
+      </LiveryProvider>
     </TrainProvider>
   );
 }

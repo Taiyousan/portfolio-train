@@ -1,11 +1,12 @@
 import {
   Suspense,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type ComponentRef,
 } from "react";
-import { useFrame } from "@react-three/fiber";
+import { useFrame, useThree } from "@react-three/fiber";
 import { CameraControls, Environment, Html, Sky } from "@react-three/drei";
 import {
   EffectComposer,
@@ -16,7 +17,7 @@ import {
 import { monitor, useControls } from "leva";
 import * as THREE from "three";
 import type { BloomEffect } from "postprocessing";
-import { useTrainContext } from "../state/TrainContext";
+import { useTrainContext, type WorkshopView } from "../state/TrainContext";
 import useTrainSpeedEasing from "../hooks/useTrainSpeedEasing";
 import useStopApproach from "../hooks/useStopApproach";
 import {
@@ -35,11 +36,13 @@ import Snowfall from "../models/Snowfall";
 import type { StationProject } from "../ui/types";
 import {
   BOARD_CAMERA,
-  CUSTOM_CAMERA,
+  CUSTOM_CAMERAS,
   RIDE_CAMERA,
   STOP_SETTLE_MS,
   STOP_CAMERAS,
   SUN_POSITION,
+  WORKSHOP_FRAME,
+  type CameraShot,
 } from "../config/scene";
 
 // Scratch vectors for the read-only camera monitor below — reused every
@@ -50,6 +53,46 @@ const monitorTarget = new THREE.Vector3();
 
 function formatVec3(vec: THREE.Vector3) {
   return `[${vec.x.toFixed(3)}, ${vec.y.toFixed(3)}, ${vec.z.toFixed(3)}]`;
+}
+
+// The workshop's shot of `view` on a `width` × `height` pixel screen, with
+// a `fov` degree camera (see WORKSHOP_FRAME): pulled back along its line of
+// sight until its subject fits in the room the panel leaves, and the
+// focal offset (world units, along the camera's right and down, as
+// camera-controls takes it) that slides the picture over by half the
+// panel, so the subject sits in the middle of that room.
+function workshopShot(
+  view: WorkshopView,
+  width: number,
+  height: number,
+  fov: number,
+) {
+  const base = CUSTOM_CAMERAS[view];
+  const phone = width < WORKSHOP_FRAME.breakpoint;
+  const panel = phone
+    ? { x: 0, y: height * WORKSHOP_FRAME.sheet }
+    : { x: WORKSHOP_FRAME.width, y: 0 };
+  const target = new THREE.Vector3(...base.target);
+  const line = new THREE.Vector3(...base.position).sub(target);
+  // World units seen per pixel, per unit of distance.
+  const perPixel = (2 * Math.tan(THREE.MathUtils.degToRad(fov) / 2)) / height;
+  const subject = WORKSHOP_FRAME.subject[view];
+  const distance = Math.max(
+    line.length(),
+    subject.width / (perPixel * Math.max(width - panel.x, 1)),
+    subject.height / (perPixel * Math.max(height - panel.y, 1)),
+  );
+  line.setLength(distance);
+  const shot: CameraShot = {
+    position: target.clone().add(line).toArray(),
+    target: base.target,
+  };
+  const offset = distance * perPixel;
+  return {
+    shot,
+    offsetX: (panel.x / 2) * offset,
+    offsetY: (panel.y / 2) * offset,
+  };
 }
 
 export default function TrainScene({
@@ -64,6 +107,7 @@ export default function TrainScene({
     mode,
     stop,
     boardFocused,
+    workshopView,
     seasonWeightsRef,
   } = useTrainContext();
 
@@ -154,6 +198,19 @@ export default function TrainScene({
   // At a stop, the wide arrival shot holds for a moment before settling on
   // the stop's view (see config/scene).
   const [stopSettled, setStopSettled] = useState(false);
+  // The workshop's shot is fitted to the screen, the others are fixed:
+  // memoised so that resizing only reframes the workshop, and never snaps
+  // back a camera the visitor has turned elsewhere.
+  const { width, height } = useThree((state) => state.size);
+  const camera = useThree((state) => state.camera);
+  const fov = camera instanceof THREE.PerspectiveCamera ? camera.fov : 45;
+  const workshop = useMemo(
+    () =>
+      mode === "custom"
+        ? workshopShot(workshopView, width, height, fov)
+        : null,
+    [mode, workshopView, width, height, fov],
+  );
   useEffect(() => {
     if (mode !== "stopped") return;
     const timer = setTimeout(() => setStopSettled(true), STOP_SETTLE_MS);
@@ -166,22 +223,24 @@ export default function TrainScene({
   useEffect(() => {
     const stopped = mode === "stopped";
     const shots = STOP_CAMERAS[stop];
-    const shot =
-      mode === "custom"
-        ? CUSTOM_CAMERA
-        : stopped && stop === "station" && boardFocused
-          ? BOARD_CAMERA
-          : stopped && stopSettled
-            ? shots.view
-            : mode === "arriving" || stopped
-              ? shots.arrival
-              : RIDE_CAMERA;
-    cameraControlsRef.current?.setLookAt(
-      ...shot.position,
-      ...shot.target,
+    const shot = workshop
+      ? workshop.shot
+      : stopped && stop === "station" && boardFocused
+        ? BOARD_CAMERA
+        : stopped && stopSettled
+          ? shots.view
+          : mode === "arriving" || stopped
+            ? shots.arrival
+            : RIDE_CAMERA;
+    const controls = cameraControlsRef.current;
+    controls?.setLookAt(...shot.position, ...shot.target, true);
+    controls?.setFocalOffset(
+      workshop ? workshop.offsetX : 0,
+      workshop ? workshop.offsetY : 0,
+      0,
       true,
     );
-  }, [mode, stop, boardFocused, stopSettled, cameraControlsRef]);
+  }, [mode, stop, boardFocused, workshop, stopSettled, cameraControlsRef]);
 
   return (
     <>

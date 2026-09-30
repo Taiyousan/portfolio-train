@@ -13,14 +13,17 @@ import { SEASONS, type Season } from "../config/seasons";
 
 // See docs/proto-train.md — one mode drives target speed, camera position
 // and HTML overlay together. arriving / stopped / departing apply to the
-// current stop. "custom" closes in on the driver in the cab: kept for a
-// future activity, it shows nothing yet.
+// current stop. "custom" is the workshop, where the locomotive is
+// repainted and the driver dressed (see ui/Workshop).
 export type TrainMode =
   "ride" | "arriving" | "stopped" | "departing" | "custom";
 
 // Where the train stops: the station (projects, departures board) or home
 // (about: the driver, cap off, working at a desk on the terrace).
 export type Stop = "station" | "home";
+
+// What the workshop is showing (its tab), and the camera closing in on.
+export type WorkshopView = "train" | "driver";
 
 // How far the scene has blended into each season, summing to 1.
 export type SeasonWeights = Record<Season, number>;
@@ -48,6 +51,8 @@ type TrainContextValue = {
   // click on it) and its rows can be picked.
   boardFocused: boolean;
   setBoardFocused: (focused: boolean) => void;
+  workshopView: WorkshopView;
+  setWorkshopView: (view: WorkshopView) => void;
   // Season picked with the switch (see config/seasons). The scene blends
   // into it gradually: seasonWeightsRef, eased once per frame by
   // useSeasonEasing and read from useFrame, like trainSpeedRef.
@@ -74,6 +79,7 @@ export function TrainProvider({ children }: { children: ReactNode }) {
   const [stop, setStop] = useState<Stop>("station");
   const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
   const [boardFocused, setBoardFocused] = useState(false);
+  const [workshopView, setWorkshopView] = useState<WorkshopView>("train");
   const [season, setSeason] = useState<Season>("summer");
   const seasonWeightsRef = useRef(
     Object.fromEntries(
@@ -96,6 +102,8 @@ export function TrainProvider({ children }: { children: ReactNode }) {
         setSelectedSlug,
         boardFocused,
         setBoardFocused,
+        workshopView,
+        setWorkshopView,
         season,
         setSeason,
         seasonWeightsRef,

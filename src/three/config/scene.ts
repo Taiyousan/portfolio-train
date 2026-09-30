@@ -1,4 +1,4 @@
-import type { Stop } from "../state/TrainContext";
+import type { Stop, WorkshopView } from "../state/TrainContext";
 
 export type Vec3 = [number, number, number];
 
@@ -70,11 +70,44 @@ export const STOP_CAMERAS: Record<Stop, StopShots> = {
   home: { arrival: HOME_CAMERA, view: HOME_VIEW_CAMERA },
 };
 
-// "custom" mode: close on the cab where Driver stands (Train.tsx), tuned
-// live in the browser via the Leva "Camera (lecture seule)" monitor.
-export const CUSTOM_CAMERA: CameraShot = {
-  position: [1.641, 0.636, 0.048],
-  target: [0.016, 0.05, -0.426],
+// "custom" mode, the workshop (ui/Workshop), one shot per tab: the whole
+// locomotive, side on from a little ahead, low enough to see the driver in
+// the cab over its side; or close on the driver, turned to it (see Train),
+// through the cab's side, from a little above. Framed for the whole
+// screen: TrainScene then pulls them back and shifts them to fit the room
+// the workshop's panel leaves (WORKSHOP_FRAME).
+export const CUSTOM_CAMERAS: Record<WorkshopView, CameraShot> = {
+  train: {
+    position: [3.0, 0.85, 0.6],
+    target: [0, -0.05, -0.1],
+  },
+  driver: {
+    position: [1.25, 0.7, 0.0],
+    target: [0, 0.12, -0.6],
+  },
+};
+
+// The room the workshop's panel takes on screen, in step with its classes
+// (ui/Workshop): past the `sm` breakpoint, a card of `width` pixels,
+// margin included, on the right; below it, a sheet over the bottom
+// `sheet` share of the height. And the size, in world units, each shot's
+// subject needs to fit in the rest: the train's full length side on is a
+// little more, so on phones its buffers may be cut, rather than backing
+// the camera into the forest (kept off only up to STOP_CLEAR_X); the
+// driver, from the sill up, with some of the cab around.
+export const WORKSHOP_FRAME: {
+  breakpoint: number;
+  width: number;
+  sheet: number;
+  subject: Record<WorkshopView, { width: number; height: number }>;
+} = {
+  breakpoint: 640,
+  width: 404,
+  sheet: 0.5,
+  subject: {
+    train: { width: 2.1, height: 1.4 },
+    driver: { width: 0.8, height: 0.6 },
+  },
 };
 
 // Approach to a stop (see hooks/useStopApproach), the same for both. The

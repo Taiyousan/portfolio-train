@@ -1,7 +1,9 @@
-import { useRef, type ReactNode } from "react";
+import { useMemo, useRef, type ReactNode } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { useTrainContext } from "../state/TrainContext";
+import { useLivery } from "../state/LiveryContext";
+import { shade } from "../config/livery";
 import SnowCover from "./SnowCover";
 import {
   Block,
@@ -11,22 +13,25 @@ import {
 } from "./StationPrimitives";
 
 // A rounded cartoon steam locomotive, built like the station and the home
-// (see StationPrimitives): a red boiler with brass bands and a dome, a
-// dark smokebox with a flared chimney and a headlamp up front, and an open
-// cab at the back, under a navy roof, for the driver (see Train). Its
+// (see StationPrimitives): a boiler with bands and a dome, a dark smokebox
+// with a flared chimney and a headlamp up front, and an open cab at the
+// back, under a roof, for the driver (see Train). Painted in the livery
+// picked in the workshop (see config/livery), red, navy and brass at
+// first. Its
 // wheels roll on the rails with the train's speed, the coupling and
 // connecting rods following them, while the body sways on top of them. In
 // world units, facing +z, centred on the origin, 2 long.
 
+// The livery's colours (Livery's body, roof and trim, and a darker shade
+// of the body for the cab floor and the wheels' spokes and counterweights).
+type Paint = { body: string; bodyDark: string; roof: string; trim: string };
+
+// Everything else, whatever the livery.
 const COLORS = {
-  body: "#b8433a",
-  bodyDark: "#8a2f28",
-  brass: STATION_COLORS.edge,
   iron: STATION_COLORS.iron,
   steel: "#8d939c",
   smokebox: "#2c2e35",
   door: "#3a3c44",
-  roof: "#2b3a5c",
   glass: "#9cc7e0",
   dial: STATION_COLORS.sign,
   light: STATION_COLORS.light,
@@ -50,7 +55,7 @@ const SWAY_LIFT = 0.0035;
 // Top of rails.glb's rail heads (Rails is at y = -0.57, see TrainScene),
 // where the wheels touch them, and their centre either side of the centre
 // line, the wheels' mid-plane.
-const RAIL_TOP = -0.546;
+export const RAIL_TOP = -0.546;
 const GAUGE_X = 0.2755;
 const WHEEL_WIDTH = 0.05;
 const DRIVING_RADIUS = 0.19;
@@ -128,10 +133,12 @@ function Wheel({
   radius,
   side,
   driving,
+  paint,
 }: {
   radius: number;
   side: number;
   driving: boolean;
+  paint: Paint;
 }) {
   const face = side * (WHEEL_WIDTH / 2 + 0.006);
   return (
@@ -144,7 +151,7 @@ function Wheel({
         radius={radius - 0.025}
         height={WHEEL_WIDTH + 0.01}
         rotation={ALONG_X}
-        color={COLORS.body}
+        color={paint.body}
         segments={24}
       />
       {/* Spokes, so the wheel is seen to turn */}
@@ -155,14 +162,14 @@ function Wheel({
           position={[face, 0, 0]}
           rotation={[(i * Math.PI) / 3, 0, 0]}
           radius={0.005}
-          color={COLORS.bodyDark}
+          color={paint.bodyDark}
         />
       ))}
       <Cylinder
         radius={0.035}
         height={WHEEL_WIDTH + 0.03}
         rotation={ALONG_X}
-        color={COLORS.brass}
+        color={paint.trim}
         segments={12}
       />
       {driving && (
@@ -171,14 +178,14 @@ function Wheel({
             size={[0.016, 0.07, 0.16]}
             position={[face, -(radius - 0.065), 0]}
             radius={0.02}
-            color={COLORS.bodyDark}
+            color={paint.bodyDark}
           />
           <Cylinder
             radius={0.018}
             height={0.06}
             position={[side * (WHEEL_WIDTH / 2 + 0.03), CRANK, 0]}
             rotation={ALONG_X}
-            color={COLORS.brass}
+            color={paint.trim}
             segments={10}
           />
         </>
@@ -188,7 +195,15 @@ function Wheel({
 }
 
 // The half-round cover over a driving wheel, rising through the deck.
-function Splasher({ side, z }: { side: number; z: number }) {
+function Splasher({
+  side,
+  z,
+  paint,
+}: {
+  side: number;
+  z: number;
+  paint: Paint;
+}) {
   const radius = DRIVING_RADIUS + 0.025;
   return (
     <group position={[side * GAUGE_X, DRIVING_Y, z]}>
@@ -196,7 +211,7 @@ function Splasher({ side, z }: { side: number; z: number }) {
         <cylinderGeometry
           args={[radius, radius, 0.07, 24, 1, false, 0, Math.PI]}
         />
-        <meshStandardMaterial color={COLORS.body} roughness={0.75} />
+        <meshStandardMaterial color={paint.body} roughness={0.75} />
       </mesh>
       <mesh
         position={[side * 0.035, 0, 0]}
@@ -204,7 +219,7 @@ function Splasher({ side, z }: { side: number; z: number }) {
         castShadow
       >
         <torusGeometry args={[radius, 0.012, 6, 24, Math.PI]} />
-        <meshStandardMaterial color={COLORS.brass} roughness={0.6} />
+        <meshStandardMaterial color={paint.trim} roughness={0.6} />
       </mesh>
     </group>
   );
@@ -213,14 +228,14 @@ function Splasher({ side, z }: { side: number; z: number }) {
 // A buffer beam across the deck's end, `dir` its way out, with its two
 // buffers. A little wider and longer than the deck, so their faces don't
 // meet in the same planes (z-fighting).
-function BufferBeam({ dir }: { dir: number }) {
+function BufferBeam({ dir, paint }: { dir: number; paint: Paint }) {
   const end = dir > 0 ? DECK.front : DECK.back;
   return (
     <group position={[0, DECK.y - 0.04, end + dir * (0.01 - 0.035)]}>
       <Block
         size={[DECK.width + 0.02, 0.16, 0.07]}
         radius={0.025}
-        color={COLORS.body}
+        color={paint.body}
       />
       {SIDES.map((side) => (
         <group key={side} position={[side * 0.27, 0, 0]}>
@@ -249,6 +264,11 @@ function BufferBeam({ dir }: { dir: number }) {
 // `children` ride in the body (the driver, see Train).
 export default function Locomotive({ children }: { children?: ReactNode }) {
   const { trainSpeedRef, targetTrainSpeed } = useTrainContext();
+  const { livery } = useLivery();
+  const paint = useMemo<Paint>(
+    () => ({ ...livery, bodyDark: shade(livery.body, 0.75) }),
+    [livery],
+  );
   const bodyRef = useRef<THREE.Group>(null);
   const swayPhaseRef = useRef(0);
   // Distance rolled so far: every wheel's angle follows from it and its
@@ -347,6 +367,7 @@ export default function Locomotive({ children }: { children?: ReactNode }) {
                 radius={wheel.radius}
                 side={side}
                 driving={wheel.driving}
+                paint={paint}
               />
             </group>
           ))}
@@ -384,7 +405,7 @@ export default function Locomotive({ children }: { children?: ReactNode }) {
             <Block
               size={[0.035, 0.05, 0.05]}
               radius={0.012}
-              color={COLORS.brass}
+              color={paint.trim}
             />
           </group>
           <group
@@ -417,8 +438,8 @@ export default function Locomotive({ children }: { children?: ReactNode }) {
           radius={0.025}
           color={COLORS.iron}
         />
-        <BufferBeam dir={1} />
-        <BufferBeam dir={-1} />
+        <BufferBeam dir={1} paint={paint} />
+        <BufferBeam dir={-1} paint={paint} />
 
         {/* Cowcatcher: bars leaning forward under the front beam */}
         {[-0.24, -0.12, 0, 0.12, 0.24].map((x) => (
@@ -442,7 +463,7 @@ export default function Locomotive({ children }: { children?: ReactNode }) {
         {SIDES.map((side) => (
           <group key={side}>
             {[DRIVING_FRONT_Z, DRIVING_BACK_Z].map((z) => (
-              <Splasher key={z} side={side} z={z} />
+              <Splasher key={z} side={side} z={z} paint={paint} />
             ))}
             {/* Steam cylinder, with brass end caps */}
             <group
@@ -456,7 +477,7 @@ export default function Locomotive({ children }: { children?: ReactNode }) {
                 radius={PISTON.radius}
                 height={PISTON.front - PISTON.back}
                 rotation={ALONG_Z}
-                color={COLORS.body}
+                color={paint.body}
                 segments={18}
               />
               {[-1, 1].map((end) => (
@@ -466,7 +487,7 @@ export default function Locomotive({ children }: { children?: ReactNode }) {
                   height={0.018}
                   position={[0, 0, (end * (PISTON.front - PISTON.back)) / 2]}
                   rotation={ALONG_Z}
-                  color={COLORS.brass}
+                  color={paint.trim}
                   segments={18}
                 />
               ))}
@@ -480,13 +501,13 @@ export default function Locomotive({ children }: { children?: ReactNode }) {
           height={boilerLength}
           position={[0, BOILER_Y, (BOILER.front + BOILER.back) / 2]}
           rotation={ALONG_Z}
-          color={COLORS.body}
+          color={paint.body}
           segments={28}
         />
         {[-0.15, 0.1, 0.3].map((z) => (
           <mesh key={z} position={[0, BOILER_Y, z]} castShadow>
             <torusGeometry args={[BOILER.radius + 0.004, 0.014, 8, 32]} />
-            <meshStandardMaterial color={COLORS.brass} roughness={0.6} />
+            <meshStandardMaterial color={paint.trim} roughness={0.6} />
           </mesh>
         ))}
         <group position={[0, BOILER_Y + BOILER.radius, -0.03]}>
@@ -495,12 +516,12 @@ export default function Locomotive({ children }: { children?: ReactNode }) {
             top={0.072}
             height={0.1}
             position={[0, 0.01, 0]}
-            color={COLORS.brass}
+            color={paint.trim}
             segments={18}
           />
           <mesh position={[0, 0.06, 0]} scale={[1, 0.75, 1]} castShadow>
             <sphereGeometry args={[0.072, 18, 10]} />
-            <meshStandardMaterial color={COLORS.brass} roughness={0.6} />
+            <meshStandardMaterial color={paint.trim} roughness={0.6} />
           </mesh>
         </group>
         <group position={[0.1, BOILER_Y + BOILER.radius - 0.02, -0.22]}>
@@ -508,7 +529,7 @@ export default function Locomotive({ children }: { children?: ReactNode }) {
             radius={0.016}
             height={0.08}
             position={[0, 0.04, 0]}
-            color={COLORS.brass}
+            color={paint.trim}
             segments={8}
           />
           <Cylinder
@@ -516,7 +537,7 @@ export default function Locomotive({ children }: { children?: ReactNode }) {
             top={0.02}
             height={0.05}
             position={[0, 0.1, 0]}
-            color={COLORS.brass}
+            color={paint.trim}
             segments={12}
           />
         </group>
@@ -531,7 +552,7 @@ export default function Locomotive({ children }: { children?: ReactNode }) {
               (BOILER.front + BOILER.back) / 2 + 0.05,
             ]}
             rotation={ALONG_Z}
-            color={COLORS.brass}
+            color={paint.trim}
             segments={6}
           />
         ))}
@@ -552,11 +573,11 @@ export default function Locomotive({ children }: { children?: ReactNode }) {
           </mesh>
           <mesh castShadow>
             <torusGeometry args={[SMOKEBOX.radius - 0.02, 0.016, 8, 32]} />
-            <meshStandardMaterial color={COLORS.brass} roughness={0.6} />
+            <meshStandardMaterial color={paint.trim} roughness={0.6} />
           </mesh>
           <mesh position={[0, 0, 0.075]} castShadow>
             <sphereGeometry args={[0.025, 10, 8]} />
-            <meshStandardMaterial color={COLORS.brass} roughness={0.6} />
+            <meshStandardMaterial color={paint.trim} roughness={0.6} />
           </mesh>
         </group>
         <group position={[0, CHIMNEY_BASE, CHIMNEY_Z]}>
@@ -581,7 +602,7 @@ export default function Locomotive({ children }: { children?: ReactNode }) {
             radius={0.108}
             height={0.025}
             position={[0, 0.155, 0]}
-            color={COLORS.brass}
+            color={paint.trim}
             segments={18}
           />
           <Cylinder
@@ -610,7 +631,7 @@ export default function Locomotive({ children }: { children?: ReactNode }) {
             radius={0.065}
             height={0.1}
             rotation={ALONG_Z}
-            color={COLORS.body}
+            color={paint.body}
             segments={18}
           />
           <mesh position={[0, 0, 0.052]} rotation={ALONG_Z}>
@@ -623,7 +644,7 @@ export default function Locomotive({ children }: { children?: ReactNode }) {
           </mesh>
           <mesh position={[0, 0, 0.05]}>
             <torusGeometry args={[0.058, 0.012, 6, 20]} />
-            <meshStandardMaterial color={COLORS.brass} roughness={0.6} />
+            <meshStandardMaterial color={paint.trim} roughness={0.6} />
           </mesh>
         </group>
 
@@ -632,14 +653,14 @@ export default function Locomotive({ children }: { children?: ReactNode }) {
           size={[CAB.width - 0.08, CAB.floor - DECK_TOP, CAB_LENGTH - 0.08]}
           position={[0, (CAB.floor + DECK_TOP) / 2, CAB_Z]}
           radius={0.01}
-          color={COLORS.bodyDark}
+          color={paint.bodyDark}
         />
         {/* Front wall, round windows either side of the boiler */}
         <Block
           size={[CAB.width + 0.02, CAB.roof - DECK_TOP, 0.06]}
           position={[0, (CAB.roof + DECK_TOP) / 2, CAB.front]}
           radius={0.025}
-          color={COLORS.body}
+          color={paint.body}
         />
         {SIDES.map((side) => (
           <group
@@ -656,7 +677,7 @@ export default function Locomotive({ children }: { children?: ReactNode }) {
             {[-1, 1].map((face) => (
               <mesh key={face} position={[0, 0, face * 0.034]}>
                 <torusGeometry args={[0.065, 0.014, 6, 20]} />
-                <meshStandardMaterial color={COLORS.brass} roughness={0.6} />
+                <meshStandardMaterial color={paint.trim} roughness={0.6} />
               </mesh>
             ))}
           </group>
@@ -672,7 +693,7 @@ export default function Locomotive({ children }: { children?: ReactNode }) {
           size={[0.12, 0.08, 0.02]}
           position={[0, CAB.floor + 0.16, CAB.front - 0.08]}
           radius={0.01}
-          color={COLORS.brass}
+          color={paint.trim}
         />
         {[-0.07, 0.07].map((x) => (
           <mesh
@@ -695,13 +716,13 @@ export default function Locomotive({ children }: { children?: ReactNode }) {
                 CAB_Z,
               ]}
               radius={0.025}
-              color={COLORS.body}
+              color={paint.body}
             />
             <Block
               size={[0.08, 0.03, CAB_LENGTH + 0.02]}
               position={[side * (CAB.width / 2 - 0.03), CAB.sill, CAB_Z]}
               radius={0.012}
-              color={COLORS.brass}
+              color={paint.trim}
             />
             {/* Brass number plate */}
             <Block
@@ -712,7 +733,7 @@ export default function Locomotive({ children }: { children?: ReactNode }) {
                 CAB_Z,
               ]}
               radius={0.006}
-              color={COLORS.brass}
+              color={paint.trim}
             />
             {/* Back post */}
             <Cylinder
@@ -723,7 +744,7 @@ export default function Locomotive({ children }: { children?: ReactNode }) {
                 CAB.sill + postHeight / 2,
                 CAB.back + 0.035,
               ]}
-              color={COLORS.body}
+              color={paint.body}
               segments={12}
             />
           </group>
@@ -732,26 +753,26 @@ export default function Locomotive({ children }: { children?: ReactNode }) {
           size={[CAB.width - 0.01, sillHeight, 0.06]}
           position={[0, DECK_TOP + sillHeight / 2, CAB.back + 0.035]}
           radius={0.025}
-          color={COLORS.body}
+          color={paint.body}
         />
         <Block
           size={[CAB.width - 0.14, 0.03, 0.08]}
           position={[0, CAB.sill, CAB.back + 0.03]}
           radius={0.012}
-          color={COLORS.brass}
+          color={paint.trim}
         />
         {/* Roof overhanging all round, crowned, snowed on in winter */}
         <Block
           size={[CAB.width + 0.12, 0.06, CAB_LENGTH + 0.16]}
           position={[0, CAB.roof + 0.03, CAB_Z]}
           radius={0.028}
-          color={COLORS.roof}
+          color={paint.roof}
         />
         <Block
           size={[CAB.width - 0.2, 0.04, CAB_LENGTH + 0.12]}
           position={[0, CAB.roof + 0.07, CAB_Z]}
           radius={0.018}
-          color={COLORS.roof}
+          color={paint.roof}
         />
         <SnowCover
           top={[0, CAB.roof + 0.06, CAB_Z]}
