@@ -39,7 +39,7 @@ export const STATION_VIEW_CAMERA: CameraShot = {
 };
 
 // Square to the board, near enough for its rows to read, with the driver
-// sitting beside it. Update with STATION_BOARD / STATION_DRIVER.
+// propped against its side. Update with STATION_BOARD / STATION_DRIVER.
 export const BOARD_CAMERA: CameraShot = {
   position: [1.675, 0.151, 1.086],
   target: [3.106, 0.119, 1.086],
@@ -159,13 +159,16 @@ export const STATION_BOARD = {
 
 // Driver on the platform while the train waits (models/Station), in the
 // platform's frame (x across it, + away from the track; z along it):
-// standing left of the board in STATION_VIEW_CAMERA, sitting on the edge
-// right of it once the board is open, so BOARD_CAMERA frames both. scale in
-// world units per driver unit (same on-screen size as in the cab, where
-// Train's Resize applies its own).
+// standing left of the board in STATION_VIEW_CAMERA; once the board is
+// open, propped against its right-hand side, so BOARD_CAMERA frames both,
+// turned from facing +z by `propped.yaw` radians (-π/2 would face the
+// track squarely): three-quarter on, turned any further toward the camera,
+// it would stand over the board's rows in BOARD_CAMERA. Placed from the
+// board (see Station). scale in world units per driver unit (same
+// on-screen size as in the cab, where Train's Resize applies its own).
 export const STATION_DRIVER = {
   standing: { x: -0.45, z: -0.9 },
-  sitting: { z: 1.4 },
+  propped: { yaw: -0.35 },
   scale: 0.55,
 };
 

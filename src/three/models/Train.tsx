@@ -3,23 +3,34 @@ import { animated, useSpring } from "@react-spring/three";
 import { useTrainContext } from "../state/TrainContext";
 import { useLivery } from "../state/LiveryContext";
 import usePopIn from "../hooks/usePopIn";
-import Driver, { type DriverHandle } from "./Driver";
-import Locomotive, { CAB_FLOOR, RAIL_TOP } from "./Locomotive";
+import Driver, { DRIVER_LEANING_LEDGE, type DriverHandle } from "./Driver";
+import Locomotive, { CAB_FLOOR, CAB_SILL, RAIL_TOP } from "./Locomotive";
 
-// Driver standing in the cab, in world units, and size in world units per
-// driver unit (see Station for the matching size on the platform).
-const DRIVER_POSITION: [number, number, number] = [0, CAB_FLOOR, -0.58];
+// Driver standing in the cab, in world units (its height and place along
+// it; across it, see driverX), and size in world units per driver unit
+// (see Station for the matching size on the platform).
+const DRIVER_Y = CAB_FLOOR;
+const DRIVER_Z = -0.58;
 const DRIVER_SCALE = 0.53;
 const DRIVER_SWAP_DELAY_MS = 250;
 // In the workshop, the driver turns from the track toward the camera (on
 // +x, see CUSTOM_CAMERAS) by this much, radians, to show off the outfit.
 const WORKSHOP_DRIVER_TURN = 1.1;
+// While the locomotive is being repainted, the driver leans on the cab's
+// sill on the camera's side, facing out (+x), dreamy (see Driver's
+// LEANING): this far over, so that the sill is where the pose expects it.
+// The pose is worked out for a sill DRIVER_LEANING_LEDGE.height above the
+// cab floor, (CAB_SILL.top - CAB_FLOOR) / DRIVER_SCALE: keep the two in
+// step.
+const LEANING_DRIVER_X =
+  CAB_SILL.x - DRIVER_LEANING_LEDGE.edge * DRIVER_SCALE;
+const LEANING_DRIVER_TURN = Math.PI / 2;
 // Repainted, the locomotive squashes down on its wheels by this much and
 // springs back.
 const REPAINT_SQUASH = 0.08;
 
 export default function Train() {
-  const { mode, setMode } = useTrainContext();
+  const { mode, setMode, workshopView } = useTrainContext();
   const { livery, outfit } = useLivery();
   const scale = usePopIn();
   const driverRef = useRef<DriverHandle>(null);
@@ -60,8 +71,17 @@ export default function Train() {
     delay: stopped ? 0 : DRIVER_SWAP_DELAY_MS,
     config: { mass: 1, tension: 260, friction: 12, precision: 0.001 },
   });
-  const { driverTurn } = useSpring({
-    driverTurn: mode === "custom" ? WORKSHOP_DRIVER_TURN : 0,
+  // In the workshop: leaning on the sill while the locomotive is shown,
+  // up and turned to the camera while the driver is.
+  const workshop = mode === "custom";
+  const leaning = workshop && workshopView === "train";
+  const { driverTurn, driverX } = useSpring({
+    driverTurn: leaning
+      ? LEANING_DRIVER_TURN
+      : workshop
+        ? WORKSHOP_DRIVER_TURN
+        : 0,
+    driverX: leaning ? LEANING_DRIVER_X : 0,
     immediate: reducedMotion,
     config: { mass: 1, tension: 120, friction: 16 },
   });
@@ -86,13 +106,16 @@ export default function Train() {
             {/* Clicking the driver while riding opens the workshop
                 ("custom" mode, see ui/Workshop). */}
             <animated.group
-              position={DRIVER_POSITION}
+              position-x={driverX}
+              position-y={DRIVER_Y}
+              position-z={DRIVER_Z}
               scale={driverScale}
               rotation-y={driverTurn}
             >
               <Driver
                 ref={driverRef}
                 outfit={outfit}
+                leaning={leaning}
                 onClick={(e) => {
                   if (mode !== "ride") return;
                   e.stopPropagation();

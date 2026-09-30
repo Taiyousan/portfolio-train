@@ -17,8 +17,11 @@ import {
   STOP_SIDE,
 } from "../config/scene";
 import type { StationProject } from "../ui/types";
-import StationBoard, { stationBoardHeight } from "./StationBoard";
-import Driver, { DRIVER_SEAT_DEPTH, type DriverHandle } from "./Driver";
+import StationBoard, {
+  STATION_BOARD_SIDE,
+  stationBoardHeight,
+} from "./StationBoard";
+import Driver, { DRIVER_PROPPED_BACK, type DriverHandle } from "./Driver";
 import StationDecor, {
   STATION_FITTINGS,
   stationPlatformHeight,
@@ -92,22 +95,34 @@ const Station = forwardRef<THREE.Group, { projects: StationProject[] }>(
     }));
     const sunkRef = useRef(false);
     // The driver, stepped off the cab (see Train), waits on the platform:
-    // standing left of the departures board, or sitting on the edge right of
-    // it while the board is open (so BOARD_CAMERA frames both). Each pops in
-    // once the other (or the cab one) has gone.
+    // standing left of the departures board, or propped against its right
+    // side while it's open (so BOARD_CAMERA frames both). Each pops in once
+    // the other (or the cab one) has gone.
     const atStation = here && mode === "stopped";
     const standing = atStation && !boardFocused;
-    const sitting = atStation && boardFocused;
+    const propped = atStation && boardFocused;
     const { standingScale } = useSpring({
       standingScale: standing ? STATION_DRIVER.scale : 0,
       delay: standing ? DRIVER_SWAP_DELAY_MS : 0,
       config: DRIVER_SPRING,
     });
-    const { sittingScale } = useSpring({
-      sittingScale: sitting ? STATION_DRIVER.scale : 0,
-      delay: sitting ? DRIVER_SWAP_DELAY_MS : 0,
+    const { proppedScale } = useSpring({
+      proppedScale: propped ? STATION_DRIVER.scale : 0,
+      delay: propped ? DRIVER_SWAP_DELAY_MS : 0,
       config: DRIVER_SPRING,
     });
+    // Propped: the back against the board's right-hand side edge (on +z,
+    // the board facing the track unturned), the feet out from it.
+    const proppedYaw = STATION_DRIVER.propped.yaw;
+    const proppedOut = DRIVER_PROPPED_BACK.behind * STATION_DRIVER.scale;
+    const proppedX =
+      board.x -
+      STATION_BOARD_SIDE.front * board.scale +
+      Math.sin(proppedYaw) * proppedOut;
+    const proppedZ =
+      board.z +
+      STATION_BOARD_SIDE.x * board.scale +
+      Math.cos(proppedYaw) * proppedOut;
     // Clicking the standing driver makes it wave.
     const standingDriverRef = useRef<DriverHandle>(null);
     const pointingDriverRef = useRef(false);
@@ -203,18 +218,14 @@ const Station = forwardRef<THREE.Group, { projects: StationProject[] }>(
               }}
             />
           </animated.group>
-          {/* Driver sitting on the track-side edge right of the board,
-              facing the track (-x), legs over the edge. */}
+          {/* Driver propped against the board's right-hand side, passing
+              the time. */}
           <animated.group
-            position={[
-              placement.edgeX + DRIVER_SEAT_DEPTH * STATION_DRIVER.scale,
-              platformHeight,
-              STATION_DRIVER.sitting.z,
-            ]}
-            rotation={[0, -Math.PI / 2, 0]}
-            scale={sittingScale}
+            position={[proppedX, platformHeight, proppedZ]}
+            rotation={[0, proppedYaw, 0]}
+            scale={proppedScale}
           >
-            <Driver pose="sitting" outfit={outfit} />
+            <Driver pose="propped" outfit={outfit} />
           </animated.group>
         </animated.group>
       </group>

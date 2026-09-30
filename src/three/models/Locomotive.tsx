@@ -124,6 +124,9 @@ const CAB = {
 const CAB_LENGTH = CAB.front - CAB.back;
 // Where the driver stands (see Train).
 export const CAB_FLOOR = CAB.floor;
+// The sill's brass cap on the +x side, which the driver leans on in the
+// workshop (see Train): its inner edge and its top.
+export const CAB_SILL = { x: CAB.width / 2 - 0.07, top: CAB.sill + 0.015 };
 const CAB_Z = (CAB.front + CAB.back) / 2;
 
 // A wheel, its axle along x, centred on its hub; `side` is the way its

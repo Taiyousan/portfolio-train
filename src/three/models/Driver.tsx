@@ -6,15 +6,17 @@ import { Block, Cylinder, STATION_COLORS } from "./StationPrimitives";
 import { DEFAULT_OUTFIT, shade, type Outfit } from "../config/livery";
 
 // A small cartoon driver, rounded like the station (see StationPrimitives):
-// standing in the locomotive cab, standing or sitting on the platform's edge
-// while the train waits at the station, or at the desk at home, in a hoodie,
-// typing. Dressed as picked in the workshop (see config/livery). Curly
-// hair, a short beard and a moustache. Built as a rig of nested groups
-// (hips, knees, spine, shoulders, elbows, neck) posed every
-// frame: breathing, blinking, glancing around, legs swinging over the
-// platform's edge, and a wave or a look at the camera on demand (see
-// DriverHandle). Held still with reduced motion. In driver units: about
-// 0.94 tall standing, cap included, facing +z.
+// standing in the locomotive cab, standing on the platform or propped
+// against the departures board while the train waits at the station, or
+// at the desk at home, in a hoodie, typing. Dressed as picked in the
+// workshop (see config/livery). Curly hair, a short beard and a moustache.
+// Built as a rig of nested groups (hips, knees, spine, shoulders, elbows,
+// neck) posed every frame: breathing, blinking, glancing around, legs
+// swinging sitting, a toe tapping propped (see PROPPED), and a wave or a
+// look at the camera on demand (see DriverHandle). Standing, the driver
+// can also lean on a ledge, dreamy (see LEANING). Held still with reduced
+// motion. In driver units: about 0.94 tall standing, cap included, facing
+// +z.
 
 const COLORS = {
   gold: STATION_COLORS.edge,
@@ -105,6 +107,95 @@ export const DRIVER_TYPING_HANDS = {
   radius: HAND_RADIUS,
 };
 
+// Leaning on a ledge (the cab's sill, in the workshop, see Train), dreamy:
+// bent over it, elbows on it, the chin on the right fist and the left
+// forearm along it, the head tipped toward the fist, gazing up and off to
+// the right with heavy lids, breathing deeper, swaying a little. Worked
+// out for a ledge `sill` above the feet whose edge is `edge` ahead of them
+// (driver units), with the spine bent by `lean`: shoulders (x, y, z) then
+// elbows (x, z), right arm then left, and the head's pitch, turn and tilt
+// (on top of being kept level). Blended in and out over `ease` seconds,
+// the arms going over the ledge rather than through it: standing `back`
+// from it (fully by `backAt` of the way), they fold across the chest at
+// the ledge's height (both forearms flat, as the left one ends up) by
+// `fold.at`, then the body steps in and they're set down on it, the right
+// fist sliding up under the chin. Bending over it from `bendFrom` of the
+// way. The other way round on the way back.
+const LEANING = {
+  sill: 0.538,
+  edge: 0.2,
+  lean: 0.45,
+  arms: [
+    [-1.74, 1, -0.5, -2.13, 0.16],
+    [-1.67, -1.04, 0.57, -1.39, -0.49],
+  ],
+  fold: {
+    at: 0.5,
+    arms: [
+      [-1.67, 1.04, -0.57, -1.39, 0.49],
+      [-1.67, -1.04, 0.57, -1.39, -0.49],
+    ],
+  },
+  back: 0.15,
+  backAt: 0.35,
+  bendFrom: 0.3,
+  look: [-0.25, -0.85, 0.3],
+  lids: 0.85,
+  brows: 0.006,
+  breath: 2,
+  sway: 0.035,
+  swaySpeed: 0.6,
+  ease: 1.2,
+};
+// The ledge the leaning pose fits, in driver units: its top's height above
+// the feet and its edge's distance ahead of them.
+export const DRIVER_LEANING_LEDGE = {
+  height: LEANING.sill,
+  edge: LEANING.edge,
+};
+
+// Propped against something behind (the departures board's edge, see
+// Station), passing the time: the whole body tilted back about the feet
+// by `tilt`, the weight on the left leg (its knee a little bent, the hips
+// down by `drop`), the right knee loose, its toe on the ground, tapping
+// now and then, the hands in the pockets, the shoulders slumped back
+// (`spine`), the head pushed forward by `neck` (its curls would otherwise
+// stick out well behind the back, into what it leans on), glancing around
+// more widely than usual (`look`). Hip joints (x, z) and knees (x), then
+// shoulders (x, y, z) and elbows (x, z), right then left.
+const PROPPED = {
+  tilt: 0.12,
+  drop: 0.006,
+  spine: -0.04,
+  neck: 0.06,
+  legs: [
+    [-0.3, 0.08, 0.6],
+    [-0.15, -0.03, 0.27],
+  ],
+  arms: [
+    [0.6, 0.14, -0.58, -1.5, 0.64],
+    [0.6, -0.14, 0.58, -1.5, -0.64],
+  ],
+  // Toe tapping: lifted this much (radians at the hip), this fast, in
+  // bursts every so often.
+  tap: 0.12,
+  tapSpeed: 9,
+  tapBursts: 0.5,
+  look: 1.5,
+};
+// Where the back rests (from its point between the shoulder blades), in
+// driver units: this far behind the feet, this high.
+const BACK_POINT = { y: 0.2, depth: 0.1 };
+export const DRIVER_PROPPED_BACK = {
+  behind:
+    (HIP_STANDING + BACK_POINT.y) * Math.sin(PROPPED.tilt) +
+    BACK_POINT.depth * Math.cos(PROPPED.tilt),
+  height:
+    (HIP_STANDING + BACK_POINT.y) * Math.cos(PROPPED.tilt) -
+    BACK_POINT.depth * Math.sin(PROPPED.tilt) -
+    PROPPED.drop,
+};
+
 // Idle motion, in seconds and radians: breathing, weight shifting from foot
 // to foot standing, legs swinging sitting, blinks now and then (sometimes
 // twice), and glances held a few seconds each, eased toward.
@@ -183,13 +274,18 @@ export type DriverHandle = {
 type Props = Omit<ThreeElements["group"], "ref"> & {
   ref?: Ref<DriverHandle>;
   // "standing": feet at the origin. "sitting": seat at the origin, facing
-  // +z, legs dangling below it past z = DRIVER_SEAT_DEPTH.
-  pose?: "standing" | "sitting";
+  // +z, legs dangling below it past z = DRIVER_SEAT_DEPTH. "propped": feet
+  // at the origin, leaning back against something DRIVER_PROPPED_BACK
+  // behind them (see PROPPED).
+  pose?: "standing" | "sitting" | "propped";
   // The conductor's uniform and cap by default (see config/livery's
   // OUTFITS); at home, where the driver is just the developer, a hoodie.
   outfit?: Outfit;
   // Hands over a keyboard in front, tapping (see DRIVER_TYPING_HANDS).
   typing?: boolean;
+  // Standing only: leaning on a ledge in front (see LEANING and
+  // DRIVER_LEANING_LEDGE), eased into and out of.
+  leaning?: boolean;
 };
 
 type Rig = {
@@ -210,9 +306,11 @@ export default function Driver({
   pose = "standing",
   outfit = DEFAULT_OUTFIT,
   typing = false,
+  leaning = false,
   ...props
 }: Props) {
   const sitting = pose === "sitting";
+  const propped = pose === "propped";
   const clothes = dress(outfit);
   const rig = useRef<Rig>({
     hips: null,
@@ -230,9 +328,11 @@ export default function Driver({
     () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
   );
   // Frame-clock state, set up on the first frame: an offset so two drivers
-  // don't move in step, the next blink, the glance eased toward, the wave.
+  // don't move in step, the next blink, the glance eased toward, the wave,
+  // how far into leaning (0 to 1, eased).
   const stateRef = useRef({
     seed: -1,
+    leaning: 0,
     blinkAt: 0,
     nextBlink: 0,
     nextLook: 0,
@@ -265,13 +365,29 @@ export default function Driver({
     const r = rig.current;
     const state = stateRef.current;
     const now = clock.elapsedTime;
+    const leaningTarget = leaning && pose === "standing" ? 1 : 0;
     if (state.seed < 0) {
       state.seed = Math.random() * 100;
       state.nextBlink = now + between(IDLE.blinkGap);
+      state.leaning = leaningTarget;
     }
     // Idle time, frozen with reduced motion, and how much idle motion.
     const t = reducedMotion ? 0 : now + state.seed;
     const idle = reducedMotion ? 0 : 1;
+
+    // Leaning: 0 upright, 1 on the ledge, at a steady pace, eased at both
+    // ends.
+    state.leaning = reducedMotion
+      ? leaningTarget
+      : state.leaning +
+        THREE.MathUtils.clamp(
+          leaningTarget - state.leaning,
+          -delta / LEANING.ease,
+          delta / LEANING.ease,
+        );
+    const lean = smoothstep(state.leaning);
+    // Idle glances around, kept small leaning (the chin stays on the fist).
+    const looking = 1 - 0.8 * lean;
 
     // Wave: 0 at rest, 1 with the arm up.
     if (state.waveRequested) {
@@ -332,19 +448,45 @@ export default function Driver({
       );
     }
 
-    // Body: breathing swells the chest and lifts the shoulders and head,
-    // standing shifts the weight (the hips tilt, the spine leans back
-    // against it, the legs stay upright).
-    const breath = idle * Math.sin(t * IDLE.breathSpeed);
+    // Body: breathing swells the chest and lifts the shoulders and head
+    // (deeper leaning), standing shifts the weight (the hips tilt, the
+    // spine bends back against it, the legs stay upright; not leaning).
+    const breath =
+      idle *
+      THREE.MathUtils.lerp(1, LEANING.breath, lean) *
+      Math.sin(t * IDLE.breathSpeed);
     const lift = 1 + IDLE.breath * breath;
-    const shift = sitting
-      ? 0
-      : idle * IDLE.shift * Math.sin(t * IDLE.shiftSpeed);
-    const lean = typing ? TYPING.lean : sitting ? 0.06 : 0;
-    r.hips?.position.set(0, sitting ? HIP_SITTING : HIP_STANDING, 0);
-    r.hips?.rotation.set(0, 0, shift);
+    const shift =
+      sitting || propped
+        ? 0
+        : idle * IDLE.shift * Math.sin(t * IDLE.shiftSpeed) * (1 - lean);
+    // Leaning: stood back from the ledge until the arms are folded over
+    // it, bending over it on the way (see LEANING).
+    const { fold } = LEANING;
+    const way = state.leaning;
+    const bend = THREE.MathUtils.lerp(
+      typing ? TYPING.lean : sitting ? 0.06 : propped ? PROPPED.spine : 0,
+      LEANING.lean,
+      smoothstep((way - LEANING.bendFrom) / (1 - LEANING.bendFrom)),
+    );
+    const back =
+      LEANING.back *
+      smoothstep(way / LEANING.backAt) *
+      (1 - smoothstep((way - fold.at) / (1 - fold.at)));
+    // Propped: the whole body tilted back about the feet.
+    const tilt = propped ? PROPPED.tilt : 0;
+    if (propped) {
+      r.hips?.position.set(
+        0,
+        HIP_STANDING * Math.cos(tilt) - PROPPED.drop,
+        -HIP_STANDING * Math.sin(tilt),
+      );
+    } else {
+      r.hips?.position.set(0, sitting ? HIP_SITTING : HIP_STANDING, -back);
+    }
+    r.hips?.rotation.set(-tilt, 0, shift);
     r.spine?.rotation.set(
-      lean + 0.01 * breath,
+      bend + 0.01 * breath,
       GLANCE.spine * glanceYaw * glance,
       -1.4 * shift,
     );
@@ -352,8 +494,22 @@ export default function Driver({
 
     // Legs: straight standing; sitting, thighs forward and a little apart,
     // shins down, swinging forward in turn (never back into the ledge),
-    // still under the desk.
+    // still under the desk; propped, the right toe tapping in bursts (the
+    // foot lifted by the thigh, the shin kept at its angle).
+    const tapping = smoothstep((Math.sin(t * PROPPED.tapBursts) - 0.3) / 0.4);
+    const tap =
+      idle *
+      PROPPED.tap *
+      tapping *
+      Math.max(0, Math.sin(t * PROPPED.tapSpeed));
     SIDES.forEach((side, i) => {
+      if (propped) {
+        const [thigh, out, knee] = PROPPED.legs[i];
+        const lift = i === 0 ? tap : 0;
+        r.hipJoints[i]?.rotation.set(thigh - lift, 0, out);
+        r.knees[i]?.rotation.set(knee + lift, 0, 0);
+        return;
+      }
       r.hipJoints[i]?.rotation.set(
         sitting ? -Math.PI / 2 : 0,
         0,
@@ -369,24 +525,28 @@ export default function Driver({
     });
 
     // Arms: hanging a little out standing, hands on the thighs sitting,
-    // over the keyboard typing; the right one waving on demand.
+    // over the keyboard typing, folded on the ledge leaning; the right one
+    // waving on demand.
     SIDES.forEach((side, i) => {
       let sx: number;
+      let sy = 0;
       let sz: number;
       let ex: number;
       let ez = 0;
       if (typing) {
         // Out of step, and not quite in rhythm, like actual typing.
         const phase = t * TYPING.tapSpeed * (i ? 1.3 : 1) + (i ? 2 : 0);
-        sx = -(TYPING.upperArm + lean);
+        sx = -(TYPING.upperArm + bend);
         sz = -side * 0.12;
         ex =
           -(TYPING.forearm - TYPING.upperArm) -
           idle * TYPING.tap * Math.max(0, Math.sin(phase)) * (1 - glance);
       } else if (sitting) {
-        sx = -(0.5 + lean);
+        sx = -(0.5 + bend);
         sz = -side * 0.03;
         ex = -0.45;
+      } else if (propped) {
+        [sx, sy, sz, ex, ez] = PROPPED.arms[i];
       } else {
         // Relaxed, and not quite mirrored.
         sx = (i ? 0.02 : 0.08) + idle * 0.03 * Math.sin(t * 1.1 + i);
@@ -402,16 +562,29 @@ export default function Driver({
         ex = THREE.MathUtils.lerp(ex, 0, wave);
         ez = wave * side * (WAVE.bend + sweep);
       }
+      // Leaning: from wherever they are, folded across the chest, then
+      // set down on the ledge.
+      if (way > 0) {
+        const [from, to, progress] =
+          way < fold.at
+            ? [[sx, sy, sz, ex, ez], fold.arms[i], way / fold.at]
+            : [fold.arms[i], LEANING.arms[i], (way - fold.at) / (1 - fold.at)];
+        const step = smoothstep(progress);
+        [sx, sy, sz, ex, ez] = from.map((angle, k) =>
+          THREE.MathUtils.lerp(angle, to[k], step),
+        );
+      }
       r.shoulders[i]?.position.set(side * SHOULDER_X, SHOULDER_Y * lift, 0);
-      r.shoulders[i]?.rotation.set(sx, 0, sz);
+      r.shoulders[i]?.rotation.set(sx, sy, sz);
       r.elbows[i]?.rotation.set(ex, 0, ez);
     });
 
     // Head: a new glance every few seconds, eased toward (down at the
-    // screen typing), kept level against the lean.
+    // screen typing), kept level against the spine's bend; leaning, set
+    // dreamily and swaying.
     if (!reducedMotion && now >= state.nextLook) {
       state.nextLook = now + between(IDLE.lookGap);
-      const range = typing ? 0.25 : 1;
+      const range = typing ? 0.25 : propped ? PROPPED.look : 1;
       state.targetYaw = (Math.random() * 2 - 1) * IDLE.lookYaw * range;
       state.targetPitch = (Math.random() * 2 - 1) * IDLE.lookPitch * range;
     }
@@ -420,24 +593,31 @@ export default function Driver({
     state.pitch += (state.targetPitch - state.pitch) * ease;
     // Or turned to the camera: turned about y last ("YXZ"), so it tips
     // toward it rather than rolling.
-    r.head?.position.set(0, NECK_Y * lift, 0);
+    const [lookPitch, lookYaw, lookTilt] = LEANING.look;
+    const sway = idle * LEANING.sway * Math.sin(t * LEANING.swaySpeed);
+    r.head?.position.set(0, NECK_Y * lift, propped ? PROPPED.neck : 0);
     r.head?.rotation.set(
       THREE.MathUtils.lerp(
-        state.pitch - lean + (typing ? TYPING.look : 0),
-        glancePitch - lean,
+        state.pitch * looking -
+          bend +
+          tilt +
+          (typing ? TYPING.look : 0) +
+          lookPitch * lean,
+        glancePitch - bend,
         glance,
       ),
       THREE.MathUtils.lerp(
-        state.yaw * (1 - wave),
+        state.yaw * looking * (1 - wave) + lookYaw * lean,
         glanceYaw * (1 - GLANCE.spine),
         glance,
       ),
-      (1.4 * shift + WAVE.tilt * wave) * (1 - glance),
+      (1.4 * shift + WAVE.tilt * wave + (lookTilt + sway) * lean) *
+        (1 - glance),
       "YXZ",
     );
     r.brows?.position.set(
       0,
-      WAVE.brows * wave + GLANCE.brows * glance,
+      WAVE.brows * wave + GLANCE.brows * glance + LEANING.brows * lean,
       0,
     );
 
@@ -453,6 +633,8 @@ export default function Driver({
       const b = (now - state.blinkAt) / IDLE.blink;
       if (b >= 0 && b < 1) open = 1 - 0.9 * Math.sin(Math.PI * b);
     }
+    // Heavy-lidded leaning.
+    open *= THREE.MathUtils.lerp(1, LEANING.lids, lean);
     r.eyes.forEach((eye) => eye?.scale.set(1, open, 1));
   });
 

@@ -88,6 +88,14 @@ const RIGHT = FLAP_WIDTH / 2 - INSET;
 const TITLE_X = LEFT + TIME_WIDTH;
 const TITLE_MAX_WIDTH = RIGHT - LINE_WIDTH - TITLE_X - INSET;
 
+// The board's side edges, in board units: the rim's outer front corners,
+// this far out from the centre and in front of the face. Something leaning
+// on a side (the driver, see Station) rests against them.
+export const STATION_BOARD_SIDE = {
+  x: WIDTH / 2 + FRAME + RIM_BEVEL,
+  front: RIM_DEPTH + RIM_BEVEL,
+};
+
 export function stationBoardHeight(rows: number) {
   return 2 * PADDING + HEADER_HEIGHT + rows * ROW_HEIGHT + (rows - 1) * ROW_GAP;
 }
