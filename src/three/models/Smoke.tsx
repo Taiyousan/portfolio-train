@@ -4,8 +4,12 @@ import { useFrame } from "@react-three/fiber";
 import { useControls } from "leva";
 import { useTrainContext } from "../state/TrainContext";
 import { createSmokeMaterial } from "../shaders/smoke";
+import { CHIMNEY_TOP } from "./Locomotive";
 
-const START_POSITION = new THREE.Vector3(0, 0.55, 0.48);
+// Just above the chimney's mouth.
+const START_POSITION = new THREE.Vector3(...CHIMNEY_TOP).add(
+  new THREE.Vector3(0, 0.08, 0),
+);
 const START_SCALE = 0.1;
 // Below this speed the chimney stops emitting new puffs.
 const EMIT_MIN_SPEED = 0.3;
