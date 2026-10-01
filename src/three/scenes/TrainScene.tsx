@@ -5,6 +5,7 @@ import {
   useRef,
   useState,
   type ComponentRef,
+  type RefObject,
 } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { CameraControls, Environment, Html, Sky } from "@react-three/drei";
@@ -20,6 +21,7 @@ import type { BloomEffect } from "postprocessing";
 import { useTrainContext, type WorkshopView } from "../state/TrainContext";
 import useTrainSpeedEasing from "../hooks/useTrainSpeedEasing";
 import useStopApproach from "../hooks/useStopApproach";
+import useShaderWarmup from "../hooks/useShaderWarmup";
 import {
   mixColor,
   mixValue,
@@ -96,6 +98,18 @@ function workshopShot(
     offsetX: (panel.x / 2) * offset,
     offsetY: (panel.y / 2) * offset,
   };
+}
+
+// Inside the scene's Suspense, so that it runs once the stops have loaded.
+function ShaderWarmup({
+  stationRef,
+  homeRef,
+}: {
+  stationRef: RefObject<THREE.Group | null>;
+  homeRef: RefObject<THREE.Group | null>;
+}) {
+  useShaderWarmup(stationRef, homeRef);
+  return null;
 }
 
 export default function TrainScene({
@@ -304,6 +318,8 @@ export default function TrainScene({
         <Snowfall />
         <Station ref={stationRef} projects={projects} />
         <Home ref={homeRef} />
+        {/* Last, so that the stops are in the scene when it runs. */}
+        <ShaderWarmup stationRef={stationRef} homeRef={homeRef} />
       </Suspense>
     </>
   );
