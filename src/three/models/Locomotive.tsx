@@ -59,7 +59,8 @@ const SWAY_LIFT = 0.0035;
 export const RAIL_TOP = -0.546;
 const GAUGE_X = 0.2755;
 const WHEEL_WIDTH = 0.05;
-const DRIVING_RADIUS = 0.19;
+// Also paces the chimney's puffs (see Smoke).
+export const DRIVING_RADIUS = 0.19;
 const DRIVING_Y = RAIL_TOP + DRIVING_RADIUS;
 const DRIVING_FRONT_Z = 0.12;
 const DRIVING_BACK_Z = -0.34;

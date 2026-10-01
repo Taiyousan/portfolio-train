@@ -7,6 +7,9 @@ import { SUN_POSITION } from "../config/scene";
 // sphere is displaced by animated noise so it churns like a puff, and it
 // dissolves (noise-driven discard) at the end of its life instead of
 // fading out, so it stays opaque and needs no depth sorting.
+//
+// Made for an InstancedMesh (see models/Smoke): one draw call for every
+// puff, each with its own age and noise seed as instanced attributes.
 
 const NOISE = /* glsl */ `
   // Value noise by Inigo Quilez, returns 0 → 1.
@@ -41,20 +44,27 @@ const vertexShader = /* glsl */ `
   #include <fog_pars_vertex>
 
   uniform float uTime;
-  uniform float uSeed;
   uniform float uBulge;
+
+  // Per puff: 0 → 1 over its life, and its noise seed.
+  attribute float aAge;
+  attribute float aSeed;
 
   varying vec3 vWorldPosition;
   varying vec3 vDirection;
+  varying float vAge;
+  varying float vSeed;
 
   ${NOISE}
 
   void main() {
+    vAge = aAge;
+    vSeed = aSeed;
     vDirection = normalize(position);
-    float bump = noise(vDirection * 2.5 + vec3(uSeed, uTime * 0.8, uSeed * 0.5));
+    float bump = noise(vDirection * 2.5 + vec3(aSeed, uTime * 0.8, aSeed * 0.5));
     vec3 transformed = position * (1.0 + uBulge * (bump - 0.5) * 2.0);
 
-    vec4 worldPosition = modelMatrix * vec4(transformed, 1.0);
+    vec4 worldPosition = modelMatrix * instanceMatrix * vec4(transformed, 1.0);
     vWorldPosition = worldPosition.xyz;
     vec4 mvPosition = viewMatrix * worldPosition;
     gl_Position = projectionMatrix * mvPosition;
@@ -67,8 +77,6 @@ const fragmentShader = /* glsl */ `
   #include <common>
   #include <fog_pars_fragment>
 
-  uniform float uAge;
-  uniform float uSeed;
   uniform vec3 uColor;
   uniform vec3 uLightDirection;
   uniform vec3 uLightColor;
@@ -78,13 +86,15 @@ const fragmentShader = /* glsl */ `
 
   varying vec3 vWorldPosition;
   varying vec3 vDirection;
+  varying float vAge;
+  varying float vSeed;
 
   ${NOISE}
 
   void main() {
     // Dissolve over the last part of the puff's life.
-    float dissolve = smoothstep(0.55, 1.0, uAge);
-    if (noise(vDirection * 4.0 + uSeed * 3.1) < dissolve) discard;
+    float dissolve = smoothstep(0.55, 1.0, vAge);
+    if (noise(vDirection * 4.0 + vSeed * 3.1) < dissolve) discard;
 
     // Faceted normals from screen-space derivatives: they follow the
     // displaced surface and match the low-poly forest.
@@ -118,8 +128,6 @@ export function createSmokeMaterial() {
     uniforms: {
       ...THREE.UniformsUtils.clone(THREE.UniformsLib.fog),
       uTime: { value: 0 },
-      uAge: { value: 0 },
-      uSeed: { value: Math.random() * 100 },
       uBulge: { value: 0.22 },
       uColor: { value: new THREE.Color("#ffffff") },
       uLightDirection: {

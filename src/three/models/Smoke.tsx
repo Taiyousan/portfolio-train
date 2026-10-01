@@ -4,121 +4,204 @@ import { useFrame } from "@react-three/fiber";
 import { useControls } from "leva";
 import { useTrainContext } from "../state/TrainContext";
 import { createSmokeMaterial } from "../shaders/smoke";
-import { CHIMNEY_TOP } from "./Locomotive";
+import { CHIMNEY_TOP, DRIVING_RADIUS } from "./Locomotive";
 
 // Just above the chimney's mouth.
-const START_POSITION = new THREE.Vector3(...CHIMNEY_TOP).add(
+const START = new THREE.Vector3(...CHIMNEY_TOP).add(
   new THREE.Vector3(0, 0.08, 0),
 );
+// Plenty at the default settings; past it (a fast train with long-lived
+// puffs), the oldest puff is recycled early.
+const MAX_PUFFS = 96;
+// Distance rolled per turn of the driving wheels.
+const WHEEL_TURN = 2 * Math.PI * DRIVING_RADIUS;
+// Scale of a puff (an icosahedron of radius 0.3) leaving the chimney and
+// at the end of its life.
 const START_SCALE = 0.1;
-// Below this speed the chimney stops emitting new puffs.
-const EMIT_MIN_SPEED = 0.3;
+const END_SCALE = 1.6;
+// How fast a puff gives in to the air around it (1/s): its blast upward
+// settles into a slow buoyant rise, and it comes to a rest relative to the
+// air, which streams past the train at the train's speed.
+const RISE_DRAG = 3;
+const AIR_DRAG = 6;
+const BUOYANCY = 0.6;
+// Size and blast of a puff at a standstill, relative to one at cruising
+// speed: the engine only ticks over.
+const IDLE_STRENGTH = 0.55;
+// A huge frame (back from another tab) is cut short rather than emitting
+// and moving everything in one jump.
+const MAX_DELTA = 0.1;
+const matrix = new THREE.Matrix4();
 
-// Puffs of smoke rising from the chimney and drifting behind the train,
-// toon-shaded by a custom shader (see shaders/smoke.ts).
+type Puff = {
+  age: number;
+  life: number;
+  seed: number;
+  size: number;
+  // Sideways speed it settles to, so the column wavers a little.
+  drift: number;
+  position: THREE.Vector3;
+  velocity: THREE.Vector3;
+};
+
+// Moves a puff `dt` seconds on, the air streaming backward at `airSpeed`.
+// Exponential easing, so the path doesn't depend on the frame rate.
+function step(puff: Puff, dt: number, airSpeed: number) {
+  const rise = 1 - Math.exp(-RISE_DRAG * dt);
+  const air = 1 - Math.exp(-AIR_DRAG * dt);
+  const { velocity } = puff;
+  velocity.x += (puff.drift - velocity.x) * air;
+  velocity.y += (BUOYANCY - velocity.y) * rise;
+  velocity.z += (-airSpeed - velocity.z) * air;
+  puff.position.addScaledVector(velocity, dt);
+}
+
+// Puffs of smoke blasted out of the chimney, toon-shaded by a custom shader
+// (see shaders/smoke.ts), all drawn in one call by an InstancedMesh.
+//
+// Like a real steam engine, the chimney puffs in time with the driving
+// wheels: a puff every so much distance rolled, so they come faster as the
+// train speeds up and space out, then stop, as it brakes — plus a gentle
+// idle rate, so the engine still breathes at a standstill. Each puff, once
+// out, lives on its own: it is moved frame by frame (blast, then buoyancy,
+// then carried off by the air) rather than placed from the current speed,
+// so a change of speed never drags the puffs already out along with it.
 export default function Smoke() {
-  const { trainSpeedRef } = useTrainContext();
+  const { trainSpeedRef, targetTrainSpeed } = useTrainContext();
 
-  const { numSmokes, duration } = useControls("Smoke", {
-    numSmokes: { value: 5, min: 1, max: 20, step: 1 },
-    duration: { value: 2, min: 0.5, max: 10, step: 0.1 },
+  const { lifetime, puffsPerTurn, idleRate, blast } = useControls("Smoke", {
+    // Seconds a puff lasts.
+    lifetime: { value: 2.4, min: 0.5, max: 6, step: 0.1 },
+    // Puffs per turn of the driving wheels (a real engine gives 4).
+    puffsPerTurn: { value: 1, min: 1, max: 4, step: 1 },
+    // Puffs per second at a standstill.
+    idleRate: { value: 0.6, min: 0, max: 4, step: 0.1 },
+    // Upward speed a puff leaves the chimney at.
+    blast: { value: 1.4, min: 0, max: 6, step: 0.1 },
   });
 
-  // One material per puff: each has its own age and noise seed.
-  const materials = useMemo(
-    () => Array.from({ length: numSmokes }, () => createSmokeMaterial()),
-    [numSmokes],
-  );
+  const material = useMemo(() => createSmokeMaterial(), []);
+  const geometry = useMemo(() => {
+    const geometry = new THREE.IcosahedronGeometry(0.3, 2);
+    for (const name of ["aAge", "aSeed"]) {
+      const attribute = new THREE.InstancedBufferAttribute(
+        new Float32Array(MAX_PUFFS),
+        1,
+      );
+      attribute.setUsage(THREE.DynamicDrawUsage);
+      geometry.setAttribute(name, attribute);
+    }
+    return geometry;
+  }, []);
   useEffect(
-    () => () => materials.forEach((material) => material.dispose()),
-    [materials],
+    () => () => {
+      material.dispose();
+      geometry.dispose();
+    },
+    [material, geometry],
   );
 
-  // A single ref array (populated via callback refs below) instead of one
-  // useRef() per puff — numSmokes can change at runtime via the debug
-  // panel, and calling useRef() a variable number of times per render
-  // breaks React's rules of hooks.
-  const meshRefs = useRef<(THREE.Mesh | null)[]>([]);
-  // Each puff's age in seconds. Offset evenly so they are spread out.
-  const agesRef = useRef<number[]>([]);
-  // A puff that finishes its life while the train is stopped goes idle
-  // instead of restarting; it is re-released, staggered, once moving again.
-  const idleRef = useRef<boolean[]>([]);
+  const meshRef = useRef<THREE.InstancedMesh>(null);
+  // Every puff out of the chimney, oldest first; spent ones go back to the
+  // pool to be reused.
+  const liveRef = useRef<Puff[]>([]);
+  const poolRef = useRef<Puff[]>([]);
+  // Progress toward the next puff: one is released each time it reaches 1.
+  const phaseRef = useRef(0);
 
   useFrame(({ clock }, delta) => {
-    const ages = agesRef.current;
-    if (ages.length !== numSmokes) {
-      agesRef.current = Array.from(
-        { length: numSmokes },
-        (_, index) => (index * duration) / numSmokes,
+    const mesh = meshRef.current;
+    if (!mesh) return;
+    const dt = Math.min(delta, MAX_DELTA);
+    const speed = trainSpeedRef.current;
+    const live = liveRef.current;
+    const pool = poolRef.current;
+
+    // Age and move the puffs already out, retiring the spent ones.
+    let kept = 0;
+    for (const puff of live) {
+      puff.age += dt;
+      if (puff.age >= puff.life) {
+        pool.push(puff);
+        continue;
+      }
+      step(puff, dt, speed);
+      live[kept++] = puff;
+    }
+    live.length = kept;
+
+    // Release the puffs due this frame, each already aged and moved by the
+    // time since it was due, so that fast puffs don't bunch up per frame.
+    const rate = (speed / WHEEL_TURN) * puffsPerTurn + idleRate;
+    phaseRef.current += rate * dt;
+    const effort = THREE.MathUtils.clamp(
+      speed / Math.max(targetTrainSpeed, 1),
+      0,
+      1,
+    );
+    const strength = THREE.MathUtils.lerp(IDLE_STRENGTH, 1, effort);
+    while (phaseRef.current >= 1) {
+      phaseRef.current -= 1;
+      const puff =
+        live.length >= MAX_PUFFS
+          ? live.shift()!
+          : (pool.pop() ?? {
+              age: 0,
+              life: 0,
+              seed: 0,
+              size: 0,
+              drift: 0,
+              position: new THREE.Vector3(),
+              velocity: new THREE.Vector3(),
+            });
+      const since = phaseRef.current / rate;
+      puff.age = since;
+      puff.life = lifetime * THREE.MathUtils.randFloat(0.85, 1.15);
+      puff.seed = Math.random() * 100;
+      puff.size = strength * THREE.MathUtils.randFloat(0.85, 1.15);
+      puff.drift = THREE.MathUtils.randFloatSpread(0.3);
+      puff.position.copy(START);
+      puff.velocity.set(
+        THREE.MathUtils.randFloatSpread(0.2),
+        blast * strength * THREE.MathUtils.randFloat(0.85, 1.15),
+        0,
       );
-      idleRef.current = Array.from({ length: numSmokes }, () => false);
-      return;
+      step(puff, since, speed);
+      // Released oldest first, so pushed in age order.
+      live.push(puff);
     }
 
-    const emitting = trainSpeedRef.current > EMIT_MIN_SPEED;
-    const idle = idleRef.current;
-
-    // Once released, smoke is left behind by the passing air rather than
-    // travelling with the train — its backward drift should match the
-    // speed the rest of the world scrolls past at, not a fixed constant,
-    // or it looks like it's riding along with the train.
-    const driftDistance = trainSpeedRef.current * duration;
-
-    ages.forEach((age, index) => {
-      const mesh = meshRefs.current[index];
-      if (!mesh) return;
-
-      if (idle[index]) {
-        if (!emitting) return;
-        // Restart with a delay proportional to the puff's slot.
-        idle[index] = false;
-        age = -(index * duration) / numSmokes;
-      }
-      // Negative age = waiting to be released.
-      if (age < 0) {
-        ages[index] = age + delta;
-        mesh.visible = false;
-        return;
-      }
-      mesh.visible = true;
-
-      const nextAge = (age + delta) % duration;
-      ages[index] = nextAge;
-      if (nextAge < age && !emitting) {
-        idle[index] = true;
-        mesh.visible = false;
-        return;
-      }
-      const { uniforms } = materials[index];
-
-      const t = nextAge / duration; // 0 → 1 over the puff's lifetime
-      mesh.position.z = START_POSITION.z - Math.pow(t, 1.2) * driftDistance;
-      mesh.position.y = START_POSITION.y + t * 2.5;
-      mesh.scale.setScalar(START_SCALE * (1 + t * 15.4));
-
-      uniforms.uAge.value = t;
-      uniforms.uTime.value = clock.elapsedTime;
-      // A new shape each time the puff loops back to the chimney.
-      if (nextAge < age) uniforms.uSeed.value = Math.random() * 100;
+    // Hand them to the instances (through the mesh: the material and the
+    // geometry are render-time values, not to be modified from here).
+    const ages = mesh.geometry.getAttribute("aAge");
+    const seeds = mesh.geometry.getAttribute("aSeed");
+    live.forEach((puff, i) => {
+      const t = puff.age / puff.life;
+      // Balloons out of the chimney, then swells more slowly.
+      const grow = 1 - (1 - t) * (1 - t);
+      const scale =
+        puff.size * THREE.MathUtils.lerp(START_SCALE, END_SCALE, grow);
+      matrix.makeScale(scale, scale, scale).setPosition(puff.position);
+      mesh.setMatrixAt(i, matrix);
+      ages.setX(i, t);
+      seeds.setX(i, puff.seed);
     });
+    mesh.count = live.length;
+    mesh.instanceMatrix.needsUpdate = true;
+    ages.needsUpdate = true;
+    seeds.needsUpdate = true;
+    (mesh.material as THREE.ShaderMaterial).uniforms.uTime.value =
+      clock.elapsedTime;
   });
 
   return (
-    <group>
-      {materials.map((material, index) => (
-        <mesh
-          key={index}
-          ref={(el) => {
-            meshRefs.current[index] = el;
-          }}
-          material={material}
-          position={START_POSITION}
-          scale={START_SCALE}
-        >
-          <icosahedronGeometry args={[0.3, 2]} />
-        </mesh>
-      ))}
-    </group>
+    <instancedMesh
+      ref={meshRef}
+      // Its count starts at MAX_PUFFS, so the shader warm-up (see
+      // useShaderWarmup) draws it; the first frame sets the real count.
+      args={[geometry, material, MAX_PUFFS]}
+      // Its puffs drift far from the mesh's own bounds.
+      frustumCulled={false}
+    />
   );
 }

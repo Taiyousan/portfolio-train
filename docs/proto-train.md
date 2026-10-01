@@ -21,7 +21,7 @@ L'ancien dépôt Vite, `../portfolio-pro-train`, sert d'archive et de bac à sab
 
 La migration est terminée :
 
-- La fumée a son propre shader (`src/three/shaders/smoke.ts`) à la place de l'ancien shader NodeToy, incompatible avec R3F 9. Même rendu « toon » (éclairage en paliers, reflet net, liseré clair), plus des bouffées qui ondulent et se désagrègent en fin de vie.
+- La fumée a son propre shader (`src/three/shaders/smoke.ts`) à la place de l'ancien shader NodeToy, incompatible avec R3F 9. Même rendu « toon » (éclairage en paliers, reflet net, liseré clair), plus des bouffées qui ondulent et se désagrègent en fin de vie. Les bouffées sortent au rythme des roues motrices (elles s'espacent au freinage, la loco « respire » à l'arrêt), puis chacune suit sa propre trajectoire (jet, montée, emportée par l'air) : un changement de vitesse ne déplace pas celles déjà sorties. Toutes sont dessinées en un seul appel (`InstancedMesh`), réglages dans le panneau Leva « Smoke ».
 - La forêt laisse un couloir libre entre la caméra et le train (réglage `clearing` dans le panneau Leva, groupe Forest).
 
 ### Décor
