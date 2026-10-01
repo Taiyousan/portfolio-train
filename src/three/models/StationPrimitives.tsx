@@ -1,12 +1,14 @@
-import { useMemo, type ReactNode } from "react";
+import { createContext, use, useMemo, type ReactNode } from "react";
 import { RoundedBox } from "@react-three/drei";
 import { animated, type SpringValue } from "@react-spring/three";
 import * as THREE from "three";
+import { snowy } from "../shaders/snow";
 
 // Rounded building blocks and palette shared by the station's decor
 // (StationDecor), its props (StationProps) and its departures board, and by
 // the home (HomeDecor), built in the same units: the house shape, windows,
-// window boxes, and the group the fittings pop in with.
+// window boxes, and the group the fittings pop in with. Blocks and
+// cylinders take the snow (see shaders/snow), except inside a NoSnow.
 
 export type Vec3 = [number, number, number];
 
@@ -38,6 +40,15 @@ export const STATION_COLORS = {
 
 export const FLOWER_COLORS = ["#f08a5d", "#f5d36b", "#e2769a", "#fff3e0"];
 
+const SnowContext = createContext(true);
+
+// Keeps the snow off the blocks and cylinders inside: off what's in use
+// (floors, the desk) or warm (the boiler), what turns (wheels, rods) and
+// would carry it round, and the characters.
+export function NoSnow({ children }: { children: ReactNode }) {
+  return <SnowContext value={false}>{children}</SnowContext>;
+}
+
 export function Block({
   size,
   position,
@@ -53,6 +64,7 @@ export function Block({
   color: string;
   emissive?: number;
 }) {
+  const snow = use(SnowContext);
   return (
     <RoundedBox
       args={size}
@@ -64,6 +76,7 @@ export function Block({
       receiveShadow
     >
       <meshStandardMaterial
+        {...(snow && snowy)}
         color={color}
         roughness={0.75}
         emissive={emissive ? color : "#000000"}
@@ -90,10 +103,15 @@ export function Cylinder({
   top?: number;
   segments?: number;
 }) {
+  const snow = use(SnowContext);
   return (
     <mesh position={position} rotation={rotation} castShadow receiveShadow>
       <cylinderGeometry args={[top, radius, height, segments]} />
-      <meshStandardMaterial color={color} roughness={0.75} />
+      <meshStandardMaterial
+        {...(snow && snowy)}
+        color={color}
+        roughness={0.75}
+      />
     </mesh>
   );
 }
@@ -236,7 +254,7 @@ function Flowers({
             castShadow
           >
             <sphereGeometry args={[0.16, 10, 8]} />
-            <meshStandardMaterial color={color} roughness={0.6} />
+            <meshStandardMaterial {...snowy} color={color} roughness={0.6} />
           </mesh>
         );
       })}
@@ -255,7 +273,11 @@ export function WindowBox({ position }: { position: Vec3 }) {
       />
       <mesh position={[0, 0.3, 0]} scale={[0.5, 0.35, 1.6]} castShadow>
         <sphereGeometry args={[0.6, 14, 10]} />
-        <meshStandardMaterial color={STATION_COLORS.bush} roughness={0.8} />
+        <meshStandardMaterial
+          {...snowy}
+          color={STATION_COLORS.bush}
+          roughness={0.8}
+        />
       </mesh>
       <Flowers count={5} spread={1.5} y={0.45} seed={position[2] > 0 ? 1 : 0} />
     </group>

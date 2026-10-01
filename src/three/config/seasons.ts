@@ -10,7 +10,7 @@ export const SEASON_LABELS: Record<Season, string> = {
   winter: "Hiver",
 };
 
-// Snow on the trees, roofs and ground, and falling flakes.
+// Snow on whatever faces up (see shaders/snow), and falling flakes.
 export const SNOW_COLOR = "#eef2f6";
 
 type SeasonLook = {
@@ -37,7 +37,7 @@ type SeasonLook = {
     turbidity: number;
     rayleigh: number;
     mieCoefficient: number;
-    // 0 → 1: snow on the trees and roofs, then falling flakes.
+    // 0 → 1: snow on whatever faces up, then falling flakes.
     snow: number;
     snowfall: number;
   };

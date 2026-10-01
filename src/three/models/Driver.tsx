@@ -2,7 +2,7 @@ import { useImperativeHandle, useRef, useState, type Ref } from "react";
 import { useFrame, type ThreeElements } from "@react-three/fiber";
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
-import { Block, Cylinder, STATION_COLORS } from "./StationPrimitives";
+import { Block, Cylinder, NoSnow, STATION_COLORS } from "./StationPrimitives";
 import { DEFAULT_OUTFIT, shade, type Outfit } from "../config/livery";
 
 // A small cartoon driver, rounded like the station (see StationPrimitives):
@@ -10,6 +10,7 @@ import { DEFAULT_OUTFIT, shade, type Outfit } from "../config/livery";
 // against the departures board while the train waits at the station, or
 // at the desk at home, in a hoodie, typing. Dressed as picked in the
 // workshop (see config/livery). Curly hair, a short beard and a moustache.
+// Kept clear of the snow (see NoSnow).
 // Built as a rig of nested groups (hips, knees, spine, shoulders, elbows,
 // neck) posed every frame: breathing, blinking, glancing around, legs
 // swinging sitting, a toe tapping propped (see PROPPED), and a wave or a
@@ -639,92 +640,94 @@ export default function Driver({
   });
 
   return (
-    <group {...props}>
-      <group
-        ref={(g) => {
-          rig.current.hips = g;
-        }}
-        position={[0, sitting ? HIP_SITTING : HIP_STANDING, 0]}
-      >
-        {/* Pelvis, under the jacket's hem */}
-        <Block
-          size={[0.25, 0.11, 0.18]}
-          position={[0, 0.005, 0]}
-          radius={0.05}
-          color={clothes.trousers}
-        />
-        {SIDES.map((side, i) => (
-          <Leg
-            key={side}
-            side={side}
-            clothes={clothes}
-            hipRef={(g) => {
-              rig.current.hipJoints[i] = g;
-            }}
-            kneeRef={(g) => {
-              rig.current.knees[i] = g;
-            }}
-          />
-        ))}
-
+    <NoSnow>
+      <group {...props}>
         <group
           ref={(g) => {
-            rig.current.spine = g;
+            rig.current.hips = g;
           }}
+          position={[0, sitting ? HIP_SITTING : HIP_STANDING, 0]}
         >
-          <group
-            ref={(g) => {
-              rig.current.chest = g;
-            }}
-          >
-            {outfit.style === "hoodie" ? (
-              <Hoodie color={clothes.top} trim={clothes.trim} />
-            ) : outfit.style === "overalls" ? (
-              <Overalls shirt={clothes.top} denim={clothes.trousers} />
-            ) : (
-              <Uniform color={clothes.top} />
-            )}
-          </group>
+          {/* Pelvis, under the jacket's hem */}
+          <Block
+            size={[0.25, 0.11, 0.18]}
+            position={[0, 0.005, 0]}
+            radius={0.05}
+            color={clothes.trousers}
+          />
           {SIDES.map((side, i) => (
-            <Arm
+            <Leg
               key={side}
               side={side}
               clothes={clothes}
-              ribbed={outfit.style !== "uniform"}
-              shoulderRef={(g) => {
-                rig.current.shoulders[i] = g;
+              hipRef={(g) => {
+                rig.current.hipJoints[i] = g;
               }}
-              elbowRef={(g) => {
-                rig.current.elbows[i] = g;
+              kneeRef={(g) => {
+                rig.current.knees[i] = g;
               }}
             />
           ))}
+
           <group
             ref={(g) => {
-              rig.current.head = g;
+              rig.current.spine = g;
             }}
-            position={[0, NECK_Y, 0]}
           >
-            <Cylinder
-              radius={0.045}
-              height={0.07}
-              position={[0, 0.01, 0]}
-              color={COLORS.skin}
-            />
-            <Head
-              hat={HATS[outfit.style]}
-              hatColor={clothes.trousers}
-              eyeRef={(i, g) => {
-                rig.current.eyes[i] = g;
+            <group
+              ref={(g) => {
+                rig.current.chest = g;
               }}
-              browsRef={(g) => {
-                rig.current.brows = g;
+            >
+              {outfit.style === "hoodie" ? (
+                <Hoodie color={clothes.top} trim={clothes.trim} />
+              ) : outfit.style === "overalls" ? (
+                <Overalls shirt={clothes.top} denim={clothes.trousers} />
+              ) : (
+                <Uniform color={clothes.top} />
+              )}
+            </group>
+            {SIDES.map((side, i) => (
+              <Arm
+                key={side}
+                side={side}
+                clothes={clothes}
+                ribbed={outfit.style !== "uniform"}
+                shoulderRef={(g) => {
+                  rig.current.shoulders[i] = g;
+                }}
+                elbowRef={(g) => {
+                  rig.current.elbows[i] = g;
+                }}
+              />
+            ))}
+            <group
+              ref={(g) => {
+                rig.current.head = g;
               }}
-            />
+              position={[0, NECK_Y, 0]}
+            >
+              <Cylinder
+                radius={0.045}
+                height={0.07}
+                position={[0, 0.01, 0]}
+                color={COLORS.skin}
+              />
+              <Head
+                hat={HATS[outfit.style]}
+                hatColor={clothes.trousers}
+                eyeRef={(i, g) => {
+                  rig.current.eyes[i] = g;
+                }}
+                browsRef={(g) => {
+                  rig.current.brows = g;
+                }}
+              />
+            </group>
           </group>
         </group>
       </group>
-    </group>
+    </NoSnow>
   );
 }
 

@@ -1,13 +1,14 @@
 import { useState } from "react";
 import { Text } from "@react-three/drei";
 import type { SpringValue } from "@react-spring/three";
-import SnowCover from "./SnowCover";
 import { useStationClick } from "../hooks/useStationProp";
+import { snowy } from "../shaders/snow";
 import { StationHints } from "../state/StationHints";
 import HintOrb from "./HintOrb";
 import {
   Block,
   Cylinder,
+  NoSnow,
   Pop,
   STATION_COLORS as COLORS,
   Window,
@@ -144,20 +145,23 @@ function Platform() {
         radius={0.35}
         color={COLORS.platformSide}
       />
-      {/* Paving on top, a shade lighter, inset from the edges. */}
-      <Block
-        size={[PLATFORM_DEPTH - 0.5, 0.1, PLATFORM_LENGTH - 0.5]}
-        position={[PLATFORM_DEPTH / 2, PLATFORM_TOP, 0]}
-        radius={0.04}
-        color={COLORS.platform}
-      />
-      {/* Yellow safety line along the track side */}
-      <Block
-        size={[0.45, 0.06, PLATFORM_LENGTH - 1.2]}
-        position={[0.9, PLATFORM_TOP + 0.06, 0]}
-        radius={0.02}
-        color={COLORS.edge}
-      />
+      {/* Paving on top, a shade lighter, inset from the edges, and a
+          yellow safety line along the track side: swept clear of the snow,
+          left on the platform's edges all round. */}
+      <NoSnow>
+        <Block
+          size={[PLATFORM_DEPTH - 0.5, 0.1, PLATFORM_LENGTH - 0.5]}
+          position={[PLATFORM_DEPTH / 2, PLATFORM_TOP, 0]}
+          radius={0.04}
+          color={COLORS.platform}
+        />
+        <Block
+          size={[0.45, 0.06, PLATFORM_LENGTH - 1.2]}
+          position={[0.9, PLATFORM_TOP + 0.06, 0]}
+          radius={0.02}
+          color={COLORS.edge}
+        />
+      </NoSnow>
       <Stairs />
     </group>
   );
@@ -205,7 +209,7 @@ function Building() {
         color={COLORS.plinth}
       />
       <mesh geometry={house} position={[cx, base, 0]} castShadow receiveShadow>
-        <meshStandardMaterial color={COLORS.wall} roughness={0.85} />
+        <meshStandardMaterial {...snowy} color={COLORS.wall} roughness={0.85} />
       </mesh>
       {/* Roof: two slabs meeting at the ridge, eaves overhanging. */}
       {[-1, 1].map((side) => (
@@ -226,10 +230,6 @@ function Building() {
             size={[slopeLength + 0.3, 0.35, BUILDING.length + 1.4]}
             radius={0.15}
             color={COLORS.roof}
-          />
-          <SnowCover
-            top={[0, 0.175, 0]}
-            size={[slopeLength + 0.3, 0.3, BUILDING.length + 1.4]}
           />
         </group>
       ))}
@@ -257,6 +257,7 @@ function Building() {
       <mesh position={[FRONT - 0.35, base + 1.5, 0.6]} castShadow>
         <sphereGeometry args={[0.1, 10, 8]} />
         <meshStandardMaterial
+          {...snowy}
           color={COLORS.edge}
           metalness={0.5}
           roughness={0.4}
@@ -293,10 +294,6 @@ function Building() {
           size={[canopyDepth + 0.6, CANOPY.thickness, BUILDING.length - 0.6]}
           radius={0.12}
           color={COLORS.roof}
-        />
-        <SnowCover
-          top={[0, CANOPY.thickness / 2, 0]}
-          size={[canopyDepth + 0.6, 0.25, BUILDING.length - 0.6]}
         />
       </group>
       {[-4.4, 4.4].map((z) => (

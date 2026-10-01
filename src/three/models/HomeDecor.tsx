@@ -4,11 +4,12 @@ import { RoundedBox, Text } from "@react-three/drei";
 import { animated, useSprings, type SpringValue } from "@react-spring/three";
 import type * as THREE from "three";
 import { site } from "@/lib/site";
-import SnowCover from "./SnowCover";
 import { useStationClick } from "../hooks/useStationProp";
+import { snowy } from "../shaders/snow";
 import {
   Block,
   Cylinder,
+  NoSnow,
   Pop,
   STATION_COLORS,
   Window,
@@ -96,7 +97,8 @@ type Fitting = (typeof HOME_FITTINGS)[number];
 // ---------------------------------------------------------------- decks
 
 // A wooden deck from `x` to `x + width`, centred on z: its frame, then
-// planks laid along `along`, in two alternating shades.
+// planks laid along `along`, in two alternating shades. The planks are
+// swept clear of the snow, left on the frame's edges all round.
 function Deck({
   x,
   width,
@@ -122,26 +124,28 @@ function Deck({
         radius={0.2}
         color={COLORS.deckFrame}
       />
-      {Array.from({ length: count }, (_, i) => {
-        const offset = -across / 2 + pitch * (i + 0.5);
-        return (
-          <Block
-            key={i}
-            size={
-              along === "z"
-                ? [pitch - 0.08, PLANK, length - 0.2]
-                : [width - 0.2, PLANK, pitch - 0.08]
-            }
-            position={[
-              x + width / 2 + (along === "z" ? offset : 0),
-              DECK_TOP - PLANK / 2,
-              along === "x" ? offset : 0,
-            ]}
-            radius={0.08}
-            color={shades[i % shades.length]}
-          />
-        );
-      })}
+      <NoSnow>
+        {Array.from({ length: count }, (_, i) => {
+          const offset = -across / 2 + pitch * (i + 0.5);
+          return (
+            <Block
+              key={i}
+              size={
+                along === "z"
+                  ? [pitch - 0.08, PLANK, length - 0.2]
+                  : [width - 0.2, PLANK, pitch - 0.08]
+              }
+              position={[
+                x + width / 2 + (along === "z" ? offset : 0),
+                DECK_TOP - PLANK / 2,
+                along === "x" ? offset : 0,
+              ]}
+              radius={0.08}
+              color={shades[i % shades.length]}
+            />
+          );
+        })}
+      </NoSnow>
     </group>
   );
 }
@@ -210,14 +214,12 @@ function NameSign() {
         radius={0.1}
         color={COLORS.sign}
       />
-      <group position={[x + 0.1, top + 0.08, z]}>
-        <Block
-          size={[0.6, 0.16, width + 0.4]}
-          radius={0.07}
-          color={COLORS.slate}
-        />
-        <SnowCover top={[0, 0.08, 0]} size={[0.6, 0.14, width + 0.4]} />
-      </group>
+      <Block
+        size={[0.6, 0.16, width + 0.4]}
+        position={[x + 0.1, top + 0.08, z]}
+        radius={0.07}
+        color={COLORS.slate}
+      />
       <Text
         font={FONT}
         fontSize={0.42}
@@ -237,7 +239,8 @@ function NameSign() {
 // ---------------------------------------------------------------- house
 
 // Horizontal boards over the cladding, on the front wall and both gables
-// (shorter up the gables, following the roof's slopes).
+// (shorter up the gables, following the roof's slopes). Too thin to hold
+// the snow: it would stripe the walls.
 const BOARD_GAP = 0.6;
 
 function Clapboards({ cx, base }: { cx: number; base: number }) {
@@ -252,7 +255,7 @@ function Clapboards({ cx, base }: { cx: number; base: number }) {
   }
   const front = HOUSE.length - 2 * HOUSE_BEVEL - 0.1;
   return (
-    <group>
+    <NoSnow>
       {rows.map(({ y, width }) => (
         <group key={y}>
           {y < HOUSE.wall && (
@@ -274,7 +277,7 @@ function Clapboards({ cx, base }: { cx: number; base: number }) {
           ))}
         </group>
       ))}
-    </group>
+    </NoSnow>
   );
 }
 
@@ -440,12 +443,14 @@ function House({ pop }: { pop: SpringValue<number> }) {
           radius={0.2}
           color={COLORS.stone}
         />
-        <Block
-          size={[1.1, 0.06, 1.7]}
-          position={[FRONT - 0.75, DECK_TOP + 0.03, DOOR_Z]}
-          radius={0.03}
-          color={COLORS.pot}
-        />
+        <NoSnow>
+          <Block
+            size={[1.1, 0.06, 1.7]}
+            position={[FRONT - 0.75, DECK_TOP + 0.03, DOOR_Z]}
+            radius={0.03}
+            color={COLORS.pot}
+          />
+        </NoSnow>
       </group>
       <group {...bind}>
         <mesh
@@ -454,7 +459,11 @@ function House({ pop }: { pop: SpringValue<number> }) {
           castShadow
           receiveShadow
         >
-          <meshStandardMaterial color={COLORS.cladding} roughness={0.85} />
+          <meshStandardMaterial
+            {...snowy}
+            color={COLORS.cladding}
+            roughness={0.85}
+          />
         </mesh>
         <Clapboards cx={cx} base={base} />
 
@@ -479,10 +488,6 @@ function House({ pop }: { pop: SpringValue<number> }) {
               radius={0.15}
               color={COLORS.slate}
             />
-            <SnowCover
-              top={[0, 0.175, 0]}
-              size={[slopeLength + 0.3, 0.3, HOUSE.length + 1.4]}
-            />
           </group>
         ))}
         <Cylinder
@@ -499,14 +504,12 @@ function House({ pop }: { pop: SpringValue<number> }) {
           radius={0.15}
           color={COLORS.stone}
         />
-        <group position={[chimney.x, chimney.top + 0.1, chimney.z]}>
-          <Block
-            size={[1.15, 0.25, 1.15]}
-            radius={0.1}
-            color={COLORS.stoneDark}
-          />
-          <SnowCover top={[0, 0.125, 0]} size={[1.15, 0.2, 1.15]} />
-        </group>
+        <Block
+          size={[1.15, 0.25, 1.15]}
+          position={[chimney.x, chimney.top + 0.1, chimney.z]}
+          radius={0.1}
+          color={COLORS.stoneDark}
+        />
 
         {/* Front, toward the terrace: a shuttered window behind the desk,
             the door with a lit pane, the lantern. */}
@@ -544,6 +547,7 @@ function House({ pop }: { pop: SpringValue<number> }) {
         <mesh position={[FRONT - 0.38, base + 1.5, DOOR_Z + 0.6]} castShadow>
           <sphereGeometry args={[0.1, 10, 8]} />
           <meshStandardMaterial
+            {...snowy}
             color={COLORS.edge}
             metalness={0.5}
             roughness={0.4}
@@ -628,13 +632,15 @@ export default function HomeDecor({
         along="z"
         shades={COLORS.halt}
       />
-      {/* Yellow line along the track side */}
-      <Block
-        size={[0.35, 0.05, HALT.length - 1.2]}
-        position={[HALT.x + 0.45, DECK_TOP + 0.02, 0]}
-        radius={0.02}
-        color={COLORS.edge}
-      />
+      {/* Yellow line along the track side, swept as the planks */}
+      <NoSnow>
+        <Block
+          size={[0.35, 0.05, HALT.length - 1.2]}
+          position={[HALT.x + 0.45, DECK_TOP + 0.02, 0]}
+          radius={0.02}
+          color={COLORS.edge}
+        />
+      </NoSnow>
       <Deck
         x={TERRACE.x}
         width={TERRACE.width}

@@ -6,8 +6,8 @@ import { useTrainContext } from "../state/TrainContext";
 import useFlapText from "../hooks/useFlapText";
 import { departureTime, ROW_FLAP_DELAY_MS } from "../config/departures";
 import type { StationProject } from "../ui/types";
+import { snowy } from "../shaders/snow";
 import { STATION_COLORS } from "./StationPrimitives";
-import SnowCover from "./SnowCover";
 
 // Troika (drei <Text>) reads woff/ttf/otf, not woff2. Same face as the HTML
 // board's font-mono.
@@ -421,7 +421,11 @@ export default function StationBoard({ projects, legHeight, ...props }: Props) {
         castShadow
         receiveShadow
       >
-        <meshStandardMaterial color={STATION_COLORS.darkWood} roughness={0.8} />
+        <meshStandardMaterial
+          {...snowy}
+          color={STATION_COLORS.darkWood}
+          roughness={0.8}
+        />
       </RoundedBox>
       <mesh>
         <planeGeometry args={[WIDTH, height]} />
@@ -429,6 +433,7 @@ export default function StationBoard({ projects, legHeight, ...props }: Props) {
       </mesh>
       <mesh geometry={rim} castShadow receiveShadow>
         <meshStandardMaterial
+          {...snowy}
           ref={frameMaterialRef}
           color={STATION_COLORS.wood}
           emissive={COLORS.glow}
@@ -456,14 +461,11 @@ export default function StationBoard({ projects, legHeight, ...props }: Props) {
             receiveShadow
           >
             <meshStandardMaterial
+              {...snowy}
               color={STATION_COLORS.roof}
               roughness={0.75}
             />
           </RoundedBox>
-          <SnowCover
-            top={[0, ROOF.thickness / 2, 0]}
-            size={[roofWidth, ROOF.thickness * 0.8, ROOF.half + 0.04]}
-          />
         </group>
       ))}
       <mesh
@@ -472,7 +474,11 @@ export default function StationBoard({ projects, legHeight, ...props }: Props) {
         castShadow
       >
         <cylinderGeometry args={[0.03, 0.03, roofWidth + 0.02, 12]} />
-        <meshStandardMaterial color={STATION_COLORS.darkWood} roughness={0.7} />
+        <meshStandardMaterial
+          {...snowy}
+          color={STATION_COLORS.darkWood}
+          roughness={0.7}
+        />
       </mesh>
       {/* Fills the gap between the frame's top and the roof. */}
       <RoundedBox
@@ -486,7 +492,11 @@ export default function StationBoard({ projects, legHeight, ...props }: Props) {
         ]}
         castShadow
       >
-        <meshStandardMaterial color={STATION_COLORS.darkWood} roughness={0.8} />
+        <meshStandardMaterial
+          {...snowy}
+          color={STATION_COLORS.darkWood}
+          roughness={0.8}
+        />
       </RoundedBox>
 
       {/* Round wooden posts, on flared feet */}
@@ -499,6 +509,7 @@ export default function StationBoard({ projects, legHeight, ...props }: Props) {
                 args={[POST_RADIUS, POST_RADIUS, legHeight, 12]}
               />
               <meshStandardMaterial
+                {...snowy}
                 color={STATION_COLORS.darkWood}
                 roughness={0.7}
               />
@@ -508,6 +519,7 @@ export default function StationBoard({ projects, legHeight, ...props }: Props) {
                 args={[POST_RADIUS * 1.4, POST_RADIUS * 2, 0.06, 12]}
               />
               <meshStandardMaterial
+                {...snowy}
                 color={STATION_COLORS.darkWood}
                 roughness={0.7}
               />

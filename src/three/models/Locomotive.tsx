@@ -4,10 +4,11 @@ import * as THREE from "three";
 import { useTrainContext } from "../state/TrainContext";
 import { useLivery } from "../state/LiveryContext";
 import { shade } from "../config/livery";
-import SnowCover from "./SnowCover";
+import { snowy } from "../shaders/snow";
 import {
   Block,
   Cylinder,
+  NoSnow,
   STATION_COLORS,
   type Vec3,
 } from "./StationPrimitives";
@@ -214,7 +215,7 @@ function Splasher({
         <cylinderGeometry
           args={[radius, radius, 0.07, 24, 1, false, 0, Math.PI]}
         />
-        <meshStandardMaterial color={paint.body} roughness={0.75} />
+        <meshStandardMaterial {...snowy} color={paint.body} roughness={0.75} />
       </mesh>
       <mesh
         position={[side * 0.035, 0, 0]}
@@ -222,7 +223,7 @@ function Splasher({
         castShadow
       >
         <torusGeometry args={[radius, 0.012, 6, 24, Math.PI]} />
-        <meshStandardMaterial color={paint.trim} roughness={0.6} />
+        <meshStandardMaterial {...snowy} color={paint.trim} roughness={0.6} />
       </mesh>
     </group>
   );
@@ -356,75 +357,77 @@ export default function Locomotive({ children }: { children?: ReactNode }) {
   return (
     <group>
       {/* Running gear, on the rails: wheels and motion on each side */}
-      {SIDES.map((side, s) => (
-        <group key={side}>
-          {WHEELS.map((wheel, i) => (
+      <NoSnow>
+        {SIDES.map((side, s) => (
+          <group key={side}>
+            {WHEELS.map((wheel, i) => (
+              <group
+                key={wheel.z}
+                ref={(group) => {
+                  wheelRefs.current[s * WHEELS.length + i] = group;
+                }}
+                position={[side * GAUGE_X, RAIL_TOP + wheel.radius, wheel.z]}
+              >
+                <Wheel
+                  radius={wheel.radius}
+                  side={side}
+                  driving={wheel.driving}
+                  paint={paint}
+                />
+              </group>
+            ))}
+
             <group
-              key={wheel.z}
               ref={(group) => {
-                wheelRefs.current[s * WHEELS.length + i] = group;
+                couplingRefs.current[s] = group;
               }}
-              position={[side * GAUGE_X, RAIL_TOP + wheel.radius, wheel.z]}
+              position={[side * COUPLING_X, DRIVING_Y + CRANK, 0]}
             >
-              <Wheel
-                radius={wheel.radius}
-                side={side}
-                driving={wheel.driving}
-                paint={paint}
+              <Block
+                size={[0.02, 0.035, DRIVING_FRONT_Z - DRIVING_BACK_Z + 0.06]}
+                radius={0.01}
+                color={COLORS.steel}
               />
             </group>
-          ))}
-
-          <group
-            ref={(group) => {
-              couplingRefs.current[s] = group;
-            }}
-            position={[side * COUPLING_X, DRIVING_Y + CRANK, 0]}
-          >
-            <Block
-              size={[0.02, 0.035, DRIVING_FRONT_Z - DRIVING_BACK_Z + 0.06]}
-              radius={0.01}
-              color={COLORS.steel}
-            />
+            <group
+              ref={(group) => {
+                mainRodRefs.current[s] = group;
+              }}
+              position={[side * MAIN_ROD_X, DRIVING_Y, 0]}
+            >
+              <Block
+                size={[0.02, 0.035, MAIN_ROD + 0.04]}
+                radius={0.01}
+                color={COLORS.steel}
+              />
+            </group>
+            <group
+              ref={(group) => {
+                crossheadRefs.current[s] = group;
+              }}
+              position={[side * MAIN_ROD_X, DRIVING_Y, 0]}
+            >
+              <Block
+                size={[0.035, 0.05, 0.05]}
+                radius={0.012}
+                color={paint.trim}
+              />
+            </group>
+            <group
+              ref={(group) => {
+                pistonRodRefs.current[s] = group;
+              }}
+              position={[side * MAIN_ROD_X, DRIVING_Y, 0]}
+            >
+              {/* One unit long, stretched to fit by its group's scale. */}
+              <mesh rotation={ALONG_Z}>
+                <cylinderGeometry args={[0.012, 0.012, 1, 8]} />
+                <meshStandardMaterial color={COLORS.steel} roughness={0.5} />
+              </mesh>
+            </group>
           </group>
-          <group
-            ref={(group) => {
-              mainRodRefs.current[s] = group;
-            }}
-            position={[side * MAIN_ROD_X, DRIVING_Y, 0]}
-          >
-            <Block
-              size={[0.02, 0.035, MAIN_ROD + 0.04]}
-              radius={0.01}
-              color={COLORS.steel}
-            />
-          </group>
-          <group
-            ref={(group) => {
-              crossheadRefs.current[s] = group;
-            }}
-            position={[side * MAIN_ROD_X, DRIVING_Y, 0]}
-          >
-            <Block
-              size={[0.035, 0.05, 0.05]}
-              radius={0.012}
-              color={paint.trim}
-            />
-          </group>
-          <group
-            ref={(group) => {
-              pistonRodRefs.current[s] = group;
-            }}
-            position={[side * MAIN_ROD_X, DRIVING_Y, 0]}
-          >
-            {/* One unit long, stretched to fit by its group's scale. */}
-            <mesh rotation={ALONG_Z}>
-              <cylinderGeometry args={[0.012, 0.012, 1, 8]} />
-              <meshStandardMaterial color={COLORS.steel} roughness={0.5} />
-            </mesh>
-          </group>
-        </group>
-      ))}
+        ))}
+      </NoSnow>
 
       {/* The body, swaying on its springs */}
       <group ref={bodyRef}>
@@ -498,158 +501,161 @@ export default function Locomotive({ children }: { children?: ReactNode }) {
           </group>
         ))}
 
-        {/* Boiler: bands, dome, whistle and handrails */}
-        <Cylinder
-          radius={BOILER.radius}
-          height={boilerLength}
-          position={[0, BOILER_Y, (BOILER.front + BOILER.back) / 2]}
-          rotation={ALONG_Z}
-          color={paint.body}
-          segments={28}
-        />
-        {[-0.15, 0.1, 0.3].map((z) => (
-          <mesh key={z} position={[0, BOILER_Y, z]} castShadow>
-            <torusGeometry args={[BOILER.radius + 0.004, 0.014, 8, 32]} />
-            <meshStandardMaterial color={paint.trim} roughness={0.6} />
-          </mesh>
-        ))}
-        <group position={[0, BOILER_Y + BOILER.radius, -0.03]}>
+        {/* Warm: no snow on the boiler and smokebox */}
+        <NoSnow>
+          {/* Boiler: bands, dome, whistle and handrails */}
           <Cylinder
-            radius={0.085}
-            top={0.072}
-            height={0.1}
-            position={[0, 0.01, 0]}
-            color={paint.trim}
-            segments={18}
-          />
-          <mesh position={[0, 0.06, 0]} scale={[1, 0.75, 1]} castShadow>
-            <sphereGeometry args={[0.072, 18, 10]} />
-            <meshStandardMaterial color={paint.trim} roughness={0.6} />
-          </mesh>
-        </group>
-        <group position={[0.1, BOILER_Y + BOILER.radius - 0.02, -0.22]}>
-          <Cylinder
-            radius={0.016}
-            height={0.08}
-            position={[0, 0.04, 0]}
-            color={paint.trim}
-            segments={8}
-          />
-          <Cylinder
-            radius={0.026}
-            top={0.02}
-            height={0.05}
-            position={[0, 0.1, 0]}
-            color={paint.trim}
-            segments={12}
-          />
-        </group>
-        {SIDES.map((side) => (
-          <Cylinder
-            key={side}
-            radius={0.01}
-            height={boilerLength + 0.2}
-            position={[
-              side * railX,
-              BOILER_Y + railRise,
-              (BOILER.front + BOILER.back) / 2 + 0.05,
-            ]}
-            rotation={ALONG_Z}
-            color={paint.trim}
-            segments={6}
-          />
-        ))}
-
-        {/* Smokebox: rounded door with a brass ring, chimney, headlamp */}
-        <Cylinder
-          radius={SMOKEBOX.radius}
-          height={smokeboxLength}
-          position={[0, BOILER_Y, (SMOKEBOX.front + SMOKEBOX.back) / 2]}
-          rotation={ALONG_Z}
-          color={COLORS.smokebox}
-          segments={28}
-        />
-        <group position={[0, BOILER_Y, SMOKEBOX.front]}>
-          <mesh scale={[1, 1, 0.3]} castShadow>
-            <sphereGeometry args={[SMOKEBOX.radius - 0.02, 24, 14]} />
-            <meshStandardMaterial color={COLORS.door} roughness={0.7} />
-          </mesh>
-          <mesh castShadow>
-            <torusGeometry args={[SMOKEBOX.radius - 0.02, 0.016, 8, 32]} />
-            <meshStandardMaterial color={paint.trim} roughness={0.6} />
-          </mesh>
-          <mesh position={[0, 0, 0.075]} castShadow>
-            <sphereGeometry args={[0.025, 10, 8]} />
-            <meshStandardMaterial color={paint.trim} roughness={0.6} />
-          </mesh>
-        </group>
-        <group position={[0, CHIMNEY_BASE, CHIMNEY_Z]}>
-          <Cylinder
-            radius={0.1}
-            top={0.08}
-            height={0.06}
-            position={[0, 0.01, 0]}
-            color={COLORS.smokebox}
-            segments={18}
-          />
-          {/* Flared, a little wider at the top */}
-          <Cylinder
-            radius={0.075}
-            top={0.1}
-            height={0.17}
-            position={[0, 0.085, 0]}
-            color={COLORS.smokebox}
-            segments={18}
-          />
-          <Cylinder
-            radius={0.108}
-            height={0.025}
-            position={[0, 0.155, 0]}
-            color={paint.trim}
-            segments={18}
-          />
-          <Cylinder
-            radius={0.118}
-            height={0.045}
-            position={[0, 0.19, 0]}
-            color={COLORS.smokebox}
-            segments={18}
-          />
-          <Cylinder
-            radius={0.085}
-            height={0.01}
-            position={[0, 0.211, 0]}
-            color="#141417"
-            segments={18}
-          />
-        </group>
-        <group
-          position={[
-            0,
-            BOILER_Y + SMOKEBOX.radius + 0.05,
-            SMOKEBOX.front - 0.02,
-          ]}
-        >
-          <Cylinder
-            radius={0.065}
-            height={0.1}
+            radius={BOILER.radius}
+            height={boilerLength}
+            position={[0, BOILER_Y, (BOILER.front + BOILER.back) / 2]}
             rotation={ALONG_Z}
             color={paint.body}
-            segments={18}
+            segments={28}
           />
-          <mesh position={[0, 0, 0.052]} rotation={ALONG_Z}>
-            <cylinderGeometry args={[0.052, 0.052, 0.01, 18]} />
-            <meshStandardMaterial
-              color={COLORS.light}
-              emissive={COLORS.light}
-              emissiveIntensity={1.6}
+          {[-0.15, 0.1, 0.3].map((z) => (
+            <mesh key={z} position={[0, BOILER_Y, z]} castShadow>
+              <torusGeometry args={[BOILER.radius + 0.004, 0.014, 8, 32]} />
+              <meshStandardMaterial color={paint.trim} roughness={0.6} />
+            </mesh>
+          ))}
+          <group position={[0, BOILER_Y + BOILER.radius, -0.03]}>
+            <Cylinder
+              radius={0.085}
+              top={0.072}
+              height={0.1}
+              position={[0, 0.01, 0]}
+              color={paint.trim}
+              segments={18}
             />
-          </mesh>
-          <mesh position={[0, 0, 0.05]}>
-            <torusGeometry args={[0.058, 0.012, 6, 20]} />
-            <meshStandardMaterial color={paint.trim} roughness={0.6} />
-          </mesh>
-        </group>
+            <mesh position={[0, 0.06, 0]} scale={[1, 0.75, 1]} castShadow>
+              <sphereGeometry args={[0.072, 18, 10]} />
+              <meshStandardMaterial color={paint.trim} roughness={0.6} />
+            </mesh>
+          </group>
+          <group position={[0.1, BOILER_Y + BOILER.radius - 0.02, -0.22]}>
+            <Cylinder
+              radius={0.016}
+              height={0.08}
+              position={[0, 0.04, 0]}
+              color={paint.trim}
+              segments={8}
+            />
+            <Cylinder
+              radius={0.026}
+              top={0.02}
+              height={0.05}
+              position={[0, 0.1, 0]}
+              color={paint.trim}
+              segments={12}
+            />
+          </group>
+          {SIDES.map((side) => (
+            <Cylinder
+              key={side}
+              radius={0.01}
+              height={boilerLength + 0.2}
+              position={[
+                side * railX,
+                BOILER_Y + railRise,
+                (BOILER.front + BOILER.back) / 2 + 0.05,
+              ]}
+              rotation={ALONG_Z}
+              color={paint.trim}
+              segments={6}
+            />
+          ))}
+
+          {/* Smokebox: rounded door with a brass ring, chimney, headlamp */}
+          <Cylinder
+            radius={SMOKEBOX.radius}
+            height={smokeboxLength}
+            position={[0, BOILER_Y, (SMOKEBOX.front + SMOKEBOX.back) / 2]}
+            rotation={ALONG_Z}
+            color={COLORS.smokebox}
+            segments={28}
+          />
+          <group position={[0, BOILER_Y, SMOKEBOX.front]}>
+            <mesh scale={[1, 1, 0.3]} castShadow>
+              <sphereGeometry args={[SMOKEBOX.radius - 0.02, 24, 14]} />
+              <meshStandardMaterial color={COLORS.door} roughness={0.7} />
+            </mesh>
+            <mesh castShadow>
+              <torusGeometry args={[SMOKEBOX.radius - 0.02, 0.016, 8, 32]} />
+              <meshStandardMaterial color={paint.trim} roughness={0.6} />
+            </mesh>
+            <mesh position={[0, 0, 0.075]} castShadow>
+              <sphereGeometry args={[0.025, 10, 8]} />
+              <meshStandardMaterial color={paint.trim} roughness={0.6} />
+            </mesh>
+          </group>
+          <group position={[0, CHIMNEY_BASE, CHIMNEY_Z]}>
+            <Cylinder
+              radius={0.1}
+              top={0.08}
+              height={0.06}
+              position={[0, 0.01, 0]}
+              color={COLORS.smokebox}
+              segments={18}
+            />
+            {/* Flared, a little wider at the top */}
+            <Cylinder
+              radius={0.075}
+              top={0.1}
+              height={0.17}
+              position={[0, 0.085, 0]}
+              color={COLORS.smokebox}
+              segments={18}
+            />
+            <Cylinder
+              radius={0.108}
+              height={0.025}
+              position={[0, 0.155, 0]}
+              color={paint.trim}
+              segments={18}
+            />
+            <Cylinder
+              radius={0.118}
+              height={0.045}
+              position={[0, 0.19, 0]}
+              color={COLORS.smokebox}
+              segments={18}
+            />
+            <Cylinder
+              radius={0.085}
+              height={0.01}
+              position={[0, 0.211, 0]}
+              color="#141417"
+              segments={18}
+            />
+          </group>
+          <group
+            position={[
+              0,
+              BOILER_Y + SMOKEBOX.radius + 0.05,
+              SMOKEBOX.front - 0.02,
+            ]}
+          >
+            <Cylinder
+              radius={0.065}
+              height={0.1}
+              rotation={ALONG_Z}
+              color={paint.body}
+              segments={18}
+            />
+            <mesh position={[0, 0, 0.052]} rotation={ALONG_Z}>
+              <cylinderGeometry args={[0.052, 0.052, 0.01, 18]} />
+              <meshStandardMaterial
+                color={COLORS.light}
+                emissive={COLORS.light}
+                emissiveIntensity={1.6}
+              />
+            </mesh>
+            <mesh position={[0, 0, 0.05]}>
+              <torusGeometry args={[0.058, 0.012, 6, 20]} />
+              <meshStandardMaterial color={paint.trim} roughness={0.6} />
+            </mesh>
+          </group>
+        </NoSnow>
 
         {/* Cab */}
         <Block
@@ -680,7 +686,11 @@ export default function Locomotive({ children }: { children?: ReactNode }) {
             {[-1, 1].map((face) => (
               <mesh key={face} position={[0, 0, face * 0.034]}>
                 <torusGeometry args={[0.065, 0.014, 6, 20]} />
-                <meshStandardMaterial color={paint.trim} roughness={0.6} />
+                <meshStandardMaterial
+                  {...snowy}
+                  color={paint.trim}
+                  roughness={0.6}
+                />
               </mesh>
             ))}
           </group>
@@ -776,10 +786,6 @@ export default function Locomotive({ children }: { children?: ReactNode }) {
           position={[0, CAB.roof + 0.07, CAB_Z]}
           radius={0.018}
           color={paint.roof}
-        />
-        <SnowCover
-          top={[0, CAB.roof + 0.06, CAB_Z]}
-          size={[CAB.width + 0.08, 0.05, CAB_LENGTH + 0.12]}
         />
         {children}
       </group>

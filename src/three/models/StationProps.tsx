@@ -3,11 +3,13 @@ import { RoundedBox } from "@react-three/drei";
 import type { SpringValue } from "@react-spring/three";
 import * as THREE from "three";
 import useStationProp from "../hooks/useStationProp";
+import { snowy } from "../shaders/snow";
 import HintOrb from "./HintOrb";
 import {
   Block,
   Cylinder,
   FLOWER_COLORS,
+  NoSnow,
   STATION_COLORS as COLORS,
   type Vec3,
 } from "./StationPrimitives";
@@ -264,7 +266,7 @@ export function Lamp({
           />
           <mesh position={[0, 0.72, 0]}>
             <sphereGeometry args={[0.1, 10, 8]} />
-            <meshStandardMaterial color={COLORS.iron} />
+            <meshStandardMaterial {...snowy} color={COLORS.iron} />
           </mesh>
           <Block
             size={[0.62, 0.08, 0.62]}
@@ -457,7 +459,11 @@ export function TrashCan({ position }: { position: Vec3 }) {
               castShadow
             >
               <torusGeometry args={[BIN.top, 0.07, 8, 20]} />
-              <meshStandardMaterial color={COLORS.iron} roughness={0.6} />
+              <meshStandardMaterial
+                {...snowy}
+                color={COLORS.iron}
+                roughness={0.6}
+              />
             </mesh>
             <group ref={lidRef} position={[-BIN.top, BIN.height, 0]}>
               <mesh
@@ -468,7 +474,11 @@ export function TrashCan({ position }: { position: Vec3 }) {
                 <sphereGeometry
                   args={[0.46, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2]}
                 />
-                <meshStandardMaterial color={COLORS.bin} roughness={0.7} />
+                <meshStandardMaterial
+                  {...snowy}
+                  color={COLORS.bin}
+                  roughness={0.7}
+                />
               </mesh>
             </group>
           </group>
@@ -606,6 +616,7 @@ function SuitcaseContents({
           <mesh key={z} position={[0, 0.09, z]} castShadow>
             <sphereGeometry args={[0.04, 10, 6, 0, TAU, 0, Math.PI / 2]} />
             <meshStandardMaterial
+              {...snowy}
               color={COLORS.edge}
               metalness={0.5}
               roughness={0.4}
@@ -700,13 +711,16 @@ export function Luggage({ position }: { position: Vec3 }) {
           />
         ))}
         <group position={[0.02, 0.77, 0.05]} rotation-y={0.25}>
-          {/* Hollow shell: lined floor, then four walls */}
-          <Block
-            size={[width, wall, length]}
-            position={[0, wall / 2, 0]}
-            radius={0.03}
-            color={COLORS.lining}
-          />
+          {/* Hollow shell: lined floor, then four walls. What's inside, the
+              lining and contents, keeps clear of the snow. */}
+          <NoSnow>
+            <Block
+              size={[width, wall, length]}
+              position={[0, wall / 2, 0]}
+              radius={0.03}
+              color={COLORS.lining}
+            />
+          </NoSnow>
           {[-1, 1].map((side) => (
             <group key={side}>
               <Block
@@ -746,7 +760,9 @@ export function Luggage({ position }: { position: Vec3 }) {
               color={COLORS.strap}
             />
           ))}
-          <SuitcaseContents itemRefs={itemRefs} />
+          <NoSnow>
+            <SuitcaseContents itemRefs={itemRefs} />
+          </NoSnow>
           {/* Lid, hinged along the back edge, lined inside */}
           <group ref={lidRef} position={[width / 2, depth, 0]}>
             <Block
@@ -755,12 +771,14 @@ export function Luggage({ position }: { position: Vec3 }) {
               radius={0.05}
               color={COLORS.suitcase}
             />
-            <Block
-              size={[width - 2 * wall, 0.02, length - 2 * wall]}
-              position={[-width / 2, 0, 0]}
-              radius={0.005}
-              color={COLORS.lining}
-            />
+            <NoSnow>
+              <Block
+                size={[width - 2 * wall, 0.02, length - 2 * wall]}
+                position={[-width / 2, 0, 0]}
+                radius={0.005}
+                color={COLORS.lining}
+              />
+            </NoSnow>
           </group>
         </group>
       </group>
@@ -958,7 +976,11 @@ export function Mailbox({ position }: { position: Vec3 }) {
           castShadow
           receiveShadow
         >
-          <meshStandardMaterial color={COLORS.edge} roughness={0.75} />
+          <meshStandardMaterial
+            {...snowy}
+            color={COLORS.edge}
+            roughness={0.75}
+          />
         </mesh>
         {/* Back: the plate, a little smaller and set in, its edges hidden
             in the body's walls (not flush with them, which would flicker) */}
@@ -970,7 +992,11 @@ export function Mailbox({ position }: { position: Vec3 }) {
           castShadow
           receiveShadow
         >
-          <meshStandardMaterial color={COLORS.edge} roughness={0.75} />
+          <meshStandardMaterial
+            {...snowy}
+            color={COLORS.edge}
+            roughness={0.75}
+          />
         </mesh>
         {/* Door over the whole front, hinged along its bottom edge,
             dropping flat toward the track */}
@@ -1003,39 +1029,42 @@ export function Mailbox({ position }: { position: Vec3 }) {
             color={COLORS.roof}
           />
         </group>
-        {/* Letters, stacked inside, each turning about its centre */}
-        {LETTERS.map(({ size, color, rest, stamp }, i) => (
-          <group
-            key={i}
-            ref={(letter) => {
-              letterRefs.current[i] = letter;
-            }}
-            position={[
-              rest.x,
-              floor + LETTER_THICKNESS * (i + 0.5),
-              rest.z,
-            ]}
-            rotation-y={rest.yaw}
-          >
-            <Block
-              size={[size[0], LETTER_THICKNESS, size[1]]}
-              radius={0.012}
-              color={color}
-            />
-            {stamp && (
+        {/* Letters, stacked inside, each turning about its centre, kept
+            clear of the snow */}
+        <NoSnow>
+          {LETTERS.map(({ size, color, rest, stamp }, i) => (
+            <group
+              key={i}
+              ref={(letter) => {
+                letterRefs.current[i] = letter;
+              }}
+              position={[
+                rest.x,
+                floor + LETTER_THICKNESS * (i + 0.5),
+                rest.z,
+              ]}
+              rotation-y={rest.yaw}
+            >
               <Block
-                size={[0.09, 0.01, 0.08]}
-                position={[
-                  -size[0] / 2 + 0.08,
-                  LETTER_THICKNESS / 2,
-                  size[1] / 2 - 0.07,
-                ]}
-                radius={0.004}
-                color={COLORS.roof}
+                size={[size[0], LETTER_THICKNESS, size[1]]}
+                radius={0.012}
+                color={color}
               />
-            )}
-          </group>
-        ))}
+              {stamp && (
+                <Block
+                  size={[0.09, 0.01, 0.08]}
+                  position={[
+                    -size[0] / 2 + 0.08,
+                    LETTER_THICKNESS / 2,
+                    size[1] / 2 - 0.07,
+                  ]}
+                  radius={0.004}
+                  color={COLORS.roof}
+                />
+              )}
+            </group>
+          ))}
+        </NoSnow>
       </group>
       <HintOrb hint={hint} position={[0, post + height + 0.6, 0]} />
     </group>
@@ -1045,7 +1074,7 @@ export function Mailbox({ position }: { position: Vec3 }) {
 // ---------------------------------------------------------------- ping-pong
 
 // A ping-pong paddle left lying on the floor, red side up, its ball beside
-// it; cartoon-sized (about twice a real one).
+// it; cartoon-sized (about twice a real one). In play: no snow on them.
 const PADDLE = { radius: 0.26, rubber: 0.02, core: 0.03, handle: 0.36 };
 const BALL_RADIUS = 0.07;
 const BALL_REST: Vec3 = [-0.35, BALL_RADIUS, 0.5];
@@ -1154,48 +1183,50 @@ export function PingPong({ position, yaw }: { position: Vec3; yaw: number }) {
   ];
 
   return (
-    <group position={position} {...bind}>
-      <group ref={pose}>
-        <group rotation-y={yaw}>
-          <group ref={paddleRef}>
-            {/* Blade, a little oval */}
-            <group scale={[1, 1, 1.08]}>
-              {layers.map(({ color, bottom, height, inset }) => (
-                <Cylinder
-                  key={color}
-                  radius={radius - inset}
-                  height={height}
-                  position={[0, bottom + height / 2, 0]}
-                  color={color}
-                  segments={28}
-                />
-              ))}
+    <NoSnow>
+      <group position={position} {...bind}>
+        <group ref={pose}>
+          <group rotation-y={yaw}>
+            <group ref={paddleRef}>
+              {/* Blade, a little oval */}
+              <group scale={[1, 1, 1.08]}>
+                {layers.map(({ color, bottom, height, inset }) => (
+                  <Cylinder
+                    key={color}
+                    radius={radius - inset}
+                    height={height}
+                    position={[0, bottom + height / 2, 0]}
+                    color={color}
+                    segments={28}
+                  />
+                ))}
+              </group>
+              {/* Handle, off the blade's edge, a darker band where it's
+                  held */}
+              <Block
+                size={[handle, 0.07, 0.1]}
+                position={[radius + handle / 2 - 0.04, rubber + core / 2, 0]}
+                radius={0.03}
+                color={COLORS.lining}
+              />
+              <Block
+                size={[0.14, 0.075, 0.105]}
+                position={[radius + handle - 0.13, rubber + core / 2, 0]}
+                radius={0.03}
+                color={COLORS.wood}
+              />
             </group>
-            {/* Handle, off the blade's edge, a darker band where it's
-                held */}
-            <Block
-              size={[handle, 0.07, 0.1]}
-              position={[radius + handle / 2 - 0.04, rubber + core / 2, 0]}
-              radius={0.03}
-              color={COLORS.lining}
-            />
-            <Block
-              size={[0.14, 0.075, 0.105]}
-              position={[radius + handle - 0.13, rubber + core / 2, 0]}
-              radius={0.03}
-              color={COLORS.wood}
-            />
+          </group>
+          <group ref={ballRef} position={BALL_REST}>
+            <mesh castShadow receiveShadow>
+              <sphereGeometry args={[BALL_RADIUS, 16, 12]} />
+              <meshStandardMaterial color="#f5a142" roughness={0.45} />
+            </mesh>
           </group>
         </group>
-        <group ref={ballRef} position={BALL_REST}>
-          <mesh castShadow receiveShadow>
-            <sphereGeometry args={[BALL_RADIUS, 16, 12]} />
-            <meshStandardMaterial color="#f5a142" roughness={0.45} />
-          </mesh>
-        </group>
+        <HintOrb hint={hint} position={[0, 0.9, 0]} />
       </group>
-      <HintOrb hint={hint} position={[0, 0.9, 0]} />
-    </group>
+    </NoSnow>
   );
 }
 
@@ -1326,11 +1357,19 @@ export function Planter({
         />
         <mesh position={[0, 1.35, 0]} castShadow receiveShadow>
           <sphereGeometry args={[0.95, 16, 12]} />
-          <meshStandardMaterial color={COLORS.bush} roughness={0.85} />
+          <meshStandardMaterial
+            {...snowy}
+            color={COLORS.bush}
+            roughness={0.85}
+          />
         </mesh>
         <mesh position={[0.35, 1.75, 0.3]} castShadow>
           <sphereGeometry args={[0.55, 14, 10]} />
-          <meshStandardMaterial color={COLORS.bushLight} roughness={0.85} />
+          <meshStandardMaterial
+            {...snowy}
+            color={COLORS.bushLight}
+            roughness={0.85}
+          />
         </mesh>
         {/* A ring of small flowers dotted over the top of the bush. */}
         {PLANTER_FLOWERS.map((angle, i) => (
@@ -1345,6 +1384,7 @@ export function Planter({
           >
             <sphereGeometry args={[0.13, 10, 8]} />
             <meshStandardMaterial
+              {...snowy}
               color={FLOWER_COLORS[i % 3]}
               roughness={0.6}
             />

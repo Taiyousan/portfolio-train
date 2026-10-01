@@ -20,7 +20,12 @@ import Driver, {
   type DriverHandle,
 } from "./Driver";
 import HomeDecor, { HOME_FITTINGS, homeDeckHeight } from "./HomeDecor";
-import { Block, Cylinder, STATION_COLORS as COLORS } from "./StationPrimitives";
+import {
+  Block,
+  Cylinder,
+  NoSnow,
+  STATION_COLORS as COLORS,
+} from "./StationPrimitives";
 
 // The halt's centre, across the track.
 const HALT_X = 2.85;
@@ -58,138 +63,144 @@ const LAPTOP = "#c9ccd1";
 const SCREEN = "#8fc2ff";
 
 // Rounded like the rest of the home: a chair with a slatted back, a wooden
-// desk on round legs, a laptop, a mug and a little potted plant.
+// desk on round legs, a laptop, a mug and a little potted plant. Kept clear
+// of the snow: in use.
 function DeskSetup() {
   const seat = DRIVER_SEAT_HEIGHT;
   const legHeight = DESK_TOP - 0.03;
   return (
-    <group>
-      {/* Chair */}
-      <Block
-        size={[0.34, 0.04, 0.36]}
-        position={[0, seat - 0.02, 0.02]}
-        radius={0.015}
-        color={COLORS.benchWood}
-      />
-      {[0.1, 0.22].map((y) => (
+    <NoSnow>
+      <group>
+        {/* Chair */}
         <Block
-          key={y}
-          size={[0.32, 0.07, 0.025]}
-          position={[0, seat + y, -0.16]}
-          rotation={[-0.1, 0, 0]}
-          radius={0.012}
+          size={[0.34, 0.04, 0.36]}
+          position={[0, seat - 0.02, 0.02]}
+          radius={0.015}
           color={COLORS.benchWood}
         />
-      ))}
-      {[-0.14, 0.14].map((x) => (
-        <Cylinder
-          key={x}
-          radius={0.014}
-          height={0.26}
-          position={[x, seat + 0.12, -0.16]}
-          color={COLORS.darkWood}
-          segments={8}
-        />
-      ))}
-      {[-0.14, 0.14].flatMap((x) =>
-        [-0.14, 0.18].map((z) => (
+        {[0.1, 0.22].map((y) => (
+          <Block
+            key={y}
+            size={[0.32, 0.07, 0.025]}
+            position={[0, seat + y, -0.16]}
+            rotation={[-0.1, 0, 0]}
+            radius={0.012}
+            color={COLORS.benchWood}
+          />
+        ))}
+        {[-0.14, 0.14].map((x) => (
           <Cylinder
-            key={`${x}:${z}`}
-            radius={0.016}
-            height={seat - 0.04}
-            position={[x, (seat - 0.04) / 2, z]}
+            key={x}
+            radius={0.014}
+            height={0.26}
+            position={[x, seat + 0.12, -0.16]}
             color={COLORS.darkWood}
             segments={8}
           />
-        )),
-      )}
+        ))}
+        {[-0.14, 0.14].flatMap((x) =>
+          [-0.14, 0.18].map((z) => (
+            <Cylinder
+              key={`${x}:${z}`}
+              radius={0.016}
+              height={seat - 0.04}
+              position={[x, (seat - 0.04) / 2, z]}
+              color={COLORS.darkWood}
+              segments={8}
+            />
+          )),
+        )}
 
-      {/* Desk */}
-      <Block
-        size={[DESK_WIDTH, 0.035, DESK_DEPTH]}
-        position={[0, DESK_TOP - 0.0175, DESK_Z]}
-        radius={0.014}
-        color={COLORS.benchWood}
-      />
-      {[-1, 1].flatMap((sx) =>
-        [-1, 1].map((sz) => (
-          <Cylinder
-            key={`${sx}:${sz}`}
-            radius={0.018}
-            top={0.014}
-            height={legHeight}
-            position={[
-              sx * (DESK_WIDTH / 2 - 0.05),
-              legHeight / 2,
-              DESK_Z + sz * (DESK_DEPTH / 2 - 0.05),
-            ]}
-            color={COLORS.wood}
-            segments={10}
-          />
-        )),
-      )}
-
-      {/* Laptop, the hands at its front edge, the lid tipped back and its
-          screen lit toward the driver. */}
-      <Block
-        size={[0.3, 0.016, 0.2]}
-        position={[0, DESK_TOP + 0.008, LAPTOP_Z]}
-        radius={0.006}
-        color={LAPTOP}
-      />
-      <group position={[0, DESK_TOP + 0.015, LAPTOP_Z + 0.1]} rotation-x={0.25}>
+        {/* Desk */}
         <Block
-          size={[0.3, 0.2, 0.014]}
-          position={[0, 0.1, 0]}
+          size={[DESK_WIDTH, 0.035, DESK_DEPTH]}
+          position={[0, DESK_TOP - 0.0175, DESK_Z]}
+          radius={0.014}
+          color={COLORS.benchWood}
+        />
+        {[-1, 1].flatMap((sx) =>
+          [-1, 1].map((sz) => (
+            <Cylinder
+              key={`${sx}:${sz}`}
+              radius={0.018}
+              top={0.014}
+              height={legHeight}
+              position={[
+                sx * (DESK_WIDTH / 2 - 0.05),
+                legHeight / 2,
+                DESK_Z + sz * (DESK_DEPTH / 2 - 0.05),
+              ]}
+              color={COLORS.wood}
+              segments={10}
+            />
+          )),
+        )}
+
+        {/* Laptop, the hands at its front edge, the lid tipped back and its
+            screen lit toward the driver. */}
+        <Block
+          size={[0.3, 0.016, 0.2]}
+          position={[0, DESK_TOP + 0.008, LAPTOP_Z]}
           radius={0.006}
           color={LAPTOP}
         />
-        <Block
-          size={[0.27, 0.17, 0.004]}
-          position={[0, 0.1, -0.007]}
-          radius={0.0015}
-          color={SCREEN}
-          emissive={1.2}
-        />
-      </group>
+        <group
+          position={[0, DESK_TOP + 0.015, LAPTOP_Z + 0.1]}
+          rotation-x={0.25}
+        >
+          <Block
+            size={[0.3, 0.2, 0.014]}
+            position={[0, 0.1, 0]}
+            radius={0.006}
+            color={LAPTOP}
+          />
+          <Block
+            size={[0.27, 0.17, 0.004]}
+            position={[0, 0.1, -0.007]}
+            radius={0.0015}
+            color={SCREEN}
+            emissive={1.2}
+          />
+        </group>
 
-      {/* Mug, its handle to the side */}
-      <group position={[0.28, DESK_TOP, 0.34]}>
-        <Cylinder
-          radius={0.035}
-          top={0.038}
-          height={0.08}
-          position={[0, 0.04, 0]}
-          color={COLORS.sign}
-          segments={14}
-        />
-        <mesh position={[0.038, 0.042, 0]} castShadow>
-          <torusGeometry args={[0.02, 0.007, 6, 12]} />
-          <meshStandardMaterial color={COLORS.sign} roughness={0.75} />
-        </mesh>
-      </group>
+        {/* Mug, its handle to the side */}
+        <group position={[0.28, DESK_TOP, 0.34]}>
+          <Cylinder
+            radius={0.035}
+            top={0.038}
+            height={0.08}
+            position={[0, 0.04, 0]}
+            color={COLORS.sign}
+            segments={14}
+          />
+          <mesh position={[0.038, 0.042, 0]} castShadow>
+            <torusGeometry args={[0.02, 0.007, 6, 12]} />
+            <meshStandardMaterial color={COLORS.sign} roughness={0.75} />
+          </mesh>
+        </group>
 
-      {/* Potted plant on the far corner, past the mug (the laptop stays
-          in sight from the track side, on the driver's right) */}
-      <group position={[0.3, DESK_TOP, 0.56]}>
-        <Cylinder
-          radius={0.03}
-          top={0.04}
-          height={0.055}
-          position={[0, 0.0275, 0]}
-          color={COLORS.pot}
-          segments={14}
-        />
-        <mesh position={[0, 0.08, 0]} castShadow>
-          <sphereGeometry args={[0.047, 12, 10]} />
-          <meshStandardMaterial color={COLORS.bush} roughness={0.85} />
-        </mesh>
-        <mesh position={[0.022, 0.108, 0.015]} castShadow>
-          <sphereGeometry args={[0.027, 10, 8]} />
-          <meshStandardMaterial color={COLORS.bushLight} roughness={0.85} />
-        </mesh>
+        {/* Potted plant on the far corner, past the mug (the laptop stays
+            in sight from the track side, on the driver's right) */}
+        <group position={[0.3, DESK_TOP, 0.56]}>
+          <Cylinder
+            radius={0.03}
+            top={0.04}
+            height={0.055}
+            position={[0, 0.0275, 0]}
+            color={COLORS.pot}
+            segments={14}
+          />
+          <mesh position={[0, 0.08, 0]} castShadow>
+            <sphereGeometry args={[0.047, 12, 10]} />
+            <meshStandardMaterial color={COLORS.bush} roughness={0.85} />
+          </mesh>
+          <mesh position={[0.022, 0.108, 0.015]} castShadow>
+            <sphereGeometry args={[0.027, 10, 8]} />
+            <meshStandardMaterial color={COLORS.bushLight} roughness={0.85} />
+          </mesh>
+        </group>
       </group>
-    </group>
+    </NoSnow>
   );
 }
 

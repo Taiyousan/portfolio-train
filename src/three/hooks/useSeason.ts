@@ -9,6 +9,7 @@ import {
   type SeasonColor,
   type SeasonValue,
 } from "../config/seasons";
+import { setSnowCover } from "../shaders/snow";
 
 // How fast the scene blends into a newly picked season (damp rate, ~1.5 s).
 const SEASON_BLEND_RATE = 3;
@@ -76,7 +77,9 @@ export function useSeasonValue(
 // Eases every season's weight toward 1 for the picked season, 0 for the
 // others, framerate-independent. The same damping on each keeps them summing
 // to 1, so a switch picked mid-blend just carries on from where it is.
-// Instant with reduced motion. Mount once inside the Canvas (TrainScene).
+// Instant with reduced motion. Then hands the blended snow cover to every
+// material that takes it (see shaders/snow). Mount once inside the Canvas
+// (TrainScene).
 export function useSeasonEasing() {
   const { season, seasonWeightsRef } = useTrainContext();
   const [reducedMotion] = useState(
@@ -97,5 +100,6 @@ export function useSeasonEasing() {
           );
       weights[other] = Math.abs(next - target) < 0.001 ? target : next;
     }
+    setSnowCover(mixValue(weights, "snow"));
   });
 }
