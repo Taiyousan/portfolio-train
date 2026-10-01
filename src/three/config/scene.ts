@@ -127,6 +127,10 @@ export const STOP_EXIT_Z = -40;
 // whatever the scroll position.
 export const STOP_SIDE = -Math.sign(CAMERA_POSITION[0]);
 export const STOP_CLEAR_X = 5.6;
+// Half a stop's length along the track, stairs included (the station's
+// platform is the longest). The forest's small details may grow by the
+// track on the stops' side, and shrink away within it of a stop in sight.
+export const STOP_HALF_LENGTH = 2.8;
 
 // Station (models/StationDecor) in its ground frame (origin at the platform
 // centre, at track level; x across the track, + away from it; z along it):

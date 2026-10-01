@@ -33,6 +33,9 @@ import Smoke from "../models/Smoke";
 import Forest from "../models/Forest";
 import ForestFloor from "../models/ForestFloor";
 import Snowfall from "../models/Snowfall";
+import Clouds from "../models/Clouds";
+import Bunny from "../models/Bunny";
+import Bird from "../models/Bird";
 import type { StationProject } from "../ui/types";
 import {
   BOARD_CAMERA,
@@ -293,7 +296,10 @@ export default function TrainScene({
         <Train />
         <ForestFloor position={[0, -0.6, 0]} />
         <Rails position={[0, -0.57, 0]} />
-        <Forest position={[0, -0.58, 0]} />
+        <Forest position={[0, -0.58, 0]} stops={[stationRef, homeRef]} />
+        <Bunny position={[0, -0.58, 0]} />
+        <Bird />
+        <Clouds />
         <Smoke />
         <Snowfall />
         <Station ref={stationRef} projects={projects} />

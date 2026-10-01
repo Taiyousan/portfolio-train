@@ -20,10 +20,11 @@ type SeasonLook = {
     ambient: string;
     sun: string;
     ground: string;
-    foliageLow: string;
-    foliageHigh: string;
-    bush: string;
-    rock: string;
+    // Over the whole forest (see Forest): white leaves its own colours.
+    forest: string;
+    // Ponds: water, then ice.
+    water: string;
+    clouds: string;
   };
   values: {
     ambientIntensity: number;
@@ -51,11 +52,10 @@ export const SEASON_LOOKS: Record<Season, SeasonLook> = {
       haze: "#3a2a1f",
       ambient: "#4a5a7a",
       sun: "#ffb56b",
-      ground: "#1c2b16",
-      foliageLow: "#25422b",
-      foliageHigh: "#2f4f35",
-      bush: "#2e4a26",
-      rock: "#5c5850",
+      ground: "#243520",
+      forest: "#ffffff",
+      water: "#3d8fd6",
+      clouds: "#ffd2b5",
     },
     values: {
       ambientIntensity: 0.25,
@@ -76,10 +76,9 @@ export const SEASON_LOOKS: Record<Season, SeasonLook> = {
       ambient: "#8a9ac0",
       sun: "#ffc9a0",
       ground: "#dfe5ec",
-      foliageLow: "#1f3a2c",
-      foliageHigh: "#274436",
-      bush: "#d3dbe4",
-      rock: "#8e9096",
+      forest: "#d5dde6",
+      water: "#a9cbe0",
+      clouds: "#dfe4ee",
     },
     values: {
       ambientIntensity: 0.45,

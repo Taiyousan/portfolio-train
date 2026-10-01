@@ -24,6 +24,20 @@ La migration est terminée :
 - La fumée a son propre shader (`src/three/shaders/smoke.ts`) à la place de l'ancien shader NodeToy, incompatible avec R3F 9. Même rendu « toon » (éclairage en paliers, reflet net, liseré clair), plus des bouffées qui ondulent et se désagrègent en fin de vie.
 - La forêt laisse un couloir libre entre la caméra et le train (réglage `clearing` dans le panneau Leva, groupe Forest).
 
+### Décor
+
+- Forêt (`src/three/models/Forest.tsx`) dans la DA arrondie de la gare et de la maison, par tuiles qui défilent avec les rails. Formes dans `src/three/models/forestShapes.ts` : chaque type est une seule géométrie (parties fusionnées, couleurs dans les sommets), instanciée une fois par tuile ; la couleur de chaque instance teinte ses ramures, ses feuilles ou sa roche, autour d'une palette par type.
+  - Arbres : sapin à étages arrondis, feuillu en boules (un sur six déjà roux), peuplier fuselé, bouleau à tronc blanc marqué de noir (un sur cinq jaune).
+  - Buissons (simples ou fleuris : les fleurs sont un second maillage sur les mêmes emplacements, qui s'efface en hiver), rochers (galet, rocher moussu, tas de pierres).
+  - Petits détails près de la voie, occasionnels (environ trois par côté et par tuile, tous types confondus) : touffes d'herbe, fleurs, champignons rouges à pois, souches, bûches. Les comptes par type sont des moyennes : les plus rares (souches, bûches) ne viennent pas à chaque tuile. Eux seuls vont aussi dans la bande devant les arrêts, où ils rapetissent jusqu'à disparaître dès qu'un arrêt est en vue (`STOP_HALF_LENGTH`), et reviennent une fois l'arrêt caché.
+  - Rarement une mare (`src/three/models/Pond.tsx`, environ une tuile sur douze, réglage `pondChance`) au bord de la voie, du côté des arrêts : eau bleue sans reflet, berge, galets, roseaux, nénuphars dont un fleuri. Comme les détails, elle s'efface sous un arrêt en vue ; les autres éléments s'en écartent.
+  - Densités et étendues par catégorie dans le groupe Leva « Forest ».
+- Matériau commun (`src/three/shaders/forestMaterial.ts`) : en hiver, la neige se pose sur tout ce qui regarde vers le haut (ramures, rochers, souches, berges), avec un bord ondulé, d'un seul uniform ; l'herbe, les fleurs, les champignons, les roseaux et les nénuphars s'aplatissent dans le sol, et l'eau gèle (couleur de saison). Remplace les chapeaux de neige des anciens pins.
+- Nuages (`src/three/models/Clouds.tsx`) : boules fusionnées à fond plat, loin derrière la forêt, hors du brouillard, lumineux dans la couleur de la saison. Ils dérivent lentement (une fraction de la vitesse du train, plus une brise).
+- Lapin (`src/three/models/Bunny.tsx`) : de loin en loin (toutes les 25 à 50 s), un lapin arrive par l'avant et gambade le long de la voie, par bonds, avec des pauses où il remue les oreilles et regarde autour de lui, puis se fait distancer ou file dans la forêt. Seulement pendant le trajet : à l'approche d'un arrêt, il disparaît.
+- Oiseau (`src/three/models/Bird.tsx`) : de temps en temps un oiseau traverse tout le champ, loin derrière la voie et au-dessus des arbres, battements d'ailes entrecoupés de vol plané. Hors du brouillard, qui l'effacerait à cette distance. Une volée de deux ou trois oiseaux a été essayée puis retirée : à la caméra, elle semblait faire du sur-place.
+- Avec `prefers-reduced-motion`, ni lapin ni oiseau, et les nuages ne bougent plus que pour suivre le train.
+
 ## Correspondance contenu → mise en scène
 
 Le schéma de `portfolio-2026` s'adapte bien au thème ferroviaire :
@@ -117,7 +131,7 @@ Le train est fixe et le monde défile (`useScrollingLoop`), ce qui facilite l'ar
 
 - Bouton HTML en haut à droite (`src/three/ui/SeasonSwitch.tsx`) : été (la scène d'origine) ou hiver (sol et sapins enneigés, neige sur les toits, flocons qui dérivent avec la vitesse du train, lumière et ciel plus froids). Simple habillage : rien d'autre ne dépend de la saison.
 - Une palette et quelques réglages par saison dans `src/three/config/seasons.ts` ; la scène passe de l'une à l'autre en fondu (`src/three/hooks/useSeason.ts`), instantanément avec `prefers-reduced-motion` (et sans flocons).
-- À venir : printemps et automne. Les sapins ne changent pas au fil des saisons : il faudra des feuillus (feuilles rousses qui tombent, fleurs). Piste : saison par défaut selon la date réelle.
+- À venir : printemps et automne. Les feuillus de la forêt pourraient en suivre le cycle (fleurs, feuilles rousses qui tombent, branches nues en hiver). Piste : saison par défaut selon la date réelle.
 
 ## Interactions en plus
 
