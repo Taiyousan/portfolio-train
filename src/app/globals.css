@@ -175,6 +175,20 @@
   --ticket-stamp: #2d6474;
 }
 
+/* Printed barcode in the current ink, decorative (project ticket, about
+   railcard). Height and opacity are set where it's used. */
+@utility barcode {
+  background: repeating-linear-gradient(
+    90deg,
+    currentColor 0 2px,
+    transparent 2px 4px,
+    currentColor 4px 5px,
+    transparent 5px 7px,
+    currentColor 7px 10px,
+    transparent 10px 12px
+  );
+}
+
 /* A thin scrollbar in the subtree's ink, on no track, so a scrolling panel
    keeps its look (the project ticket). Chrome and Safari get a rounded
    thumb without the arrow buttons that their thin standard scrollbar keeps

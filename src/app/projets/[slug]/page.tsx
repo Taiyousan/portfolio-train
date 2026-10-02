@@ -114,7 +114,7 @@ export default async function ProjectPage({
         </aside>
 
         <div className="lg:col-start-1 lg:row-start-1">
-          <div className="space-y-4 text-lg leading-relaxed [&_p]:max-w-prose">
+          <div className="space-y-4 text-lg leading-relaxed [&_a]:font-semibold [&_a]:underline [&_a]:decoration-accent [&_a]:decoration-2 [&_p]:max-w-prose">
             <MDXRemote source={project.body} />
           </div>
 

@@ -85,7 +85,7 @@ export default function Overlay({ projects }: { projects: StationProject[] }) {
             {site.name}
           </span>
           <span className="block font-mono text-[0.625rem] tracking-wider text-board-ink/60 uppercase">
-            Développeur front-end
+            {site.role}
           </span>
         </Link>
         <SeasonSwitch />
@@ -192,6 +192,24 @@ export default function Overlay({ projects }: { projects: StationProject[] }) {
 
       {atHome && <AboutPanel onDepart={depart} />}
 
+      {/* At home on larger screens, the way out, centred beside the about
+          card as beside the workshop's; on phones, the card has it. */}
+      {atHome && (
+        <nav
+          aria-label="Voyage"
+          className="absolute bottom-0 left-0 hidden justify-center p-4 sm:right-[25.25rem] sm:flex sm:pb-8"
+        >
+          <Ticket
+            kicker="Billet · Retour"
+            title="Repartir"
+            tilt={1.5}
+            delay={900}
+            variant="return"
+            onClick={depart}
+          />
+        </nav>
+      )}
+
       {atStation && (
         <DeparturesBoard
           projects={projects}
@@ -203,8 +221,9 @@ export default function Overlay({ projects }: { projects: StationProject[] }) {
 
       {atStation && selected && (
         <ProjectDialog
-          key={selected.slug}
-          project={selected}
+          projects={projects}
+          slug={selected.slug}
+          onSelect={setSelectedSlug}
           onClose={() => setSelectedSlug(null)}
         />
       )}

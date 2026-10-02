@@ -1,5 +1,7 @@
 export const site = {
   name: "Shams Benhamou",
+  role: "Développeur front-end",
+  city: "Strasbourg",
   title: "Shams Benhamou, développeur front-end React / Three.js",
   description:
     "Développeur web fullstack spécialisé front-end, à Strasbourg. React, Next.js, Three.js et React Three Fiber.",
