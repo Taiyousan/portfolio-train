@@ -6,7 +6,6 @@ import {
   type Stop,
   type TrainMode,
 } from "../state/TrainContext";
-import { departureTime } from "../config/departures";
 import AboutPanel from "./AboutPanel";
 import DeparturesBoard from "./DeparturesBoard";
 import ProjectDialog from "./ProjectDialog";
@@ -50,8 +49,7 @@ export default function Overlay({ projects }: { projects: StationProject[] }) {
     boardFocused,
     setBoardFocused,
   } = useTrainContext();
-  const selectedIndex = projects.findIndex((p) => p.slug === selectedSlug);
-  const selected = projects[selectedIndex];
+  const selected = projects.find((p) => p.slug === selectedSlug);
   // Set when "Projets" was pressed from the keyboard, so the HTML board
   // takes focus on arrival (and shows up on larger screens, see
   // DeparturesBoard). A mouse leaves the 3D board in charge.
@@ -207,7 +205,6 @@ export default function Overlay({ projects }: { projects: StationProject[] }) {
         <ProjectDialog
           key={selected.slug}
           project={selected}
-          line={`${departureTime(selectedIndex)} · Voie ${selectedIndex + 1}`}
           onClose={() => setSelectedSlug(null)}
         />
       )}

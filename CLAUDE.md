@@ -32,7 +32,7 @@ Ranger par nature de chose, pas par page :
 | `public/` | Fichiers bruts servis tels quels (images, vidéos, CV, `.glb`) |
 | `src/app/` | Pages : un dossier = une URL |
 | `src/lib/` | Logique sans affichage (lecture/validation du contenu) |
-| `src/components/` | Interface réutilisable. N'y extraire un composant que lorsqu'une deuxième page en a besoin (ex. `ProjectDetail`, partagé par `/projets/[slug]` et le prototype du train ; la carte de projet reste inline dans `page.tsx`) |
+| `src/components/` | Interface réutilisable. N'y extraire un composant que lorsqu'une deuxième page en a besoin (la carte de projet reste inline dans `page.tsx`, le détail d'un projet dans `projets/[slug]/page.tsx` : le prototype du train a son propre billet) |
 | `src/three/` | Tout le code React Three Fiber (prototype du train sur `feat/proto-train`, page `/proto/train`) |
 
 - **Nouvelle page** : `src/app/<url>/page.tsx`. Texte long → MDX dans `content/`, pas en dur.

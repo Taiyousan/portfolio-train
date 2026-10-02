@@ -60,9 +60,8 @@
 }
 
 /* Re-themes a subtree as a printed train ticket (train prototype project
-   dialog): the shared ProjectDetail follows along, in ink on card stock
-   with the stamp as accent. Cream whatever the colour scheme, like the
-   ticket buttons. */
+   dialog and workshop): ink on card stock, with the stamp as accent. Cream
+   whatever the colour scheme, like the ticket buttons. */
 .theme-ticket {
   --background: var(--ticket);
   --foreground: var(--ticket-ink);
@@ -73,31 +72,79 @@
   color-scheme: light;
 }
 
-/* Half notches cut at the two ends of a horizontal seam: at the bottom
-   corners of the part above (.notch-bottom), at the top corners of the part
-   below (.notch-top). Put together, they make two round notches on either
-   side of the perforation. */
-.notch-bottom,
-.notch-top {
+/* Half notches cut at the two ends of a perforation, on either part: at
+   the bottom corners of the part above it (notch-bottom) and the top
+   corners of the part below (notch-top) for a horizontal one, at the right
+   corners of the part before it (notch-right) and the left corners of the
+   part after (notch-left) for a vertical one. Put together, they make two
+   round notches on either side of the perforation. Utilities, so a
+   breakpoint can turn the seam (sm:notch-right). */
+@utility notch-bottom {
   --notch: 0.75rem;
-  --notch-y: 100%;
   mask:
     radial-gradient(
-        circle at 0 var(--notch-y),
+        circle at 0 100%,
         #0000 var(--notch),
         #000 calc(var(--notch) + 0.5px)
       )
       left / 51% 100% no-repeat,
     radial-gradient(
-        circle at 100% var(--notch-y),
+        circle at 100% 100%,
         #0000 var(--notch),
         #000 calc(var(--notch) + 0.5px)
       )
       right / 51% 100% no-repeat;
 }
 
-.notch-top {
-  --notch-y: 0;
+@utility notch-top {
+  --notch: 0.75rem;
+  mask:
+    radial-gradient(
+        circle at 0 0,
+        #0000 var(--notch),
+        #000 calc(var(--notch) + 0.5px)
+      )
+      left / 51% 100% no-repeat,
+    radial-gradient(
+        circle at 100% 0,
+        #0000 var(--notch),
+        #000 calc(var(--notch) + 0.5px)
+      )
+      right / 51% 100% no-repeat;
+}
+
+@utility notch-right {
+  --notch: 0.75rem;
+  mask:
+    radial-gradient(
+        circle at 100% 0,
+        #0000 var(--notch),
+        #000 calc(var(--notch) + 0.5px)
+      )
+      top / 100% 51% no-repeat,
+    radial-gradient(
+        circle at 100% 100%,
+        #0000 var(--notch),
+        #000 calc(var(--notch) + 0.5px)
+      )
+      bottom / 100% 51% no-repeat;
+}
+
+@utility notch-left {
+  --notch: 0.75rem;
+  mask:
+    radial-gradient(
+        circle at 0 0,
+        #0000 var(--notch),
+        #000 calc(var(--notch) + 0.5px)
+      )
+      top / 100% 51% no-repeat,
+    radial-gradient(
+        circle at 0 100%,
+        #0000 var(--notch),
+        #000 calc(var(--notch) + 0.5px)
+      )
+      bottom / 100% 51% no-repeat;
 }
 
 /* Train ticket shape (three/ui/Ticket): rounded corners, and two notches
@@ -126,6 +173,30 @@
 .ticket-return {
   --ticket: #d4e3e6;
   --ticket-stamp: #2d6474;
+}
+
+/* A thin scrollbar in the subtree's ink, on no track, so a scrolling panel
+   keeps its look (the project ticket). Chrome and Safari get a rounded
+   thumb without the arrow buttons that their thin standard scrollbar keeps
+   on Windows; Firefox, the standard properties. */
+@utility scrollbar-ink {
+  --scrollbar-thumb: color-mix(in oklab, var(--foreground) 35%, transparent);
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    border-radius: 9999px;
+    background: var(--scrollbar-thumb);
+  }
+
+  @supports not selector(::-webkit-scrollbar) {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
+  }
 }
 
 body {
