@@ -17,7 +17,7 @@ Le train qui roule en forêt est le fil conducteur. Chaque section du portfolio 
 
 Le train est le concept retenu : c'est l'accueil du site (`src/three/`, page `/` ; ajouter `#debug` à l'URL pour le panneau Leva). Le contenu (`content/projets/*.mdx`, `src/lib/site.ts`) reste la source de vérité ; la 3D ne fait que le mettre en scène, par-dessus la version HTML de l'accueil.
 
-L'ancien dépôt Vite, `../portfolio-pro-train`, sert d'archive et de bac à sable.
+L'ancien dépôt Vite, `portfolio-train-old` sur GitHub (cloné dans `../portfolio-pro-train`), sert d'archive et de bac à sable.
 
 La migration est terminée :
 
@@ -40,7 +40,7 @@ La migration est terminée :
 
 ## Correspondance contenu → mise en scène
 
-Le schéma de `portfolio-2026` s'adapte bien au thème ferroviaire :
+Le schéma du contenu de ce dépôt s'adapte bien au thème ferroviaire :
 
 | Donnée (`projects.ts` / `site.ts`) | Dans la scène |
 |---|---|

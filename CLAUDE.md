@@ -1,6 +1,6 @@
 @AGENTS.md
 
-# Portfolio 2026
+# Portfolio train
 
 Portfolio de Shams Benhamou (dev front-end, React / Three.js). Next 16 (App Router), React 19, TypeScript, Tailwind 4. Contenu en français. Voir [README.md](README.md) pour la vue d'ensemble et le mode d'emploi côté humain.
 
