@@ -36,7 +36,7 @@ export default async function ProjectPage({
   return (
     <main className="mx-auto w-full max-w-5xl px-5 py-12 sm:py-20">
       <div className="flex items-baseline justify-between gap-4 font-mono text-sm text-muted">
-        <Link href="/#projets">← Tous les projets</Link>
+        <Link href="/">← Retour au portfolio</Link>
         <span>
           {pad(index + 1)} / {pad(projects.length)}
         </span>

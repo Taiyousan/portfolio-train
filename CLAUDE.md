@@ -6,7 +6,7 @@ Portfolio de Shams Benhamou (dev front-end, React / Three.js). Next 16 (App Rout
 
 ## Principe directeur
 
-**Le contenu HTML accessible passe avant la 3D.** Le site doit rester lisible et utilisable sans WebGL (SEO, accessibilité, mobiles faibles). La couche React Three Fiber, qui n'existe pas encore, viendra *par-dessus* ce contenu, jamais à sa place. La direction 3D (monde, atelier, shaders ou hybride) n'est pas encore tranchée : ne pas l'anticiper dans le code.
+**Le contenu HTML accessible passe avant la 3D.** Le site doit rester lisible et utilisable sans WebGL (SEO, accessibilité, mobiles faibles). L'accueil est une scène React Three Fiber (un train en forêt), posée *par-dessus* ce contenu, jamais à sa place : `Experience` rend la version HTML de l'accueil en tête de page, masquée visuellement mais lue par les lecteurs d'écran et les moteurs de recherche, affichée par-dessus la scène dès qu'elle reçoit le focus clavier, et seule à la place de la scène quand le navigateur n'a pas WebGL 2. Les pages projet restent en HTML.
 
 ## Structure
 
@@ -15,7 +15,7 @@ content/projets/*.mdx   Source de vérité du contenu des projets (1 fichier = 1
 src/lib/projects.ts     Lecture + validation (zod) des MDX ; getProjects(), getProject(slug)
 src/lib/site.ts         Contenu global : identité, intro, compétences, liens de contact
 src/app/layout.tsx      Layout racine (lang="fr", polices, metadata par défaut)
-src/app/page.tsx        Accueil : intro, grille de projets, compétences
+src/app/page.tsx        Accueil : la scène du train (Experience) par-dessus sa version HTML (intro, grille de projets, compétences)
 src/app/projets/[slug]/page.tsx   Page d'un projet (SSG via generateStaticParams)
 src/app/globals.css     Tokens de thème (--background, --muted, --line, --accent) + mode sombre
 public/projets/<slug>/  thumb.png + video.mp4 de chaque projet
@@ -32,8 +32,8 @@ Ranger par nature de chose, pas par page :
 | `public/` | Fichiers bruts servis tels quels (images, vidéos, CV, `.glb`) |
 | `src/app/` | Pages : un dossier = une URL |
 | `src/lib/` | Logique sans affichage (lecture/validation du contenu) |
-| `src/components/` | Interface réutilisable. N'y extraire un composant que lorsqu'une deuxième page en a besoin (la carte de projet reste inline dans `page.tsx`, le détail d'un projet dans `projets/[slug]/page.tsx` : le prototype du train a son propre billet) |
-| `src/three/` | Tout le code React Three Fiber (prototype du train sur `feat/proto-train`, page `/proto/train`) |
+| `src/components/` | Interface réutilisable. N'y extraire un composant que lorsqu'une deuxième page en a besoin (la carte de projet reste inline dans `page.tsx`, le détail d'un projet dans `projets/[slug]/page.tsx` : le train a son propre billet) |
+| `src/three/` | Tout le code React Three Fiber (la scène du train, affichée sur l'accueil) |
 
 - **Nouvelle page** : `src/app/<url>/page.tsx`. Texte long → MDX dans `content/`, pas en dur.
 - **Nouveau type de contenu** (blog, expériences) : dossier dans `content/` + schéma zod et lecteur dans `src/lib/` sur le modèle de `projects.ts` + pages.
@@ -53,7 +53,7 @@ src/three/
   ui/               surcouche HTML pilotée par l'état de la scène (panneaux, tableau des départs)
 ```
 
-1. Le code 3D reste dans `src/three/` ; les pages n'importent que `Experience`, et lui passent le contenu en props (les lecteurs de `src/lib/` utilisent `node:fs`, donc côté serveur uniquement).
+1. Le code 3D reste dans `src/three/` ; les pages n'importent que `Experience`, et lui passent le contenu en props et leur version HTML en enfants (les lecteurs de `src/lib/` utilisent `node:fs`, donc côté serveur uniquement).
 2. Les réglages 3D sont séparés du contenu (jamais dans le frontmatter des MDX).
 3. Le contenu ne dépend pas de la 3D : le site doit fonctionner sans `src/three/`.
 

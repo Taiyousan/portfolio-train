@@ -15,7 +15,7 @@ Le train qui roule en forêt est le fil conducteur. Chaque section du portfolio 
 
 ## Base de code
 
-Le train est porté dans ce dépôt, sur la branche `feat/proto-train` : `src/three/`, page `/proto/train` (ajouter `#debug` à l'URL pour le panneau Leva). Le contenu (`content/projets/*.mdx`, `src/lib/site.ts`) reste la source de vérité ; la 3D ne fait que le mettre en scène. Comme l'étagère (`feat/proto-bookshelf`), c'est un prototype : on ne fusionne dans `main` que le concept retenu.
+Le train est le concept retenu : c'est l'accueil du site (`src/three/`, page `/` ; ajouter `#debug` à l'URL pour le panneau Leva). Le contenu (`content/projets/*.mdx`, `src/lib/site.ts`) reste la source de vérité ; la 3D ne fait que le mettre en scène, par-dessus la version HTML de l'accueil.
 
 L'ancien dépôt Vite, `../portfolio-pro-train`, sert d'archive et de bac à sable.
 
