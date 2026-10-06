@@ -84,7 +84,7 @@ export default function DeparturesBoard({
           onClick={onDepart}
           className="min-h-11 rounded-full border border-board-ink/60 px-4 font-mono text-sm uppercase hover:bg-board-flap"
         >
-          Repartir
+          Retour
         </button>
       </div>
     </section>

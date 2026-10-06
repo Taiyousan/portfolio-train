@@ -26,13 +26,26 @@ const COLORS = {
   glow: "#ffb56b",
 };
 
-// Frame glow inviting a click while the board isn't open: a slow pulse
-// between these intensities (steady halfway with reduced motion), brighter
-// on hover.
-const GLOW_MIN = 0.15;
-const GLOW_MAX = 0.6;
-const GLOW_HOVER = 1.4;
-const GLOW_SPEED = 2.2;
+// Frame glow inviting a click while the board isn't open: a beat between
+// these intensities, quick to flare and slow to fade (steady halfway with
+// reduced motion), brighter on hover. Bright enough for the scene's bloom:
+// the board is the thing to look at at the station.
+const GLOW_MIN = 0.25;
+const GLOW_MAX = 2.4;
+const GLOW_HOVER = 3;
+const GLOW_SPEED = 3.2;
+// A glowing arrow floats over the roof meanwhile, pointing down at the
+// board, bobbing in time with the glow and swaying a little (still with
+// reduced motion). In board units, radians and per second.
+const ARROW = {
+  lift: 0.42,
+  bob: 0.07,
+  sway: 0.45,
+  swaySpeed: 1.1,
+  ease: 6,
+  glowMin: 0.6,
+  glowMax: 2.2,
+};
 const CLOSE_WIDTH = 0.44;
 const CLOSE_HEIGHT = 0.17;
 
@@ -141,6 +154,33 @@ function useRimGeometry(height: number) {
       curveSegments: 6,
     });
   }, [height]);
+}
+
+// A chunky arrow pointing down, centred on the origin, extruded and
+// bevelled so it reads as a rounded toy, like the station's props.
+function useArrowGeometry() {
+  return useMemo(() => {
+    const shaft = 0.075;
+    const head = 0.2;
+    const shape = new THREE.Shape()
+      .moveTo(-shaft, 0.2)
+      .lineTo(shaft, 0.2)
+      .lineTo(shaft, 0)
+      .lineTo(head, 0)
+      .lineTo(0, -0.2)
+      .lineTo(-head, 0)
+      .lineTo(-shaft, 0)
+      .closePath();
+    const geometry = new THREE.ExtrudeGeometry(shape, {
+      depth: 0.05,
+      bevelEnabled: true,
+      bevelThickness: 0.03,
+      bevelSize: 0.03,
+      bevelSegments: 4,
+    });
+    geometry.center();
+    return geometry;
+  }, []);
 }
 
 // The troika mesh behind drei's <Text>; its fillOpacity applies on the next
@@ -362,10 +402,17 @@ export default function StationBoard({ projects, legHeight, ...props }: Props) {
   );
   const frameMaterialRef = useRef<THREE.MeshStandardMaterial>(null);
   const hintRef = useRef<FadeText>(null);
-  useFrame(({ clock }) => {
+  const arrow = useArrowGeometry();
+  const arrowRef = useRef<THREE.Mesh>(null);
+  const arrowMaterialRef = useRef<THREE.MeshStandardMaterial>(null);
+  // Eased presence of the arrow (0 to 1).
+  const arrowShownRef = useRef(0);
+  useFrame(({ clock }, delta) => {
+    const time = clock.elapsedTime;
+    // Squared: a quick flare, then a longer fade.
     const pulse = reducedMotion
       ? 0.5
-      : 0.5 + 0.5 * Math.sin(clock.elapsedTime * GLOW_SPEED);
+      : (0.5 + 0.5 * Math.sin(time * GLOW_SPEED)) ** 2;
     const material = frameMaterialRef.current;
     if (material) {
       material.emissiveIntensity = !inviting
@@ -380,6 +427,26 @@ export default function StationBoard({ projects, legHeight, ...props }: Props) {
         !inviting || hovered || reducedMotion
           ? 1
           : HINT_MIN_OPACITY + (1 - HINT_MIN_OPACITY) * pulse;
+    }
+    const arrowMesh = arrowRef.current;
+    const arrowMaterial = arrowMaterialRef.current;
+    if (arrowMesh && arrowMaterial) {
+      const ease = reducedMotion ? 1 : Math.min(delta * ARROW.ease, 1);
+      arrowShownRef.current +=
+        ((inviting ? 1 : 0) - arrowShownRef.current) * ease;
+      const shown = arrowShownRef.current;
+      // Gone, it's also hidden, so it can't catch the pointer.
+      arrowMesh.visible = shown > 0.01;
+      arrowMesh.scale.setScalar(shown);
+      // Lowest as the glow flares, as if tapping on the roof.
+      arrowMesh.position.y =
+        ridgeY + ARROW.lift + (reducedMotion ? 0 : ARROW.bob * (1 - pulse));
+      arrowMesh.rotation.y = reducedMotion
+        ? 0
+        : ARROW.sway * Math.sin(time * ARROW.swaySpeed);
+      arrowMaterial.emissiveIntensity = hovered
+        ? ARROW.glowMax
+        : ARROW.glowMin + (ARROW.glowMax - ARROW.glowMin) * pulse;
     }
   });
 
@@ -439,6 +506,23 @@ export default function StationBoard({ projects, legHeight, ...props }: Props) {
           emissive={COLORS.glow}
           emissiveIntensity={0}
           roughness={0.7}
+        />
+      </mesh>
+
+      {/* The arrow over the roof, pointing at the board while it invites
+          a click (part of it: clicking or hovering it is the board's). */}
+      <mesh
+        ref={arrowRef}
+        geometry={arrow}
+        position={[0, ridgeY + ARROW.lift, -DEPTH / 2]}
+        visible={false}
+      >
+        <meshStandardMaterial
+          ref={arrowMaterialRef}
+          color={COLORS.ink}
+          emissive={COLORS.ink}
+          emissiveIntensity={ARROW.glowMin}
+          roughness={0.4}
         />
       </mesh>
 

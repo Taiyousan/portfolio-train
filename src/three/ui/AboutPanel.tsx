@@ -129,7 +129,7 @@ export default function AboutPanel({ onDepart }: { onDepart: () => void }) {
           onClick={onDepart}
           className="mt-6 min-h-11 w-full rounded-full border border-foreground/40 px-4 font-mono text-xs tracking-wider uppercase transition hover:bg-foreground/10 sm:hidden"
         >
-          Repartir
+          Retour
         </button>
       </div>
     </section>
