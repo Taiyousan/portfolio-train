@@ -10,8 +10,8 @@ const ICONS: Record<Season, string> = {
     "M12 2v20M3.3 7l17.4 10M3.3 17 20.7 7M9 3.5l3 2.5 3-2.5M9 20.5l3-2.5 3 2.5M3.9 10.5l2.8-1.2-.5-3M20.1 13.5l-2.8 1.2.5 3M3.9 13.5l2.8 1.2-.5 3M20.1 10.5l-2.8-1.2.5-3",
 };
 
-// Picks the scene's season (see config/seasons), in the departures board's
-// colours like the name card beside it. Only changes the look.
+// Picks the scene's season (see config/seasons), printed on card stock like
+// the name card beside it and the tickets. Only changes the look.
 export default function SeasonSwitch() {
   const { season, setSeason } = useTrainContext();
 
@@ -19,7 +19,7 @@ export default function SeasonSwitch() {
     <div
       role="group"
       aria-label="Saison"
-      className="pointer-events-auto flex gap-1 rounded-2xl border border-board-flap bg-board/85 p-1 shadow-lg backdrop-blur-sm"
+      className="theme-ticket pointer-events-auto flex gap-1 rounded-md border border-line bg-background p-1 shadow-lg"
     >
       {SEASONS.map((option) => {
         const active = option === season;
@@ -29,7 +29,7 @@ export default function SeasonSwitch() {
             type="button"
             aria-pressed={active}
             onClick={() => setSeason(option)}
-            className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 font-mono text-[0.625rem] tracking-wider uppercase transition outline-offset-2 outline-board-ink focus-visible:outline-2 ${active ? "bg-board-ink text-board" : "text-board-ink/70 hover:bg-board-flap hover:text-board-ink"}`}
+            className={`flex items-center gap-1.5 rounded px-3 py-1.5 font-mono text-[0.625rem] tracking-wider uppercase transition outline-offset-2 outline-foreground focus-visible:outline-2 ${active ? "bg-foreground text-background" : "text-foreground/70 hover:bg-line hover:text-foreground"}`}
           >
             <svg
               aria-hidden="true"

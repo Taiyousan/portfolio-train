@@ -16,13 +16,14 @@ const CONTACTS = [
 ];
 
 // "About" panel, shown while the train waits at home, beside the driver at
-// the desk. Dressed as a railcard, like the workshop's work order: the
-// departures board's split-flap strip with the name, then card stock below
-// a perforation (.theme-ticket), the driver's portrait as the holder's
-// photo, in the hoodie worn at the desk beside it (see models/Home). The
-// look is the railcard's, the text stays plain. A side card on larger
-// screens, a bottom sheet on phones, with its own way out there since the
-// return ticket is left out (see Overlay). Escape sets off again too.
+// the desk. Dressed as a railcard, like the workshop's work order: a
+// split-flap strip with the name, in the card's ink like the project
+// ticket's band, then card stock below a perforation (.theme-ticket), the
+// driver's portrait as the holder's photo, in the hoodie worn at the desk
+// beside it (see models/Home). The look is the railcard's, the text stays
+// plain. A side card on larger screens, a bottom sheet on phones, with its
+// own way out there since the return ticket is left out (see Overlay).
+// Escape sets off again too.
 export default function AboutPanel({ onDepart }: { onDepart: () => void }) {
   const { outfit: picked } = useLivery();
   const outfit = picked.style === "hoodie" ? picked : OUTFITS.hoodie;
@@ -42,8 +43,8 @@ export default function AboutPanel({ onDepart }: { onDepart: () => void }) {
       aria-labelledby="about-title"
       className="theme-ticket pointer-events-auto absolute inset-x-0 bottom-0 flex max-h-[55dvh] flex-col text-foreground drop-shadow-2xl transition delay-500 duration-500 starting:translate-y-6 starting:opacity-0 sm:inset-x-auto sm:top-20 sm:right-5 sm:bottom-auto sm:max-h-[calc(100dvh-7rem)] sm:w-96"
     >
-      {/* Split-flap header, as on the board. */}
-      <header className="notch-bottom shrink-0 rounded-t-xl bg-board-flap px-5 pt-4 pb-4 text-board-ink">
+      {/* Split-flap header, in the card's ink. */}
+      <header className="notch-bottom shrink-0 rounded-t-xl bg-foreground px-5 pt-4 pb-4 text-background">
         <p className={`${LABEL} opacity-80`}>À propos</p>
         <h2
           id="about-title"

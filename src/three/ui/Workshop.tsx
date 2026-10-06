@@ -42,7 +42,7 @@ const sameOutfit = (a: Outfit, b: Outfit) =>
 
 // The workshop ("custom" mode): repaint the locomotive and dress the
 // driver, the scene following each pick live (see config/livery). Dressed
-// as a work order: the departures board's split-flap strip on top, card
+// as a work order: a split-flap strip in the card's ink on top, card
 // stock below a perforation, like the project dialog (.theme-ticket). A
 // side card on larger screens, the train framed beside it (see
 // TrainScene), a bottom sheet on phones, with its own way back since the
@@ -59,8 +59,8 @@ export default function Workshop({ onLeave }: { onLeave: () => void }) {
       aria-labelledby={`${id}-title`}
       className="theme-ticket pointer-events-auto absolute inset-x-0 bottom-0 flex max-h-[50dvh] flex-col text-foreground drop-shadow-2xl transition delay-500 duration-500 starting:translate-y-6 starting:opacity-0 sm:inset-x-auto sm:top-20 sm:right-5 sm:bottom-auto sm:max-h-[calc(100dvh-7rem)] sm:w-96"
     >
-      {/* Split-flap header, as on the board, with the tabs. */}
-      <header className="notch-bottom shrink-0 rounded-t-xl bg-board-flap px-5 pt-4 pb-3 text-board-ink">
+      {/* Split-flap header, in the card's ink, with the tabs. */}
+      <header className="notch-bottom shrink-0 rounded-t-xl bg-foreground px-5 pt-4 pb-3 text-background">
         <p className="font-mono text-[0.625rem] tracking-[0.2em] uppercase opacity-80">
           Dépôt · Bon d&apos;atelier
         </p>
@@ -106,7 +106,7 @@ export default function Workshop({ onLeave }: { onLeave: () => void }) {
                 aria-controls={`${id}-panel`}
                 tabIndex={active ? 0 : -1}
                 onClick={() => setTab(option.id)}
-                className={`min-h-9 flex-1 rounded-lg px-3 font-mono text-[0.6875rem] tracking-wider uppercase transition outline-offset-2 outline-board-ink focus-visible:outline-2 ${active ? "bg-board-ink text-board" : "text-board-ink/70 hover:bg-board-flap hover:text-board-ink"}`}
+                className={`min-h-9 flex-1 rounded-lg px-3 font-mono text-[0.6875rem] tracking-wider uppercase transition outline-offset-2 outline-background focus-visible:outline-2 ${active ? "bg-background text-foreground" : "text-background/70 hover:bg-board-flap hover:text-background"}`}
               >
                 {option.label}
               </button>

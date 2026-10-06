@@ -12,11 +12,11 @@
   --board: #16140f;
   --board-flap: #26231c;
   --board-ink: #f5c542;
-  /* Train tickets (train prototype navigation): cream card stock, printed
+  /* Train tickets (train prototype navigation): ivory card stock, printed
      ink, a red stamp. */
-  --ticket: #f1e6c8;
-  --ticket-ink: #2c1f14;
-  --ticket-stamp: #b3402a;
+  --ticket: #f4efe4;
+  --ticket-ink: #26211b;
+  --ticket-stamp: #a63d2a;
 }
 
 @theme inline {
@@ -65,8 +65,8 @@
 .theme-ticket {
   --background: var(--ticket);
   --foreground: var(--ticket-ink);
-  --muted: #6a5a45;
-  --line: #d6c69f;
+  --muted: #6d6355;
+  --line: #ddd4c2;
   --accent: var(--ticket-stamp);
   --on-accent: var(--ticket);
   color-scheme: light;
@@ -169,10 +169,10 @@
       bottom / 100% 51% no-repeat;
 }
 
-/* Return ticket: the same shape on pale blue card, with a teal stamp. */
+/* Return ticket: the same shape on pale sage card, with a green stamp. */
 .ticket-return {
-  --ticket: #d4e3e6;
-  --ticket-stamp: #2d6474;
+  --ticket: #e2e6df;
+  --ticket-stamp: #3d6656;
 }
 
 /* Printed barcode in the current ink, decorative (project ticket, about

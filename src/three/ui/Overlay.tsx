@@ -104,12 +104,12 @@ export default function Overlay({ projects }: { projects: StationProject[] }) {
       <header className="flex items-start justify-between gap-3 p-3 sm:p-5">
         <Link
           href="/"
-          className="pointer-events-auto rounded-2xl border border-board-flap bg-board/85 px-4 py-1.5 text-board-ink shadow-lg backdrop-blur-sm hover:text-board-ink"
+          className="theme-ticket pointer-events-auto rounded-md border border-line bg-background px-4 py-1.5 text-foreground shadow-lg hover:text-foreground"
         >
           <span className="block font-semibold tracking-tight">
             {site.name}
           </span>
-          <span className="block font-mono text-[0.625rem] tracking-wider text-board-ink/60 uppercase">
+          <span className="block font-mono text-[0.625rem] tracking-wider text-muted uppercase">
             {site.role}
           </span>
         </Link>
