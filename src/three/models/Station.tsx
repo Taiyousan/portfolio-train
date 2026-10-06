@@ -104,12 +104,12 @@ const Station = forwardRef<THREE.Group, { projects: StationProject[] }>(
     const { standingScale } = useSpring({
       standingScale: standing ? STATION_DRIVER.scale : 0,
       delay: standing ? DRIVER_SWAP_DELAY_MS : 0,
-      config: DRIVER_SPRING,
+      config: { ...DRIVER_SPRING, clamp: !standing },
     });
     const { proppedScale } = useSpring({
       proppedScale: propped ? STATION_DRIVER.scale : 0,
       delay: propped ? DRIVER_SWAP_DELAY_MS : 0,
-      config: DRIVER_SPRING,
+      config: { ...DRIVER_SPRING, clamp: !propped },
     });
     // Propped: the back against the board's right-hand side edge (on +z,
     // the board facing the track unturned), the feet out from it.
@@ -144,7 +144,10 @@ const Station = forwardRef<THREE.Group, { projects: StationProject[] }>(
       // useStopApproach moves the stop out to STOP_DISTANCE, while it's
       // still where it was left (0 at first, STOP_EXIT_Z after a
       // departure): that frame must not count as close.
-      const approaching = z > 0 && z < POP_DISTANCE;
+      // Once shown, kept shown for the rest of the approach: on the frame the
+      // stop reaches z = 0, mode is still "arriving" until React re-renders
+      // with "stopped", and that frame must not pop the fittings out and in.
+      const approaching = shownRef.current || (z > 0 && z < POP_DISTANCE);
       const show = atStation || (here && mode === "arriving" && approaching);
       if (show !== shownRef.current) {
         shownRef.current = show;
@@ -152,6 +155,10 @@ const Station = forwardRef<THREE.Group, { projects: StationProject[] }>(
         popApi.start((i) => ({
           scale: show ? 1 : 0,
           delay: (show ? i : last - i) * POP_STAGGER_MS,
+          // Overshoots on the way in only: on the way out it would dip below
+          // 0 and bounce back, flashing the fittings and lamps on again.
+          // Set either way, as react-spring merges config into the last one.
+          config: { ...POP_SPRING, clamp: !show },
         }));
         if (!show) {
           sunkRef.current = true;

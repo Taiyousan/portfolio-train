@@ -277,7 +277,7 @@ const Home = forwardRef<THREE.Group>(function Home(_, ref) {
   const { driverScale } = useSpring({
     driverScale: atHome ? desk.scale : 0,
     delay: atHome ? DRIVER_SWAP_DELAY_MS : 0,
-    config: DRIVER_SPRING,
+    config: { ...DRIVER_SPRING, clamp: !atHome },
   });
   const groupRef = useRef<THREE.Group>(null);
   useImperativeHandle(ref, () => groupRef.current!, []);
@@ -289,7 +289,8 @@ const Home = forwardRef<THREE.Group>(function Home(_, ref) {
     // useStopApproach moves the stop out to STOP_DISTANCE, while it's
     // still where it was left (0 at first, STOP_EXIT_Z after a
     // departure): that frame must not count as close.
-    const approaching = z > 0 && z < POP_DISTANCE;
+    // Once shown, kept shown for the rest of the approach (see Station).
+    const approaching = shownRef.current || (z > 0 && z < POP_DISTANCE);
     const show = atHome || (here && mode === "arriving" && approaching);
     if (show !== shownRef.current) {
       shownRef.current = show;
@@ -297,6 +298,8 @@ const Home = forwardRef<THREE.Group>(function Home(_, ref) {
       popApi.start((i) => ({
         scale: show ? 1 : 0,
         delay: (show ? i : last - i) * POP_STAGGER_MS,
+        // Overshoots on the way in only (see Station).
+        config: { ...POP_SPRING, clamp: !show },
       }));
       if (!show) {
         sunkRef.current = true;

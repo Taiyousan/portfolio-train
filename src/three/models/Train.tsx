@@ -69,7 +69,15 @@ export default function Train() {
   const { driverScale } = useSpring({
     driverScale: stopped ? 0 : DRIVER_SCALE,
     delay: stopped ? 0 : DRIVER_SWAP_DELAY_MS,
-    config: { mass: 1, tension: 260, friction: 12, precision: 0.001 },
+    // Overshoots on the way in only: clamped, it doesn't dip below 0 and
+    // bounce back on the way out.
+    config: {
+      mass: 1,
+      tension: 260,
+      friction: 12,
+      precision: 0.001,
+      clamp: stopped,
+    },
   });
   // In the workshop: leaning on the sill while the locomotive is shown,
   // up and turned to the camera while the driver is.
