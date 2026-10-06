@@ -213,6 +213,24 @@
   }
 }
 
+/* Chimney puff of the loading screen's locomotive (three/ui/LoadingScreen):
+   blown back and up as it swells and clears. */
+@keyframes puff {
+  0% {
+    translate: 0 0;
+    scale: 0.4;
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    translate: -0.75rem -0.9rem;
+    scale: 1.6;
+    opacity: 0;
+  }
+}
+
 body {
   background: var(--background);
   color: var(--foreground);

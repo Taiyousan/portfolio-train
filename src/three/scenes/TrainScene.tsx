@@ -8,7 +8,7 @@ import {
   type RefObject,
 } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
-import { CameraControls, Environment, Html, Sky } from "@react-three/drei";
+import { CameraControls, Environment, Sky } from "@react-three/drei";
 import {
   EffectComposer,
   Bloom,
@@ -109,6 +109,19 @@ function ShaderWarmup({
   homeRef: RefObject<THREE.Group | null>;
 }) {
   useShaderWarmup(stationRef, homeRef);
+  return null;
+}
+
+// Last in the scene's Suspense: once it has drawn a few frames (the first
+// ones still settle in), the loading screen can go.
+const READY_FRAMES = 3;
+function SceneReady() {
+  const { setReady } = useTrainContext();
+  const frames = useRef(0);
+  useFrame(() => {
+    frames.current += 1;
+    if (frames.current === READY_FRAMES) setReady(true);
+  });
   return null;
 }
 
@@ -298,15 +311,8 @@ export default function TrainScene({
         <Noise opacity={0.02} />
       </EffectComposer>
 
-      <Suspense
-        fallback={
-          <Html center>
-            <p className="text-sm whitespace-nowrap text-white/80">
-              Chargement…
-            </p>
-          </Html>
-        }
-      >
+      {/* Loading shows on ui/LoadingScreen, over the canvas. */}
+      <Suspense fallback={null}>
         <Train />
         <ForestFloor position={[0, -0.6, 0]} />
         <Rails position={[0, -0.57, 0]} />
@@ -320,6 +326,7 @@ export default function TrainScene({
         <Home ref={homeRef} />
         {/* Last, so that the stops are in the scene when it runs. */}
         <ShaderWarmup stationRef={stationRef} homeRef={homeRef} />
+        <SceneReady />
       </Suspense>
     </>
   );

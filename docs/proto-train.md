@@ -170,6 +170,7 @@ Le train est fixe et le monde défile (`useScrollingLoop`), ce qui facilite l'ar
    - À faire : faire descendre le conducteur de la cabine plutôt que de le faire disparaître et réapparaître ; cadrer le tableau 3D en portrait (étape 7) ; relier projet ouvert et mode aux URL (étape 4) ; éventuellement, de vraies palettes 3D qui basculent.
 6. **Navigation** : billets de train HTML (fait, voir plus haut).
 7. **Finitions** : téléphone, son, fumée, petits secrets.
+   - Écran de chargement (`src/three/ui/LoadingScreen.tsx`), fait : sur le carton des billets (`.theme-ticket`), le nom qui s'affiche en volets, puis une locomotive qui avance sur une voie en guise de barre de progression, la voie parcourue au rouge du tampon. Rendu côté serveur, il est là avant les scripts. Les téléchargements (drei `useProgress`) remplissent 85 % de la voie, le reste attend que la scène ait dessiné ses premières images (`ready` dans `TrainContext`, mis par `SceneReady` après le préchauffage des shaders) ; en attendant, la locomotive avance doucement pour ne jamais paraître bloquée. Puis fondu sur la scène, et alors seulement les billets du trajet sont distribués (`boarded`) ; l'interface dessous est inaccessible (`inert`) tant qu'il est là.
 8. **Crédits** : afficher sur le site les crédits des modèles 3D sous licence CC-BY, listés au fil de l'eau dans `assets-src/CREDITS.md` (hors git).
 
 ## Modèles 3D

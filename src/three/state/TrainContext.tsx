@@ -59,6 +59,10 @@ type TrainContextValue = {
   season: Season;
   setSeason: (season: Season) => void;
   seasonWeightsRef: RefObject<SeasonWeights>;
+  // The scene has loaded and drawn its first frames (see SceneReady in
+  // scenes/TrainScene): the loading screen can go.
+  ready: boolean;
+  setReady: (ready: boolean) => void;
 };
 
 const TrainContext = createContext<TrainContextValue | null>(null);
@@ -81,6 +85,7 @@ export function TrainProvider({ children }: { children: ReactNode }) {
   const [boardFocused, setBoardFocused] = useState(false);
   const [workshopView, setWorkshopView] = useState<WorkshopView>("train");
   const [season, setSeason] = useState<Season>("summer");
+  const [ready, setReady] = useState(false);
   const seasonWeightsRef = useRef(
     Object.fromEntries(
       SEASONS.map((other) => [other, other === "summer" ? 1 : 0]),
@@ -107,6 +112,8 @@ export function TrainProvider({ children }: { children: ReactNode }) {
         season,
         setSeason,
         seasonWeightsRef,
+        ready,
+        setReady,
       }}
     >
       {children}

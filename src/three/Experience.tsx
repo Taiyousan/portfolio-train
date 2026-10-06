@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import { Leva } from "leva";
 import { TrainProvider } from "./state/TrainContext";
@@ -8,6 +9,7 @@ import useDebugMode from "./hooks/useDebugMode";
 import TrainScene from "./scenes/TrainScene";
 import { CAMERA_POSITION } from "./config/scene";
 import Overlay from "./ui/Overlay";
+import LoadingScreen from "./ui/LoadingScreen";
 import type { StationProject } from "./ui/types";
 
 export type { StationProject };
@@ -20,6 +22,8 @@ export default function Experience({
   projects: StationProject[];
 }) {
   const debug = useDebugMode();
+  // The loading screen has started fading onto the scene.
+  const [boarded, setBoarded] = useState(false);
 
   return (
     <TrainProvider>
@@ -39,7 +43,8 @@ export default function Experience({
           <color args={["#3a2a1f"]} attach="background" />
           <TrainScene projects={projects} />
         </Canvas>
-        <Overlay projects={projects} />
+        <Overlay projects={projects} boarded={boarded} />
+        <LoadingScreen onBoarded={() => setBoarded(true)} />
       </LiveryProvider>
     </TrainProvider>
   );

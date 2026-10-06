@@ -52,8 +52,15 @@ const STATUS: Record<Stop, Record<TrainMode, string>> = {
 // has its own buttons instead. The current mode and stop also pick the
 // panel: the about card at home, the departures board's HTML twin at the
 // station, a project's dialog once a row is picked (on either board), and
-// the workshop in "custom" mode.
-export default function Overlay({ projects }: { projects: StationProject[] }) {
+// the workshop in "custom" mode. Out of reach under the loading screen,
+// and the ride's tickets are only dealt once it starts going (`boarded`).
+export default function Overlay({
+  projects,
+  boarded,
+}: {
+  projects: StationProject[];
+  boarded: boolean;
+}) {
   const {
     mode,
     setMode,
@@ -75,7 +82,7 @@ export default function Overlay({ projects }: { projects: StationProject[] }) {
     setKeyboardArrival(false);
     setMode("departing");
   };
-  const riding = mode === "ride";
+  const riding = mode === "ride" && boarded;
   const atStation = mode === "stopped" && stop === "station";
   const atHome = mode === "stopped" && stop === "home";
   const inWorkshop = mode === "custom";
@@ -100,7 +107,10 @@ export default function Overlay({ projects }: { projects: StationProject[] }) {
   }, [mode, setMode]);
 
   return (
-    <div className="pointer-events-none absolute inset-0 text-sm text-white">
+    <div
+      inert={!boarded}
+      className="pointer-events-none absolute inset-0 text-sm text-white"
+    >
       <header className="flex items-start justify-between gap-3 p-3 sm:p-5">
         <Link
           href="/"
