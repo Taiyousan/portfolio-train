@@ -1,14 +1,16 @@
-import { createContext, use, useMemo, type ReactNode } from "react";
+import { createContext, use, useMemo, useRef, type ReactNode } from "react";
+import { useFrame } from "@react-three/fiber";
 import { RoundedBox } from "@react-three/drei";
 import { animated, type SpringValue } from "@react-spring/three";
 import * as THREE from "three";
-import { snowy } from "../shaders/snow";
+import { isSnowy, pinSnow, snowy } from "../shaders/snow";
 
 // Rounded building blocks and palette shared by the station's decor
 // (StationDecor), its props (StationProps) and its departures board, and by
 // the home (HomeDecor), built in the same units: the house shape, windows,
 // window boxes, and the group the fittings pop in with. Blocks and
-// cylinders take the snow (see shaders/snow), except inside a NoSnow.
+// cylinders take the snow (see shaders/snow), except inside a NoSnow; it's
+// pinned to them inside a PinnedSnow.
 
 export type Vec3 = [number, number, number];
 
@@ -47,6 +49,46 @@ const SnowContext = createContext(true);
 // would carry it round, and the characters.
 export function NoSnow({ children }: { children: ReactNode }) {
   return <SnowContext value={false}>{children}</SnowContext>;
+}
+
+// Pins the snow on the parts inside to them (see pinSnow), for parts that
+// move: what's white at rest stays white as they tip over or swing open.
+// Read on the first frame, when they're all at rest (as they lie inside
+// it: it must be upright then).
+export function PinnedSnow({
+  position,
+  children,
+}: {
+  position?: Vec3;
+  children: ReactNode;
+}) {
+  const ref = useRef<THREE.Group>(null);
+  const pinnedRef = useRef(false);
+  useFrame(() => {
+    const group = ref.current;
+    if (!group || pinnedRef.current) return;
+    pinnedRef.current = true;
+    group.traverse((object) => {
+      if (!(object instanceof THREE.Mesh)) return;
+      // From the part to the group, through the groups in between.
+      const rest = new THREE.Matrix4();
+      let node: THREE.Object3D | null = object;
+      while (node && node !== group) {
+        node.updateMatrix();
+        rest.premultiply(node.matrix);
+        node = node.parent;
+      }
+      const materials: THREE.Material[] = [object.material].flat();
+      materials.forEach((material) => {
+        if (isSnowy(material)) pinSnow(material, rest);
+      });
+    });
+  });
+  return (
+    <group ref={ref} position={position}>
+      {children}
+    </group>
+  );
 }
 
 export function Block({

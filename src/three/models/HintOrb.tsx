@@ -1,14 +1,16 @@
 import { useRef, useState, type RefObject } from "react";
 import { useFrame } from "@react-three/fiber";
-import * as THREE from "three";
+import type * as THREE from "three";
 import { useControls } from "leva";
-import { useTrainContext } from "../state/TrainContext";
-import { useStationHints, type HintedProp } from "../state/StationHints";
+import useHintReveal from "../hooks/useHintReveal";
+import type { HintedProp } from "../state/StationHints";
 
 // A small glowing yellow ball floating over a clickable prop not clicked yet
-// (see useStationClick), while the train waits at its stop.
-// It grows in and bobs gently, brightens a little while its prop is
-// hovered, and shrinks away once the prop is clicked. Its colour is pushed
+// (see useStationClick), while the train waits at its stop, once the
+// camera has settled there, in turn with the other hints, popping in like
+// the stop's fittings (see useHintReveal). It bobs gently, brightens a
+// little while its prop is hovered, and shrinks away once the prop is
+// clicked. Its colour is pushed
 // past white so the scene's bloom makes it glow. Still with reduced
 // motion, appearing and going at once. Sizes in the prop's units, speeds
 // per second. Tunable in the Leva "Indices" group, shared by all the balls.
@@ -41,34 +43,30 @@ export default function HintOrb({
     bob: { value: ORB.bob, min: 0, max: 0.3, step: 0.01 },
     bobSpeed: { value: ORB.bobSpeed, min: 0, max: 5, step: 0.1 },
   });
-  const { mode, stop, boardFocused } = useTrainContext();
-  const hints = useStationHints();
-  const shown =
-    hints.hinted && mode === "stopped" && stop === hints.stop && !boardFocused;
   const meshRef = useRef<THREE.Mesh>(null);
+  const size = useHintReveal(meshRef, () => hint.current.discovered);
   const materialRef = useRef<THREE.MeshBasicMaterial>(null);
   // Each ball bobs out of step with the others.
   const [phase] = useState(() => Math.random() * TAU);
   const [reducedMotion] = useState(
     () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
   );
-  // Eased presence and hover (0 to 1).
-  const stateRef = useRef({ size: 0, hover: 0 });
+  // Eased hover (0 to 1).
+  const hoverRef = useRef(0);
 
   useFrame(({ clock }, delta) => {
     const mesh = meshRef.current;
     const material = materialRef.current;
     if (!mesh || !material) return;
-    const prop = hint.current;
-    const state = stateRef.current;
     const ease = reducedMotion ? 1 : Math.min(delta * orb.ease, 1);
-    state.size += ((shown && !prop.discovered ? 1 : 0) - state.size) * ease;
-    state.hover += ((prop.hovered ? 1 : 0) - state.hover) * ease;
+    const hover = (hoverRef.current +=
+      ((hint.current.hovered ? 1 : 0) - hoverRef.current) * ease);
+    const shown = size.get();
 
     // Gone, it's also hidden, so it can't catch the pointer.
-    mesh.visible = state.size > 0.01;
+    mesh.visible = shown > 0.01;
     mesh.scale.setScalar(
-      orb.radius * state.size * (1 + (orb.hoverGrow - 1) * state.hover),
+      orb.radius * Math.max(shown, 0) * (1 + (orb.hoverGrow - 1) * hover),
     );
     mesh.position.y =
       position[1] +
@@ -77,7 +75,7 @@ export default function HintOrb({
         : orb.bob * Math.sin(clock.elapsedTime * orb.bobSpeed + phase));
     material.color
       .set(orb.color)
-      .multiplyScalar(orb.glow * (1 + (orb.hoverGlow - 1) * state.hover));
+      .multiplyScalar(orb.glow * (1 + (orb.hoverGlow - 1) * hover));
   });
 
   return (

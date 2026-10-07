@@ -3,7 +3,9 @@ import { RoundedBox, Text } from "@react-three/drei";
 import { useFrame, type ThreeElements } from "@react-three/fiber";
 import * as THREE from "three";
 import { useTrainContext } from "../state/TrainContext";
+import { claimPointer, releasePointer } from "../state/pointerCursor";
 import useFlapText from "../hooks/useFlapText";
+import useHintReveal from "../hooks/useHintReveal";
 import { departureTime, ROW_FLAP_DELAY_MS } from "../config/departures";
 import type { StationProject } from "../ui/types";
 import { snowy } from "../shaders/snow";
@@ -26,6 +28,10 @@ const COLORS = {
   glow: "#ffb56b",
 };
 
+// Its claims on the pointer cursor (see pointerCursor), its rows' aside.
+const BOARD = "board";
+const CLOSE_BUTTON = "board-close";
+
 // Frame glow inviting a click while the board isn't open: a beat between
 // these intensities, quick to flare and slow to fade (steady halfway with
 // reduced motion), brighter on hover. Bright enough for the scene's bloom:
@@ -36,13 +42,13 @@ const GLOW_HOVER = 3;
 const GLOW_SPEED = 3.2;
 // A glowing arrow floats over the roof meanwhile, pointing down at the
 // board, bobbing in time with the glow and swaying a little (still with
-// reduced motion). In board units, radians and per second.
+// reduced motion); one of the hints at the click, it pops in in turn with
+// the others (see useHintReveal). In board units, radians and per second.
 const ARROW = {
   lift: 0.42,
   bob: 0.07,
   sway: 0.45,
   swaySpeed: 1.1,
-  ease: 6,
   glowMin: 0.6,
   glowMax: 2.2,
 };
@@ -205,9 +211,16 @@ function Row({ project, index, y, active, onSelect }: RowProps) {
     FLAP_START_MS + index * ROW_FLAP_DELAY_MS,
     active,
   );
-  // Hover only shows while the rows are pickable (board open); the stray
-  // pointer cursor is reset on mode change by Train.
+  // Hover only shows while the rows are pickable (board open), with a
+  // pointer cursor as on the page's buttons; till then the board's own
+  // takes the pointer over them.
   const lit = hovered && active;
+  useEffect(() => {
+    if (!lit) return;
+    const owner = `row-${index}`;
+    claimPointer(owner, "ui");
+    return () => releasePointer(owner);
+  }, [lit, index]);
 
   // Technos, lit only while the board is open.
   const lightRefs = useRef<(FadeText | null)[]>([]);
@@ -237,11 +250,6 @@ function Row({ project, index, y, active, onSelect }: RowProps) {
     }
   });
 
-  const setHover = (value: boolean) => {
-    setHovered(value);
-    document.body.style.cursor = value && active ? "pointer" : "";
-  };
-
   return (
     <group position={[0, y, LAYER.flap]}>
       <mesh
@@ -252,8 +260,8 @@ function Row({ project, index, y, active, onSelect }: RowProps) {
           onSelect();
         }}
         // No stopPropagation: the board's own hover (glow) needs it too.
-        onPointerOver={() => setHover(true)}
-        onPointerOut={() => setHover(false)}
+        onPointerOver={() => setHovered(true)}
+        onPointerOut={() => setHovered(false)}
       >
         <planeGeometry args={[FLAP_WIDTH, ROW_HEIGHT]} />
         <meshStandardMaterial
@@ -328,6 +336,11 @@ function CloseButton({
   onClose: () => void;
 }) {
   const [hovered, setHovered] = useState(false);
+  useEffect(() => {
+    if (!hovered) return;
+    claimPointer(CLOSE_BUTTON, "ui");
+    return () => releasePointer(CLOSE_BUTTON);
+  }, [hovered]);
   return (
     <group position={position}>
       <mesh
@@ -338,12 +351,8 @@ function CloseButton({
         onPointerOver={(e) => {
           e.stopPropagation();
           setHovered(true);
-          document.body.style.cursor = "pointer";
         }}
-        onPointerOut={() => {
-          setHovered(false);
-          document.body.style.cursor = "";
-        }}
+        onPointerOut={() => setHovered(false)}
       >
         <planeGeometry args={[CLOSE_WIDTH, CLOSE_HEIGHT]} />
         <meshStandardMaterial
@@ -405,9 +414,8 @@ export default function StationBoard({ projects, legHeight, ...props }: Props) {
   const arrow = useArrowGeometry();
   const arrowRef = useRef<THREE.Mesh>(null);
   const arrowMaterialRef = useRef<THREE.MeshStandardMaterial>(null);
-  // Eased presence of the arrow (0 to 1).
-  const arrowShownRef = useRef(0);
-  useFrame(({ clock }, delta) => {
+  const arrowSize = useHintReveal(arrowRef);
+  useFrame(({ clock }) => {
     const time = clock.elapsedTime;
     // Squared: a quick flare, then a longer fade.
     const pulse = reducedMotion
@@ -431,13 +439,10 @@ export default function StationBoard({ projects, legHeight, ...props }: Props) {
     const arrowMesh = arrowRef.current;
     const arrowMaterial = arrowMaterialRef.current;
     if (arrowMesh && arrowMaterial) {
-      const ease = reducedMotion ? 1 : Math.min(delta * ARROW.ease, 1);
-      arrowShownRef.current +=
-        ((inviting ? 1 : 0) - arrowShownRef.current) * ease;
-      const shown = arrowShownRef.current;
+      const shown = arrowSize.get();
       // Gone, it's also hidden, so it can't catch the pointer.
       arrowMesh.visible = shown > 0.01;
-      arrowMesh.scale.setScalar(shown);
+      arrowMesh.scale.setScalar(Math.max(shown, 0));
       // Lowest as the glow flares, as if tapping on the roof.
       arrowMesh.position.y =
         ridgeY + ARROW.lift + (reducedMotion ? 0 : ARROW.bob * (1 - pulse));
@@ -460,6 +465,15 @@ export default function StationBoard({ projects, legHeight, ...props }: Props) {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [open, selectedSlug, setBoardFocused]);
 
+  // A pointer cursor over all of it (rows and their text too) while it
+  // invites a click.
+  const pointing = inviting && hovered;
+  useEffect(() => {
+    if (!pointing) return;
+    claimPointer(BOARD);
+    return () => releasePointer(BOARD);
+  }, [pointing]);
+
   return (
     <group
       {...props}
@@ -467,16 +481,9 @@ export default function StationBoard({ projects, legHeight, ...props }: Props) {
         if (!inviting) return;
         e.stopPropagation();
         setBoardFocused(true);
-        document.body.style.cursor = "";
       }}
-      onPointerOver={() => {
-        setHovered(true);
-        if (inviting) document.body.style.cursor = "pointer";
-      }}
-      onPointerOut={() => {
-        setHovered(false);
-        if (inviting) document.body.style.cursor = "";
-      }}
+      onPointerOver={() => setHovered(true)}
+      onPointerOut={() => setHovered(false)}
     >
       {/* Wooden back, the board face just in front of it, and the rounded
           rim around the face, which glows to invite a click. */}

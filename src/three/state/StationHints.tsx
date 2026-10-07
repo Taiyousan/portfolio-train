@@ -4,8 +4,11 @@ import {
   useRef,
   useState,
   type ReactNode,
+  type RefObject,
 } from "react";
 import { useFrame } from "@react-three/fiber";
+import * as THREE from "three";
+import { POP_STAGGER_MS, STOP_SETTLE_MS } from "../config/scene";
 import { useTrainContext, type Stop } from "./TrainContext";
 
 // Hints that a stop's props can be clicked (the station's, or the home's):
@@ -14,6 +17,16 @@ import { useTrainContext, type Stop } from "./TrainContext";
 // time. None with reduced motion. Timings in seconds: the first wiggle once the train has
 // stopped, then a random gap between two, also held off after a click.
 const HINTS = { first: 1.5, gapMin: 2, gapMax: 3.5 };
+// The hints at the click (the balls over the props, see HintOrb, and the
+// arrow over the departures board) come on once the camera has settled on
+// the stop, so that they're seen coming: no sooner than `settle` seconds
+// after the props become clickable (the camera may still rest on its
+// arrival shot before moving on, see config/scene), then once it has come
+// to rest, popping in one after the other like the stop's fittings, left
+// to right on screen (see useHintReveal).
+const SETTLE = STOP_SETTLE_MS / 1000 + 0.2;
+// Scratch vector for the hints' places on screen.
+const onScreen = new THREE.Vector3();
 
 // A clickable prop, as registered by useStationClick. `nudge` starts its
 // wiggle at a time on the frame clock.
@@ -23,6 +36,15 @@ export type HintedProp = {
   nudge: (at: number) => void;
 };
 
+// A hint at the click, as registered by useHintReveal: its mesh, whether
+// its prop has been clicked already (it's left out then), and when it
+// comes on (on the frame clock; null while the hints are off).
+export type HintedOrb = {
+  mesh: RefObject<THREE.Object3D | null>;
+  discovered: () => boolean;
+  showAt: number | null;
+};
+
 type StationHintsValue = {
   // The stop these props stand at: they're clickable only there.
   stop: Stop;
@@ -30,6 +52,7 @@ type StationHintsValue = {
   // home, where they're left to be found.
   hinted: boolean;
   register: (prop: HintedProp) => () => void;
+  registerOrb: (orb: HintedOrb) => () => void;
   // A prop was clicked: it's discovered, and the next wiggle waits.
   discover: (prop: HintedProp) => void;
 };
@@ -53,7 +76,7 @@ export function StationHints({
   hinted?: boolean;
   children: ReactNode;
 }) {
-  const { mode, stop, boardFocused } = useTrainContext();
+  const { mode, stop, boardFocused, cameraControlsRef } = useTrainContext();
   // Wiggling while the props are clickable, if they're hinted at all.
   const hinting =
     hinted && mode === "stopped" && stop === here && !boardFocused;
@@ -63,15 +86,48 @@ export function StationHints({
   // clickable, and again once they aren't.
   const nextRef = useRef<number | null>(null);
   const nowRef = useRef(0);
+  const orbsRef = useRef(new Set<HintedOrb>());
+  // Frame-clock time the props became clickable, and whether their hints
+  // have been lined up to come on since.
+  const sinceRef = useRef<number | null>(null);
+  const shownRef = useRef(false);
   const [reducedMotion] = useState(
     () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
   );
   const gap = () =>
     HINTS.gapMin + Math.random() * (HINTS.gapMax - HINTS.gapMin);
 
-  useFrame(({ clock }) => {
+  useFrame(({ clock, camera }) => {
     const now = clock.elapsedTime;
     nowRef.current = now;
+
+    // The hints: off with the props unclickable, lined up to come on once
+    // the camera has settled.
+    if (!hinting) {
+      sinceRef.current = null;
+      shownRef.current = false;
+      for (const orb of orbsRef.current) orb.showAt = null;
+    } else {
+      sinceRef.current ??= now;
+      if (
+        !shownRef.current &&
+        now - sinceRef.current >= SETTLE &&
+        !cameraControlsRef.current?.active
+      ) {
+        shownRef.current = true;
+        [...orbsRef.current]
+          .filter((orb) => orb.mesh.current && !orb.discovered())
+          .map((orb) => ({
+            orb,
+            x: orb.mesh.current!.getWorldPosition(onScreen).project(camera).x,
+          }))
+          .sort((a, b) => a.x - b.x)
+          .forEach(({ orb }, i) => {
+            orb.showAt = now + (i * POP_STAGGER_MS) / 1000;
+          });
+      }
+    }
+
     if (!hinting || reducedMotion) {
       nextRef.current = null;
       return;
@@ -100,6 +156,12 @@ export function StationHints({
       propsRef.current.add(prop);
       return () => {
         propsRef.current.delete(prop);
+      };
+    },
+    registerOrb: (orb) => {
+      orbsRef.current.add(orb);
+      return () => {
+        orbsRef.current.delete(orb);
       };
     },
     discover: (prop) => {

@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
+import { forwardRef, useImperativeHandle, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import {
   animated,
@@ -9,8 +9,12 @@ import {
 import * as THREE from "three";
 import { useControls } from "leva";
 import { useTrainContext } from "../state/TrainContext";
+import useClickable from "../hooks/useClickable";
+import { StationHints } from "../state/StationHints";
 import { useLivery } from "../state/LiveryContext";
 import {
+  POP_SPRING,
+  POP_STAGGER_MS,
   STATION_BOARD,
   STATION_DRIVER,
   STATION_PLACEMENT,
@@ -35,11 +39,10 @@ const toRad = THREE.MathUtils.degToRad;
 // Matches Train's delay, so the driver leaves the cab before appearing here.
 const DRIVER_SWAP_DELAY_MS = 250;
 const DRIVER_SPRING = { mass: 1, tension: 260, friction: 12, precision: 0.001 };
-const POP_SPRING = { mass: 1, tension: 220, friction: 9, precision: 0.001 };
 // The fittings pop one after the other, in this order (the board last, as
-// the thing to click), this far apart; in reverse order on departure.
+// the thing to click), POP_STAGGER_MS apart (see config/scene); in
+// reverse order on departure.
 const POP_ORDER = [...STATION_FITTINGS, "board"] as const;
-const POP_STAGGER_MS = 70;
 // On departure, the station itself sinks away this long after its last
 // fitting.
 const BASE_DEPOP_DELAY_MS = 250 + (POP_ORDER.length - 1) * POP_STAGGER_MS;
@@ -123,15 +126,16 @@ const Station = forwardRef<THREE.Group, { projects: StationProject[] }>(
       board.z +
       STATION_BOARD_SIDE.x * board.scale +
       Math.cos(proppedYaw) * proppedOut;
-    // Clicking the standing driver makes it wave.
+    // Clicked, the standing driver waves; propped, hands in the pockets,
+    // it looks at the camera.
     const standingDriverRef = useRef<DriverHandle>(null);
-    const pointingDriverRef = useRef(false);
-    useEffect(() => {
-      if (!standing && pointingDriverRef.current) {
-        pointingDriverRef.current = false;
-        document.body.style.cursor = "";
-      }
-    }, [standing]);
+    const standingClick = useClickable(standing, () =>
+      standingDriverRef.current?.wave(),
+    );
+    const proppedDriverRef = useRef<DriverHandle>(null);
+    const proppedClick = useClickable(propped, () =>
+      proppedDriverRef.current?.glance(),
+    );
     const groupRef = useRef<THREE.Group>(null);
     useImperativeHandle(ref, () => groupRef.current!, []);
     const shownRef = useRef(false);
@@ -176,23 +180,27 @@ const Station = forwardRef<THREE.Group, { projects: StationProject[] }>(
     return (
       <group ref={groupRef} visible={false}>
         <animated.group position={[3.2 * STOP_SIDE, -0.57, 0]} scale={base}>
-          {/* Departures board on the platform, facing the track (-x),
-              popping in with the fittings from its feet. */}
-          <animated.group position={[board.x, 0, board.z]} scale={pops.board}>
-            {/* Turned about its feet: yaw from facing the track, then tilt
-                (back/forward) and roll in the board's own frame. */}
-            <group rotation-y={-Math.PI / 2 + toRad(board.yaw)}>
-              <group rotation={[toRad(board.tilt), 0, toRad(board.roll)]}>
-                <StationBoard
-                  projects={projects}
-                  legHeight={board.lift / board.scale}
-                  position={[0, board.lift + boardHeight / 2, 0]}
-                  scale={board.scale}
-                />
+          {/* The board's arrow and the props are hinted at together (see
+              StationHints). */}
+          <StationHints stop="station">
+            {/* Departures board on the platform, facing the track (-x),
+                popping in with the fittings from its feet. */}
+            <animated.group position={[board.x, 0, board.z]} scale={pops.board}>
+              {/* Turned about its feet: yaw from facing the track, then tilt
+                  (back/forward) and roll in the board's own frame. */}
+              <group rotation-y={-Math.PI / 2 + toRad(board.yaw)}>
+                <group rotation={[toRad(board.tilt), 0, toRad(board.roll)]}>
+                  <StationBoard
+                    projects={projects}
+                    legHeight={board.lift / board.scale}
+                    position={[0, board.lift + boardHeight / 2, 0]}
+                    scale={board.scale}
+                  />
+                </group>
               </group>
-            </group>
-          </animated.group>
-          <StationDecor placement={placement} pops={pops} />
+            </animated.group>
+            <StationDecor placement={placement} pops={pops} />
+          </StationHints>
           {/* Driver standing left of the board, facing the track (-x),
               waving when clicked. */}
           <animated.group
@@ -207,32 +215,22 @@ const Station = forwardRef<THREE.Group, { projects: StationProject[] }>(
             <Driver
               ref={standingDriverRef}
               outfit={outfit}
-              onClick={(e) => {
-                if (!standing) return;
-                e.stopPropagation();
-                standingDriverRef.current?.wave();
-              }}
-              onPointerOver={(e) => {
-                if (!standing) return;
-                e.stopPropagation();
-                pointingDriverRef.current = true;
-                document.body.style.cursor = "pointer";
-              }}
-              onPointerOut={() => {
-                if (!pointingDriverRef.current) return;
-                pointingDriverRef.current = false;
-                document.body.style.cursor = "";
-              }}
+              {...standingClick}
             />
           </animated.group>
           {/* Driver propped against the board's right-hand side, passing
-              the time. */}
+              the time, looking up when clicked. */}
           <animated.group
             position={[proppedX, platformHeight, proppedZ]}
             rotation={[0, proppedYaw, 0]}
             scale={proppedScale}
           >
-            <Driver pose="propped" outfit={outfit} />
+            <Driver
+              ref={proppedDriverRef}
+              pose="propped"
+              outfit={outfit}
+              {...proppedClick}
+            />
           </animated.group>
         </animated.group>
       </group>

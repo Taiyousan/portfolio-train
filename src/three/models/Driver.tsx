@@ -73,6 +73,8 @@ const NECK_Y = 0.29;
 // Head centre above the neck joint.
 const HEAD_Y = 0.12;
 const HEAD_RADIUS = 0.14;
+// Standing, soles to the cap's top.
+export const DRIVER_HEIGHT = 0.94;
 
 // Seat depth the thighs take up: place a sitting driver this far back from
 // the ledge's edge (in driver units) so the knees just clear it and the

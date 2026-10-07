@@ -3,6 +3,7 @@ import { useFrame, type ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
 import { useTrainContext } from "../state/TrainContext";
 import { useStationHints, type HintedProp } from "../state/StationHints";
+import { claimPointer, releasePointer } from "../state/pointerCursor";
 
 // A clickable prop's wiggle: a quick stretch up, then a rocking that dies
 // out, seen sideways from the track (about x). Played in full now and then
@@ -68,14 +69,15 @@ export function useStationClick(
     if (wiggles) return hints.register(hintedRef.current);
   }, [hints, wiggles]);
 
-  // Whether this prop set the pointer cursor, so it's put back if the prop
-  // stops being clickable while hovered (departure, board opened).
+  // Whether this prop claims the pointer cursor (see pointerCursor), let go
+  // if the prop stops being clickable while hovered (departure, board
+  // opened).
   const pointingRef = useRef(false);
   useEffect(() => {
     if (!clickable && pointingRef.current) {
       pointingRef.current = false;
       hintedRef.current.hovered = false;
-      document.body.style.cursor = "";
+      releasePointer(hintedRef.current);
     }
   }, [clickable]);
 
@@ -119,7 +121,7 @@ export function useStationClick(
   const enter = () => {
     pointingRef.current = true;
     hintedRef.current.hovered = true;
-    document.body.style.cursor = "pointer";
+    claimPointer(hintedRef.current);
     if (
       wiggles &&
       !reducedMotion &&
@@ -157,7 +159,7 @@ export function useStationClick(
       if (!pointingRef.current || inFront(e)) return;
       pointingRef.current = false;
       hintedRef.current.hovered = false;
-      document.body.style.cursor = "";
+      releasePointer(hintedRef.current);
     },
   };
   return { bind, pose: poseRef, hint: hintedRef, atStop };

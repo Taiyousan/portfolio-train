@@ -23,6 +23,7 @@ import { useTrainContext, type WorkshopView } from "../state/TrainContext";
 import useTrainSpeedEasing from "../hooks/useTrainSpeedEasing";
 import useStopApproach from "../hooks/useStopApproach";
 import useShaderWarmup from "../hooks/useShaderWarmup";
+import useDebugMode from "../hooks/useDebugMode";
 import {
   mixColor,
   mixValue,
@@ -159,6 +160,7 @@ export default function TrainScene({
     workshopView,
     seasonWeightsRef,
   } = useTrainContext();
+  const debug = useDebugMode();
 
   const {
     trainSpeed: targetTrainSpeed,
@@ -345,7 +347,9 @@ export default function TrainScene({
       <Environment preset="sunset" background={false} />
       <Sky ref={skyRef} sunPosition={SUN_POSITION} mieDirectionalG={0.9} />
 
-      <CameraControls ref={cameraControlsRef} />
+      {/* Moves the camera between shots; only turned by hand in debug mode,
+          to frame new ones (see the camera monitor above). */}
+      <CameraControls ref={cameraControlsRef} enabled={debug} />
 
       <EffectComposer>
         <Bloom

@@ -12,7 +12,13 @@ import { useTrainContext } from "../state/TrainContext";
 import { useLivery } from "../state/LiveryContext";
 import { StationHints } from "../state/StationHints";
 import { useStationClick } from "../hooks/useStationProp";
-import { HOME_DESK, HOME_SCALE, STOP_SIDE } from "../config/scene";
+import {
+  HOME_DESK,
+  HOME_SCALE,
+  POP_SPRING,
+  POP_STAGGER_MS,
+  STOP_SIDE,
+} from "../config/scene";
 import { OUTFITS } from "../config/livery";
 import Driver, {
   DRIVER_SEAT_HEIGHT,
@@ -37,11 +43,10 @@ const toRad = THREE.MathUtils.degToRad;
 // Matches Train's delay, so the driver leaves the cab before appearing here.
 const DRIVER_SWAP_DELAY_MS = 250;
 const DRIVER_SPRING = { mass: 1, tension: 260, friction: 12, precision: 0.001 };
-const POP_SPRING = { mass: 1, tension: 220, friction: 9, precision: 0.001 };
 // The fittings pop one after the other, in this order (the desk last, for
-// the driver to sit at), this far apart; in reverse order on departure.
+// the driver to sit at), POP_STAGGER_MS apart (see config/scene); in
+// reverse order on departure.
 const POP_ORDER = [...HOME_FITTINGS, "desk"] as const;
-const POP_STAGGER_MS = 70;
 // On departure, the halt itself sinks away this long after its last
 // fitting.
 const BASE_DEPOP_DELAY_MS = 250 + (POP_ORDER.length - 1) * POP_STAGGER_MS;

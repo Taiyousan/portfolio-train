@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { CAMERA_POSITION, STOP_SIDE } from "../config/scene";
+import { useTrainContext } from "../state/TrainContext";
 
 const COLORS = {
   body: "#3d4f6e",
@@ -25,8 +26,12 @@ const DISTANCE: [number, number] = [22, 30];
 const ANGLE: [number, number] = [7, 9];
 const ABOVE_TREES = 5;
 const CROSS_Z = 26;
-// World units per second, against the camera.
-const SPEED: [number, number] = [5, 6.5];
+// World units per second, over the ground: on screen, the forest scrolls
+// past at the train's speed, so it outruns the train slowly flying with it,
+// and fast flying the other way. Never slower than MIN_PASS on screen,
+// though, nor ever left behind by a fast train.
+const SPEED: [number, number] = [6, 8];
+const MIN_PASS = 2.5;
 const FLAP_RATE = 11;
 
 const rand = ([min, max]: [number, number]) => min + Math.random() * (max - min);
@@ -50,6 +55,7 @@ type Flight = {
 // flapping, gliding a moment, flapping again. Out of the fog, which would
 // wash it out that far. Not shown with reduced motion.
 export default function Bird() {
+  const { trainSpeedRef } = useTrainContext();
   const [reducedMotion] = useState(
     () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
   );
@@ -91,7 +97,12 @@ export default function Bird() {
       flight.flap = rand([1, 2.5]);
     }
 
-    flight.z += flight.direction * flight.speed * delta;
+    // The train runs toward +z.
+    const pass = Math.max(
+      flight.speed - flight.direction * trainSpeedRef.current,
+      MIN_PASS,
+    );
+    flight.z += flight.direction * pass * delta;
     if (Math.abs(flight.z) > CROSS_Z) {
       flight.active = false;
       flight.wait = rand(WAIT);

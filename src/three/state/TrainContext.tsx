@@ -25,6 +25,11 @@ export type Stop = "station" | "home";
 // What the workshop is showing (its tab), and the camera closing in on.
 export type WorkshopView = "train" | "driver";
 
+// The locomotive's hop when clicked (see Train): lifted off the rails by
+// `lift` (world units), stretched up by `stretch` about them, and bulging
+// out by `bulge` across; 0, 1 and 1 at rest.
+export type TrainHop = { lift: number; stretch: number; bulge: number };
+
 // How far the scene has blended into each season, summing to 1.
 export type SeasonWeights = Record<Season, number>;
 
@@ -37,6 +42,9 @@ type TrainContextValue = {
   trainSpeedRef: RefObject<number>;
   targetTrainSpeed: number;
   setTargetTrainSpeed: (speed: number) => void;
+  // Set every frame by Train, for the smoke to leave the chimney where it
+  // is (see Smoke). A ref, like trainSpeedRef.
+  trainHopRef: RefObject<TrainHop>;
   mode: TrainMode;
   setMode: (mode: TrainMode) => void;
   // The stop the train is heading to, waiting at or leaving. Set before
@@ -79,6 +87,7 @@ export function TrainProvider({ children }: { children: ReactNode }) {
   const cameraControlsRef = useRef<CameraControls | null>(null);
   const trainSpeedRef = useRef(3);
   const [targetTrainSpeed, setTargetTrainSpeed] = useState(3);
+  const trainHopRef = useRef<TrainHop>({ lift: 0, stretch: 1, bulge: 1 });
   const [mode, setMode] = useState<TrainMode>("ride");
   const [stop, setStop] = useState<Stop>("station");
   const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
@@ -99,6 +108,7 @@ export function TrainProvider({ children }: { children: ReactNode }) {
         trainSpeedRef,
         targetTrainSpeed,
         setTargetTrainSpeed,
+        trainHopRef,
         mode,
         setMode,
         stop,

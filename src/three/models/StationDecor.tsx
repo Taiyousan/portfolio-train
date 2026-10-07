@@ -3,7 +3,6 @@ import { Text } from "@react-three/drei";
 import type { SpringValue } from "@react-spring/three";
 import { useStationClick } from "../hooks/useStationProp";
 import { snowy } from "../shaders/snow";
-import { StationHints } from "../state/StationHints";
 import HintOrb from "./HintOrb";
 import {
   Block,
@@ -371,34 +370,32 @@ export default function StationDecor({
 }) {
   return (
     <group position={[placement.edgeX, 0, placement.z]} scale={placement.scale}>
-      <StationHints stop="station">
-        <Platform />
-        <Pop
-          feet={[BUILDING.x + BUILDING.depth / 2, PLATFORM_TOP, 0]}
-          pop={pops.building}
-        >
-          <Building />
+      <Platform />
+      <Pop
+        feet={[BUILDING.x + BUILDING.depth / 2, PLATFORM_TOP, 0]}
+        pop={pops.building}
+      >
+        <Building />
+      </Pop>
+      {PLANTERS.map(({ at, size }) => (
+        <Pop key={at.join()} feet={at} pop={pops.planters}>
+          <Planter position={at} size={size} />
         </Pop>
-        {PLANTERS.map(({ at, size }) => (
-          <Pop key={at.join()} feet={at} pop={pops.planters}>
-            <Planter position={at} size={size} />
-          </Pop>
-        ))}
-        {LAMPS.map((at) => (
-          <Pop key={at.join()} feet={at} pop={pops.lamps}>
-            <Lamp position={at} pop={pops.lamps} />
-          </Pop>
-        ))}
-        <Pop feet={BENCH} pop={pops.bench}>
-          <Bench position={BENCH} />
+      ))}
+      {LAMPS.map((at) => (
+        <Pop key={at.join()} feet={at} pop={pops.lamps}>
+          <Lamp position={at} pop={pops.lamps} />
         </Pop>
-        <Pop feet={LUGGAGE} pop={pops.luggage}>
-          <Luggage position={LUGGAGE} />
-        </Pop>
-        <Pop feet={TRASH_CAN} pop={pops.trashCan}>
-          <TrashCan position={TRASH_CAN} />
-        </Pop>
-      </StationHints>
+      ))}
+      <Pop feet={BENCH} pop={pops.bench}>
+        <Bench position={BENCH} />
+      </Pop>
+      <Pop feet={LUGGAGE} pop={pops.luggage}>
+        <Luggage position={LUGGAGE} />
+      </Pop>
+      <Pop feet={TRASH_CAN} pop={pops.trashCan}>
+        <TrashCan position={TRASH_CAN} />
+      </Pop>
     </group>
   );
 }

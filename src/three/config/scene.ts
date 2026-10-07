@@ -36,6 +36,17 @@ export const STATION_CAMERA: CameraShot = {
 
 export const STOP_SETTLE_MS = 300;
 
+// At a stop, its fittings pop in one after the other with this spring, this
+// far apart (see Station and Home), and so do the hints at the click once
+// the camera has settled (see StationHints).
+export const POP_SPRING = {
+  mass: 1,
+  tension: 220,
+  friction: 9,
+  precision: 0.001,
+};
+export const POP_STAGGER_MS = 70;
+
 export const STATION_VIEW_CAMERA: CameraShot = {
   position: [0.409, 0.663, -1.572],
   target: [2.154, 0.153, -0.719],

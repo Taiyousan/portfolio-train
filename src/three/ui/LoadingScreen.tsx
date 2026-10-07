@@ -82,6 +82,19 @@ export default function LoadingScreen({
     };
   }, [arrived]);
 
+  // The site's cursor (components/Cursor) stands aside for the system's
+  // until the screen fades out: drawn by the page, it would stutter while
+  // the scene's setup holds the page up (shader builds); the system's never
+  // does.
+  useEffect(() => {
+    if (leaving) return;
+    const root = document.documentElement;
+    root.dataset.loading = "";
+    return () => {
+      delete root.dataset.loading;
+    };
+  }, [leaving]);
+
   if (gone) return null;
 
   return (

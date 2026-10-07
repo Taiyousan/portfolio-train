@@ -4,7 +4,7 @@ import { useFrame } from "@react-three/fiber";
 import { useControls } from "leva";
 import { useTrainContext } from "../state/TrainContext";
 import { createSmokeMaterial } from "../shaders/smoke";
-import { CHIMNEY_TOP, DRIVING_RADIUS } from "./Locomotive";
+import { CHIMNEY_TOP, DRIVING_RADIUS, RAIL_TOP } from "./Locomotive";
 
 // Just above the chimney's mouth.
 const START = new THREE.Vector3(...CHIMNEY_TOP).add(
@@ -57,7 +57,9 @@ function step(puff: Puff, dt: number, airSpeed: number) {
 }
 
 // Puffs of smoke blasted out of the chimney, toon-shaded by a custom shader
-// (see shaders/smoke.ts), all drawn in one call by an InstancedMesh.
+// (see shaders/smoke.ts), all drawn in one call by an InstancedMesh. Out of
+// the chimney wherever it is, hopping (see Train); once out, a puff stays
+// in the air.
 //
 // Like a real steam engine, the chimney puffs in time with the driving
 // wheels: a puff every so much distance rolled, so they come faster as the
@@ -67,7 +69,7 @@ function step(puff: Puff, dt: number, airSpeed: number) {
 // then carried off by the air) rather than placed from the current speed,
 // so a change of speed never drags the puffs already out along with it.
 export default function Smoke() {
-  const { trainSpeedRef, targetTrainSpeed } = useTrainContext();
+  const { trainSpeedRef, targetTrainSpeed, trainHopRef } = useTrainContext();
 
   const { lifetime, puffsPerTurn, idleRate, blast } = useControls("Smoke", {
     // Seconds a puff lasts.
@@ -140,6 +142,10 @@ export default function Smoke() {
       1,
     );
     const strength = THREE.MathUtils.lerp(IDLE_STRENGTH, 1, effort);
+    // The chimney's mouth, wherever the locomotive's hop puts it (squashed
+    // and stretched about the rails, see Train).
+    const { lift, stretch, bulge } = trainHopRef.current;
+    const mouthY = RAIL_TOP + lift + (START.y - RAIL_TOP) * stretch;
     while (phaseRef.current >= 1) {
       phaseRef.current -= 1;
       const puff =
@@ -160,7 +166,7 @@ export default function Smoke() {
       puff.seed = Math.random() * 100;
       puff.size = strength * THREE.MathUtils.randFloat(0.85, 1.15);
       puff.drift = THREE.MathUtils.randFloatSpread(0.3);
-      puff.position.copy(START);
+      puff.position.set(START.x * bulge, mouthY, START.z * bulge);
       puff.velocity.set(
         THREE.MathUtils.randFloatSpread(0.2),
         blast * strength * THREE.MathUtils.randFloat(0.85, 1.15),

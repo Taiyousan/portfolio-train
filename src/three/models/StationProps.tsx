@@ -10,6 +10,7 @@ import {
   Cylinder,
   FLOWER_COLORS,
   NoSnow,
+  PinnedSnow,
   STATION_COLORS as COLORS,
   type Vec3,
 } from "./StationPrimitives";
@@ -443,9 +444,9 @@ export function TrashCan({ position }: { position: Vec3 }) {
   return (
     <group position={position} {...bind}>
       <group ref={pose}>
-        {/* Tips about its bottom edge on the -z side. */}
+        {/* Tips about its bottom edge on the -z side, its snow along. */}
         <group ref={tipRef} position={[0, 0, -BIN.radius]}>
-          <group position={[0, 0, BIN.radius]}>
+          <PinnedSnow position={[0, 0, BIN.radius]}>
             <Cylinder
               radius={BIN.radius}
               top={BIN.top}
@@ -481,7 +482,7 @@ export function TrashCan({ position }: { position: Vec3 }) {
                 />
               </mesh>
             </group>
-          </group>
+          </PinnedSnow>
         </group>
         {LITTER.map(({ kind }, i) => (
           <group
@@ -763,14 +764,17 @@ export function Luggage({ position }: { position: Vec3 }) {
           <NoSnow>
             <SuitcaseContents itemRefs={itemRefs} />
           </NoSnow>
-          {/* Lid, hinged along the back edge, lined inside */}
+          {/* Lid, hinged along the back edge, lined inside, its snow
+              along as it opens */}
           <group ref={lidRef} position={[width / 2, depth, 0]}>
-            <Block
-              size={[width, lid, length]}
-              position={[-width / 2, lid / 2, 0]}
-              radius={0.05}
-              color={COLORS.suitcase}
-            />
+            <PinnedSnow>
+              <Block
+                size={[width, lid, length]}
+                position={[-width / 2, lid / 2, 0]}
+                radius={0.05}
+                color={COLORS.suitcase}
+              />
+            </PinnedSnow>
             <NoSnow>
               <Block
                 size={[width - 2 * wall, 0.02, length - 2 * wall]}
@@ -868,11 +872,50 @@ function getMailboxGeometries() {
     const plate = extrude(outline(), wall - 2 * bevel);
     plate.translate(0, height / 2, 0);
     mailboxGeometries = {
-      body: extrude(section, length - 2 * bevel),
+      body: splitInside(extrude(section, length - 2 * bevel)),
       plate,
     };
   }
   return mailboxGeometries;
+}
+
+// Sorts the faces of a tube along x, centred on y and z (non-indexed, as
+// extruded), into two material groups: the outside (0), and the inside (1),
+// facing in toward its axis, where the snow doesn't fall.
+function splitInside(geometry: THREE.BufferGeometry) {
+  const position = geometry.getAttribute("position");
+  const normal = geometry.getAttribute("normal");
+  const outside: number[] = [];
+  const inside: number[] = [];
+  for (let face = 0; face < position.count / 3; face++) {
+    let facing = 0;
+    for (let corner = face * 3; corner < face * 3 + 3; corner++) {
+      facing +=
+        position.getY(corner) * normal.getY(corner) +
+        position.getZ(corner) * normal.getZ(corner);
+    }
+    (facing < -1e-4 ? inside : outside).push(face);
+  }
+  const faces = [...outside, ...inside];
+  for (const name of Object.keys(geometry.attributes)) {
+    const attribute = geometry.getAttribute(name);
+    const size = attribute.itemSize * 3;
+    const array = new Float32Array(attribute.count * attribute.itemSize);
+    faces.forEach((face, i) => {
+      array.set(
+        attribute.array.subarray(face * size, (face + 1) * size),
+        i * size,
+      );
+    });
+    geometry.setAttribute(
+      name,
+      new THREE.BufferAttribute(array, attribute.itemSize),
+    );
+  }
+  geometry.clearGroups();
+  geometry.addGroup(0, outside.length * 3, 0);
+  geometry.addGroup(outside.length * 3, inside.length * 3, 1);
+  return geometry;
 }
 // Timeline (seconds): the door drops open flat, the letters slide out over
 // it toward the track one after the other, fanning out unevenly, wait a
@@ -968,7 +1011,8 @@ export function Mailbox({ position }: { position: Vec3 }) {
           position={[0, post / 2, 0]}
           color={COLORS.darkWood}
         />
-        {/* Hollow body, closed at the back */}
+        {/* Hollow body, closed at the back, no snow inside (on its floor,
+            seen with the door open) */}
         <mesh
           geometry={body}
           dispose={null}
@@ -977,7 +1021,13 @@ export function Mailbox({ position }: { position: Vec3 }) {
           receiveShadow
         >
           <meshStandardMaterial
+            attach="material-0"
             {...snowy}
+            color={COLORS.edge}
+            roughness={0.75}
+          />
+          <meshStandardMaterial
+            attach="material-1"
             color={COLORS.edge}
             roughness={0.75}
           />
@@ -999,17 +1049,19 @@ export function Mailbox({ position }: { position: Vec3 }) {
           />
         </mesh>
         {/* Door over the whole front, hinged along its bottom edge,
-            dropping flat toward the track */}
+            dropping flat toward the track, its handle's snow along */}
         <group ref={doorRef} position={[-length / 2 - wall / 2, post, 0]}>
           <mesh geometry={plate} dispose={null} castShadow receiveShadow>
             <meshStandardMaterial color={COLORS.edge} roughness={0.75} />
           </mesh>
-          <Block
-            size={[0.05, 0.05, 0.14]}
-            position={[-wall / 2 - 0.015, height - 0.12, 0]}
-            radius={0.02}
-            color={COLORS.iron}
-          />
+          <PinnedSnow>
+            <Block
+              size={[0.05, 0.05, 0.14]}
+              position={[-wall / 2 - 0.015, height - 0.12, 0]}
+              radius={0.02}
+              color={COLORS.iron}
+            />
+          </PinnedSnow>
         </group>
         {/* Flag, down along its arm */}
         <group
