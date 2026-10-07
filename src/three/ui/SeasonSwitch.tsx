@@ -11,7 +11,9 @@ const ICONS: Record<Season, string> = {
 };
 
 // Picks the scene's season (see config/seasons), printed on card stock like
-// the name card beside it and the tickets. Only changes the look.
+// the name card beside it and the tickets. Only changes the look. Icons
+// alone, their names for screen readers and as tooltips, as tall as
+// the name card.
 export default function SeasonSwitch() {
   const { season, setSeason } = useTrainContext();
 
@@ -19,7 +21,7 @@ export default function SeasonSwitch() {
     <div
       role="group"
       aria-label="Saison"
-      className="theme-ticket pointer-events-auto flex gap-1 rounded-md border border-line bg-background p-1 shadow-lg"
+      className="theme-ticket pointer-events-auto flex h-12 gap-1 rounded-md border border-line bg-background p-1 shadow-lg"
     >
       {SEASONS.map((option) => {
         const active = option === season;
@@ -28,13 +30,14 @@ export default function SeasonSwitch() {
             key={option}
             type="button"
             aria-pressed={active}
+            title={SEASON_LABELS[option]}
             onClick={() => setSeason(option)}
-            className={`flex items-center gap-1.5 rounded px-3 py-1.5 font-mono text-[0.625rem] tracking-wider uppercase transition outline-offset-2 outline-foreground focus-visible:outline-2 ${active ? "bg-foreground text-background" : "text-foreground/70 hover:bg-line hover:text-foreground"}`}
+            className={`grid aspect-square h-full place-items-center rounded transition outline-offset-2 outline-foreground focus-visible:outline-2 ${active ? "bg-foreground text-background" : "text-foreground/70 hover:bg-line hover:text-foreground"}`}
           >
             <svg
               aria-hidden="true"
               viewBox="0 0 24 24"
-              className="size-4"
+              className="size-5"
               fill="none"
               stroke="currentColor"
               strokeWidth="2"
@@ -43,7 +46,7 @@ export default function SeasonSwitch() {
             >
               <path d={ICONS[option]} />
             </svg>
-            {SEASON_LABELS[option]}
+            <span className="sr-only">{SEASON_LABELS[option]}</span>
           </button>
         );
       })}

@@ -6,18 +6,18 @@ import type { StationProject } from "./types";
 type Props = {
   projects: StationProject[];
   // Move focus to the board's heading on mount (keyboard arrival only: a
-  // focused element inside reveals the board on larger screens).
+  // focused element inside reveals the board).
   autoFocus: boolean;
   onSelect: (slug: string) => void;
   onDepart: () => void;
 };
 
-// HTML twin of the 3D departures board (models/StationBoard), shown while
+// HTML twin of the 3D departures board (models/StationBoard), there while
 // the train waits at the station: one row per project, a row opens the
-// project's detail. On phones it's the board itself, as a bottom sheet. On
-// larger screens the 3D board takes over and this one stays invisible, still
-// read by screen readers, and fades in as soon as it holds focus (only
-// reachable from the keyboard while it's invisible).
+// project's detail. The 3D board is in charge: this one stays invisible,
+// still read by screen readers, and fades in as soon as it holds focus
+// (only reachable from the keyboard while it's invisible), as a bottom
+// sheet on phones, a card on the left on larger screens.
 export default function DeparturesBoard({
   projects,
   autoFocus,
@@ -32,7 +32,7 @@ export default function DeparturesBoard({
   return (
     <section
       aria-labelledby="departures-title"
-      className="pointer-events-auto absolute inset-x-0 bottom-0 flex max-h-[60dvh] flex-col rounded-t-2xl bg-board p-4 text-board-ink shadow-2xl transition delay-300 duration-500 starting:translate-y-6 starting:opacity-0 sm:inset-x-auto sm:top-20 sm:bottom-auto sm:left-5 sm:max-h-[calc(100dvh-7rem)] sm:w-[34rem] sm:rounded-2xl sm:p-5 sm:pointer-events-none sm:opacity-0 sm:has-focus:pointer-events-auto sm:has-focus:opacity-100 sm:has-focus:delay-0"
+      className="absolute inset-x-0 bottom-0 flex max-h-[60dvh] flex-col rounded-t-2xl bg-board p-4 text-board-ink shadow-2xl transition delay-300 duration-500 starting:translate-y-6 starting:opacity-0 sm:inset-x-auto sm:top-20 sm:bottom-auto sm:left-5 sm:max-h-[calc(100dvh-7rem)] sm:short:top-16 sm:short:max-h-[calc(100dvh-5rem)] sm:w-[34rem] sm:rounded-2xl sm:p-5 pointer-events-none opacity-0 has-focus:pointer-events-auto has-focus:opacity-100 has-focus:delay-0"
     >
       <header className="flex items-baseline justify-between gap-4 border-b border-board-flap pb-3">
         <h2

@@ -10,7 +10,10 @@ export const CAMERA_POSITION: Vec3 = [
 // Low sun behind the train, warm dusk mood. Also lights the smoke shader.
 export const SUN_POSITION: Vec3 = [-30, 6, -20];
 
-export type CameraShot = { position: Vec3; target: Vec3 };
+// `offset`, if any, is camera-controls' focal offset (the camera moved
+// right, down and back, in world units): it slides the picture without
+// turning it, as the "#cam" readout shows it.
+export type CameraShot = { position: Vec3; target: Vec3; offset?: Vec3 };
 
 // One shot per mode: where CameraControls.setLookAt() animates to. See
 // docs/proto-train.md's state machine.
@@ -45,6 +48,25 @@ export const BOARD_CAMERA: CameraShot = {
   target: [3.106, 0.119, 1.086],
 };
 
+// Below this width (px), Tailwind's `sm`, the screen is a phone's: the
+// panels are sheets over the bottom (ui/), and the stops have their own
+// shots, framed on a phone in portrait (with the "#cam" readout).
+export const PHONE_BREAKPOINT = 640;
+
+// The station's view on phones: further back and higher, over the
+// platform, the whole station with the driver and the board in view, so
+// they can still be tapped. Then the board, whole, with the driver propped
+// against it.
+export const STATION_PHONE_CAMERA: CameraShot = {
+  position: [0.697, 0.985, -3.512],
+  target: [2.981, 0.191, -1.121],
+};
+
+export const BOARD_PHONE_CAMERA: CameraShot = {
+  position: [1.319, 0.155, 0.934],
+  target: [3.106, 0.115, 0.934],
+};
+
 // Home shots, same sequence as the station's 1 and 2: HOME_CAMERA wide while
 // the train pulls in, then HOME_VIEW_CAMERA from above the train, three
 // quarters onto the terrace and the house front, the desk in the part of
@@ -62,13 +84,39 @@ export const HOME_VIEW_CAMERA: CameraShot = {
   target: [3.767, -0.124, 0.311],
 };
 
-// Wide (arrival) and settled shot of each stop.
-type StopShots = { arrival: CameraShot; view: CameraShot };
+// The home's view on phones, where the about card is a sheet over the
+// bottom of the screen: from high above the track, looking down on the
+// terrace, the desk and the sign in the room above the sheet (slid there
+// by the offset).
+export const HOME_PHONE_CAMERA: CameraShot = {
+  position: [0.56, 2.116, 1.403],
+  target: [3.977, -0.005, -0.226],
+  offset: [0, 1.133, 0],
+};
+
+// Wide (arrival) and settled shot of each stop, and the settled one on
+// phones.
+type StopShots = { arrival: CameraShot; view: CameraShot; phone: CameraShot };
 
 export const STOP_CAMERAS: Record<Stop, StopShots> = {
-  station: { arrival: STATION_CAMERA, view: STATION_VIEW_CAMERA },
-  home: { arrival: HOME_CAMERA, view: HOME_VIEW_CAMERA },
+  station: {
+    arrival: STATION_CAMERA,
+    view: STATION_VIEW_CAMERA,
+    phone: STATION_PHONE_CAMERA,
+  },
+  home: {
+    arrival: HOME_CAMERA,
+    view: HOME_VIEW_CAMERA,
+    phone: HOME_PHONE_CAMERA,
+  },
 };
+
+// In the workshop, the camera faces the low sun, right behind the cab on
+// phones' wider view: the sky's glow around it (mie) and the bloom ease
+// down by these shares, so the sun no longer dazzles over the train.
+export const WORKSHOP_GLARE = { mie: 0.85, bloom: 0.7 };
+// How fast they ease, exponential, per second.
+export const GLARE_EASING = 3;
 
 // "custom" mode, the workshop (ui/Workshop), one shot per tab: the whole
 // locomotive, side on from a little ahead, low enough to see the driver in
@@ -87,21 +135,27 @@ export const CUSTOM_CAMERAS: Record<WorkshopView, CameraShot> = {
   },
 };
 
+// Vertical field of view, in degrees, the shots are framed with. Screens
+// narrower than FIT_ASPECT (portrait) widen it so they see as wide as a
+// FIT_ASPECT screen would, up to MAX_FOV, rather than cut the subject's
+// sides (see fittedFov in TrainScene).
+export const CAMERA_FOV = 45;
+export const FIT_ASPECT = 1;
+export const MAX_FOV = 70;
+
 // The room the workshop's panel takes on screen, in step with its classes
-// (ui/Workshop): past the `sm` breakpoint, a card of `width` pixels,
-// margin included, on the right; below it, a sheet over the bottom
-// `sheet` share of the height. And the size, in world units, each shot's
-// subject needs to fit in the rest: the train's full length side on is a
-// little more, so on phones its buffers may be cut, rather than backing
-// the camera into the forest (kept off only up to STOP_CLEAR_X); the
-// driver, from the sill up, with some of the cab around.
+// (ui/Workshop): past PHONE_BREAKPOINT, a card of `width` pixels, margin
+// included, on the right; below it, a sheet over the bottom `sheet` share
+// of the height. And the size, in world units, each shot's subject needs
+// to fit in the rest: the train's full length side on is a little more,
+// so on phones its buffers may be cut, rather than backing the camera
+// into the forest (kept off only up to STOP_CLEAR_X); the driver, from
+// the sill up, with some of the cab around.
 export const WORKSHOP_FRAME: {
-  breakpoint: number;
   width: number;
   sheet: number;
   subject: Record<WorkshopView, { width: number; height: number }>;
 } = {
-  breakpoint: 640,
   width: 404,
   sheet: 0.5,
   subject: {

@@ -56,6 +56,21 @@ export function LocomotiveIcon({ livery }: { livery: Livery }) {
   );
 }
 
+// The driver's curls, [cx, cy, r]: round the top of the head, and lower
+// down by the ears. Then the fringe's, along the hairline.
+const CURLS = [
+  [11.4, 15.6, 2.8],
+  [11.9, 11.6, 3.3],
+  [13.9, 8.4, 3.3],
+  [16.8, 6.5, 3.3],
+  [20, 5.9, 3.3],
+  [23.2, 6.5, 3.3],
+  [26.1, 8.4, 3.3],
+  [28.1, 11.6, 3.3],
+  [28.6, 15.6, 2.8],
+];
+const FRINGE = [14.6, 18.2, 21.8, 25.4];
+
 // The driver's head and shoulders in an outfit.
 export function DriverIcon({
   outfit,
@@ -105,9 +120,17 @@ export function DriverIcon({
           />
         </>
       )}
-      {/* Curly hair, head, beard, face */}
+      {/* Curly hair, as a crown of curls around the head (under a cap,
+          only those on the sides show), then the head, a curly fringe,
+          beard and face */}
       <circle cx="20" cy="14.5" r="8.8" fill={ICON.hair} />
+      {CURLS.map(([cx, cy, r]) => (
+        <circle key={`${cx},${cy}`} cx={cx} cy={cy} r={r} fill={ICON.hair} />
+      ))}
       <circle cx="20" cy="16.5" r="7.6" fill={ICON.skin} />
+      {FRINGE.map((cx) => (
+        <circle key={cx} cx={cx} cy="9.6" r="2.1" fill={ICON.hair} />
+      ))}
       <path
         d="M12.5 16.5a7.5 7.5 0 0 0 15 0 7.5 4.5 0 0 1-15 0z"
         fill={ICON.beard}

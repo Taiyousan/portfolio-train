@@ -8,7 +8,7 @@ import { LiveryProvider } from "./state/LiveryContext";
 import useDebugMode from "./hooks/useDebugMode";
 import useWebGLSupport from "./hooks/useWebGLSupport";
 import TrainScene from "./scenes/TrainScene";
-import { CAMERA_POSITION } from "./config/scene";
+import { CAMERA_FOV, CAMERA_POSITION } from "./config/scene";
 import Overlay from "./ui/Overlay";
 import LoadingScreen from "./ui/LoadingScreen";
 import type { StationProject } from "./ui/types";
@@ -60,7 +60,7 @@ export default function Experience({
             <Canvas
               shadows="percentage"
               camera={{
-                fov: 45,
+                fov: CAMERA_FOV,
                 near: 0.3,
                 far: 150,
                 position: CAMERA_POSITION,

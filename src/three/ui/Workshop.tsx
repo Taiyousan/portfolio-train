@@ -1,4 +1,10 @@
-import { useEffect, useId, useRef, type ReactNode } from "react";
+import {
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+  type ReactNode,
+} from "react";
 import { useLivery } from "../state/LiveryContext";
 import { useTrainContext, type WorkshopView } from "../state/TrainContext";
 import {
@@ -20,6 +26,7 @@ import {
 } from "../config/livery";
 import FlapText from "./FlapText";
 import { DriverIcon, LocomotiveIcon } from "./LiveryIcons";
+import Ticket from "./Ticket";
 
 // One per view: picking a tab also moves the camera (see TrainScene).
 const TABS: { id: WorkshopView; label: string }[] = [
@@ -45,8 +52,8 @@ const sameOutfit = (a: Outfit, b: Outfit) =>
 // as a work order: a split-flap strip in the card's ink on top, card
 // stock below a perforation, like the project dialog (.theme-ticket). A
 // side card on larger screens, the train framed beside it (see
-// TrainScene), a bottom sheet on phones, with its own way back since the
-// return ticket is left out there (see Overlay).
+// TrainScene), a bottom sheet on phones, with the return ticket riding on
+// top of it (Overlay's is left out there).
 export default function Workshop({ onLeave }: { onLeave: () => void }) {
   const { workshopView: tab, setWorkshopView: setTab } = useTrainContext();
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -54,10 +61,19 @@ export default function Workshop({ onLeave }: { onLeave: () => void }) {
   const id = useId();
   useEffect(() => headingRef.current?.focus(), []);
 
+  // Each tab keeps its own scroll position: the panel's is saved as it
+  // scrolls, and put back when its tab comes back, before it's painted.
+  const panelRef = useRef<HTMLDivElement>(null);
+  const scrollTops = useRef<Partial<Record<WorkshopView, number>>>({});
+  useLayoutEffect(() => {
+    if (panelRef.current)
+      panelRef.current.scrollTop = scrollTops.current[tab] ?? 0;
+  }, [tab]);
+
   return (
     <section
       aria-labelledby={`${id}-title`}
-      className="theme-ticket pointer-events-auto absolute inset-x-0 bottom-0 flex max-h-[50dvh] flex-col text-foreground drop-shadow-2xl transition delay-500 duration-500 starting:translate-y-6 starting:opacity-0 sm:inset-x-auto sm:top-20 sm:right-5 sm:bottom-auto sm:max-h-[calc(100dvh-7rem)] sm:w-96"
+      className="theme-ticket pointer-events-auto absolute inset-x-0 bottom-0 flex max-h-[50dvh] flex-col text-foreground drop-shadow-2xl transition delay-500 duration-500 starting:translate-y-6 starting:opacity-0 sm:inset-x-auto sm:top-20 sm:right-5 sm:bottom-auto sm:max-h-[calc(100dvh-7rem)] sm:short:top-16 sm:short:max-h-[calc(100dvh-5rem)] sm:w-96"
     >
       {/* Split-flap header, in the card's ink, with the tabs. */}
       <header className="notch-bottom shrink-0 rounded-t-xl bg-foreground px-5 pt-4 pb-3 text-background">
@@ -115,22 +131,32 @@ export default function Workshop({ onLeave }: { onLeave: () => void }) {
         </div>
       </header>
 
-      {/* Card stock, past the perforation. Only it scrolls. */}
+      {/* Card stock, past the perforation. Only it scrolls, with a thin
+          scrollbar in its ink so that shows on phones too. */}
       <div
+        ref={panelRef}
         role="tabpanel"
         id={`${id}-panel`}
         aria-labelledby={`${id}-tab-${tab}`}
-        className="notch-top min-h-0 overflow-y-auto border-t-2 border-dashed border-ticket-ink/30 bg-background px-5 pt-4 pb-6 sm:rounded-b-xl"
+        onScroll={(e) => {
+          scrollTops.current[tab] = e.currentTarget.scrollTop;
+        }}
+        className="notch-top scrollbar-ink min-h-0 overflow-y-auto border-t-2 border-dashed border-ticket-ink/30 bg-background px-5 pt-4 pb-6 sm:rounded-b-xl"
       >
         {tab === "train" ? <TrainTab /> : <DriverTab />}
+      </div>
 
-        <button
-          type="button"
+      {/* On phones, the way back, riding on top of the sheet. */}
+      <div className="absolute bottom-full left-4 mb-3 w-max sm:hidden">
+        <Ticket
+          kicker="Billet · Retour"
+          title="Retour"
+          tilt={1}
+          delay={0}
+          variant="return"
+          size="mini"
           onClick={onLeave}
-          className="mt-6 min-h-11 w-full rounded-full bg-accent px-4 font-mono text-xs tracking-wider text-on-accent uppercase transition hover:brightness-110 sm:hidden"
-        >
-          Retour au voyage
-        </button>
+        />
       </div>
     </section>
   );

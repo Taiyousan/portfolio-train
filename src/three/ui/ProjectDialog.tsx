@@ -175,10 +175,11 @@ export default function ProjectDialog({
           &nbsp;
         </span>
         <div className="flex flex-1 flex-col gap-4 px-6 py-4 sm:justify-between sm:px-5 sm:py-5">
-          {/* Room for a few project images, still to be made. */}
+          {/* Room for a few project images, still to be made. Left out
+              on short screens, where the stub's actions need the height. */}
           <ul
             aria-hidden="true"
-            className="grid grid-cols-3 gap-2 sm:grid-cols-1"
+            className="grid grid-cols-3 gap-2 sm:grid-cols-1 short:hidden"
           >
             {Array.from({ length: IMAGE_SLOTS }, (_, i) => (
               <li

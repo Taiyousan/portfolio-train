@@ -1,12 +1,17 @@
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { site } from "@/lib/site";
 import { OUTFITS } from "../config/livery";
 import { useLivery } from "../state/LiveryContext";
 import FlapText from "./FlapText";
 import { DriverIcon } from "./LiveryIcons";
+import Ticket from "./Ticket";
 
 // Field labels and section titles, as on the project ticket.
 const LABEL = "font-mono text-[0.625rem] tracking-[0.2em] uppercase";
+
+// A swipe on the sheet's header further than this, in pixels, raises or
+// lowers it; any less is a tap, which toggles it.
+const SWIPE_PX = 24;
 
 const CONTACTS = [
   { label: "Email", href: `mailto:${site.links.email}` },
@@ -21,14 +26,26 @@ const CONTACTS = [
 // ticket's band, then card stock below a perforation (.theme-ticket), the
 // driver's portrait as the holder's photo, in the hoodie worn at the desk
 // beside it (see models/Home). The look is the railcard's, the text stays
-// plain. A side card on larger screens, a bottom sheet on phones, with its
-// own way out there since the return ticket is left out (see Overlay).
-// Escape sets off again too.
+// plain. A side card on larger screens. On phones, a bottom sheet with the
+// return ticket riding on top of it (Overlay's is left out there), lowered
+// to leave the scene in view: it rises to take most of the screen once its
+// text is scrolled, or with a tap or a swipe up on its header, which lower
+// it again. Escape sets off again too.
 export default function AboutPanel({ onDepart }: { onDepart: () => void }) {
   const { outfit: picked } = useLivery();
   const outfit = picked.style === "hoodie" ? picked : OUTFITS.hoodie;
   const headingRef = useRef<HTMLHeadingElement>(null);
   useEffect(() => headingRef.current?.focus(), []);
+  // Phones only: the sheet raised.
+  const [raised, setRaised] = useState(false);
+  const swipeFrom = useRef<number | null>(null);
+  const textRef = useRef<HTMLDivElement>(null);
+  // Lowered, the sheet shows its top again: and its text, scrolled back,
+  // won't raise it straight away.
+  const raise = (up: boolean) => {
+    if (!up) textRef.current?.scrollTo({ top: 0 });
+    setRaised(up);
+  };
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -41,10 +58,57 @@ export default function AboutPanel({ onDepart }: { onDepart: () => void }) {
   return (
     <section
       aria-labelledby="about-title"
-      className="theme-ticket pointer-events-auto absolute inset-x-0 bottom-0 flex max-h-[55dvh] flex-col text-foreground drop-shadow-2xl transition delay-500 duration-500 starting:translate-y-6 starting:opacity-0 sm:inset-x-auto sm:top-20 sm:right-5 sm:bottom-auto sm:max-h-[calc(100dvh-7rem)] sm:w-96"
+      // Dealt in after the camera has moved, raised and lowered at once.
+      className={`theme-ticket pointer-events-auto absolute inset-x-0 bottom-0 flex flex-col text-foreground drop-shadow-2xl [transition:translate_500ms_ease-out_500ms,opacity_500ms_ease-out_500ms,max-height_300ms_ease-out] starting:translate-y-6 starting:opacity-0 sm:inset-x-auto ${raised ? "max-h-[calc(100dvh-8rem)]" : "max-h-[45dvh]"} sm:top-20 sm:right-5 sm:bottom-auto sm:max-h-[calc(100dvh-7rem)] sm:short:top-16 sm:short:max-h-[calc(100dvh-5rem)] sm:w-96`}
     >
       {/* Split-flap header, in the card's ink. */}
-      <header className="notch-bottom shrink-0 rounded-t-xl bg-foreground px-5 pt-4 pb-4 text-background">
+      <header className="notch-bottom relative shrink-0 rounded-t-xl bg-foreground px-5 pt-4 pb-4 text-background">
+        {/* On phones, the whole header raises and lowers the sheet, a
+            grab bar on top and its action spelled out on the right. */}
+        <button
+          type="button"
+          aria-expanded={raised}
+          aria-label={raised ? "Replier le panneau" : "Déplier le panneau"}
+          onPointerDown={(e) => {
+            swipeFrom.current = e.clientY;
+          }}
+          onPointerUp={(e) => {
+            if (swipeFrom.current === null) return;
+            const dy = e.clientY - swipeFrom.current;
+            swipeFrom.current = null;
+            raise(Math.abs(dy) < SWIPE_PX ? !raised : dy < 0);
+          }}
+          onPointerCancel={() => {
+            swipeFrom.current = null;
+          }}
+          // A pointer's tap is handled on release, the keyboard's here.
+          onClick={(e) => {
+            if (e.detail === 0) raise(!raised);
+          }}
+          className="absolute inset-0 z-10 flex touch-none justify-center rounded-t-xl pt-1.5 outline-offset-[-4px] outline-background focus-visible:outline-2 sm:hidden"
+        >
+          <span
+            aria-hidden="true"
+            className="h-1 w-10 rounded-full bg-background/40"
+          />
+          <span
+            aria-hidden="true"
+            className={`${LABEL} absolute top-4 right-5 flex items-center gap-1 opacity-80`}
+          >
+            {raised ? "Replier" : "Déplier"}
+            <svg
+              viewBox="0 0 24 24"
+              className={`size-3.5 transition ${raised ? "rotate-180" : ""}`}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="m6 15 6-6 6 6" />
+            </svg>
+          </span>
+        </button>
         <p className={`${LABEL} opacity-80`}>À propos</p>
         <h2
           id="about-title"
@@ -61,7 +125,13 @@ export default function AboutPanel({ onDepart }: { onDepart: () => void }) {
       </header>
 
       {/* Card stock, past the perforation. Only it scrolls. */}
-      <div className="notch-top scrollbar-ink min-h-0 overflow-y-auto border-t-2 border-dashed border-ticket-ink/30 bg-background px-5 pt-5 pb-6 sm:rounded-b-xl">
+      <div
+        ref={textRef}
+        onScroll={(e) => {
+          if (!raised && e.currentTarget.scrollTop > 0) setRaised(true);
+        }}
+        className="notch-top scrollbar-ink min-h-0 overflow-y-auto border-t-2 border-dashed border-ticket-ink/30 bg-background px-5 pt-5 pb-6 sm:rounded-b-xl"
+      >
         <div className="flex items-start gap-4">
           {/* The holder's photo, stamped in a corner. */}
           <div className="relative shrink-0">
@@ -124,14 +194,19 @@ export default function AboutPanel({ onDepart }: { onDepart: () => void }) {
           aria-hidden="true"
           className="barcode mt-6 block h-8 opacity-60"
         />
+      </div>
 
-        <button
-          type="button"
+      {/* On phones, the way back, riding on top of the sheet. */}
+      <div className="absolute bottom-full left-4 mb-3 w-max sm:hidden">
+        <Ticket
+          kicker="Billet · Retour"
+          title="Retour"
+          tilt={1}
+          delay={0}
+          variant="return"
+          size="mini"
           onClick={onDepart}
-          className="mt-6 min-h-11 w-full rounded-full border border-foreground/40 px-4 font-mono text-xs tracking-wider uppercase transition hover:bg-foreground/10 sm:hidden"
-        >
-          Retour
-        </button>
+        />
       </div>
     </section>
   );

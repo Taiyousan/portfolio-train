@@ -36,6 +36,10 @@
   --font-mono: var(--font-geist-mono);
 }
 
+/* Short screens, phones held sideways above all: the train overlay
+   tightens its margins and drops what doesn't fit (short:hidden). */
+@custom-variant short (@media (max-height: 32rem));
+
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;

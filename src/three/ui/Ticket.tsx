@@ -40,14 +40,16 @@ export default function Ticket({
 }: Props) {
   const mini = size === "mini";
   const mirrored = variant === "return" && mini;
-  const stub = mini ? "2.5rem" : "4rem";
+  // A full ticket fills its slot, up to 18rem: in a row on a tablet or a
+  // phone held sideways, it narrows, its stub and margins with it. On
+  // phones and short screens, it's pared down to its title and arrow.
   return (
     <button
       ref={ref}
       type="button"
       onClick={onClick}
       style={{ rotate: `${tilt}deg`, transitionDelay: `${delay}ms` }}
-      className={`group pointer-events-auto block w-full text-left text-ticket-ink drop-shadow-xl transition duration-300 ease-out outline-offset-4 outline-board-ink hover:-translate-y-1.5 hover:rotate-0! hover:delay-0! focus-visible:-translate-y-1.5 focus-visible:rotate-0! focus-visible:outline-2 focus-visible:delay-0! active:translate-y-0 active:scale-[0.98] starting:translate-y-8 starting:opacity-0 ${mini ? "max-w-full sm:w-max" : "max-w-72 sm:w-72"} ${variant === "return" ? "ticket-return" : ""}`}
+      className={`group pointer-events-auto block w-full text-left text-ticket-ink drop-shadow-xl transition duration-300 ease-out outline-offset-4 outline-board-ink hover:-translate-y-1.5 hover:rotate-0! hover:delay-0! focus-visible:-translate-y-1.5 focus-visible:rotate-0! focus-visible:outline-2 focus-visible:delay-0! active:translate-y-0 active:scale-[0.98] starting:translate-y-8 starting:opacity-0 ${mini ? "max-w-full [--stub:2.5rem] sm:w-max" : "max-w-72 [--stub:2.75rem] sm:[--stub:4rem] sm:max-lg:[--stub:3rem]"} ${variant === "return" ? "ticket-return" : ""}`}
     >
       {/* The mask would clip the drop shadow: it goes on this inner card,
           the shadow and motion on the button. The notches follow the
@@ -55,31 +57,31 @@ export default function Ticket({
       <span
         style={
           {
-            "--notch-x": mirrored ? stub : `calc(100% - ${stub})`,
+            "--notch-x": mirrored ? "var(--stub)" : "calc(100% - var(--stub))",
           } as CSSProperties
         }
         className={`ticket flex bg-ticket ${mirrored ? "flex-row-reverse" : ""}`}
       >
         <span
-          className={`min-w-0 flex-1 ${mini ? "px-3 py-2" : "px-4 py-3"}`}
+          className={`min-w-0 flex-1 ${mini ? "px-3 py-2" : "px-3 py-3 sm:px-4 sm:max-lg:px-3"}`}
         >
           {!mini && (
-            <span className="block font-mono text-[0.625rem] tracking-[0.2em] text-ticket-ink/60 uppercase">
+            <span className="block truncate font-mono text-[0.625rem] tracking-[0.2em] text-ticket-ink/60 uppercase max-sm:hidden short:hidden">
               {kicker}
             </span>
           )}
           <span
-            className={`block truncate leading-tight font-extrabold tracking-tight uppercase ${mini ? "text-sm" : "mt-0.5 text-lg"}`}
+            className={`block truncate leading-tight font-extrabold tracking-tight uppercase ${mini ? "text-sm" : "text-base sm:mt-0.5 sm:text-lg short:mt-0 short:text-base"}`}
           >
             {title}
           </span>
         </span>
         {/* Stub, past the perforation. */}
         <span
-          className={`flex shrink-0 flex-col items-center justify-center gap-1 border-dashed border-ticket-ink/25 bg-ticket-stamp/10 transition group-hover:bg-ticket-stamp group-hover:text-ticket group-focus-visible:bg-ticket-stamp group-focus-visible:text-ticket ${mini ? "w-10" : "w-16"} ${mirrored ? "border-r-2" : "border-l-2"}`}
+          className={`flex shrink-0 flex-col items-center justify-center gap-1 border-dashed border-ticket-ink/25 bg-ticket-stamp/10 transition group-hover:bg-ticket-stamp group-hover:text-ticket group-focus-visible:bg-ticket-stamp group-focus-visible:text-ticket w-(--stub) ${mirrored ? "border-r-2" : "border-l-2"}`}
         >
           {!mini && (
-            <span className="font-mono text-[0.625rem] tracking-widest uppercase">
+            <span className="font-mono text-[0.625rem] tracking-widest uppercase max-sm:hidden short:hidden">
               Départ
             </span>
           )}
@@ -89,7 +91,7 @@ export default function Ticket({
             <svg
               aria-hidden="true"
               viewBox="0 0 24 24"
-              className={`block ${mini ? "size-4" : "size-6"}`}
+              className={`block ${mini ? "size-4" : "size-5 sm:size-6"}`}
               fill="none"
               stroke="currentColor"
               strokeWidth="2.5"

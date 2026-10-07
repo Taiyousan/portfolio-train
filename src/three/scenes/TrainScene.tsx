@@ -1,6 +1,7 @@
 import {
   Suspense,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -41,12 +42,19 @@ import Bird from "../models/Bird";
 import type { StationProject } from "../ui/types";
 import {
   BOARD_CAMERA,
+  BOARD_PHONE_CAMERA,
+  CAMERA_FOV,
   CUSTOM_CAMERAS,
+  FIT_ASPECT,
+  GLARE_EASING,
+  MAX_FOV,
+  PHONE_BREAKPOINT,
   RIDE_CAMERA,
   STOP_SETTLE_MS,
   STOP_CAMERAS,
   SUN_POSITION,
   WORKSHOP_FRAME,
+  WORKSHOP_GLARE,
   type CameraShot,
 } from "../config/scene";
 
@@ -58,6 +66,17 @@ const monitorTarget = new THREE.Vector3();
 
 function formatVec3(vec: THREE.Vector3) {
   return `[${vec.x.toFixed(3)}, ${vec.y.toFixed(3)}, ${vec.z.toFixed(3)}]`;
+}
+
+// The camera's vertical field of view on a `width` × `height` pixel
+// screen, in degrees: CAMERA_FOV, widened on screens narrower than
+// FIT_ASPECT so they see as wide as one of those, up to MAX_FOV.
+function fittedFov(width: number, height: number) {
+  const aspect = width / Math.max(height, 1);
+  if (aspect >= FIT_ASPECT) return CAMERA_FOV;
+  const halfHeight = Math.tan(THREE.MathUtils.degToRad(CAMERA_FOV) / 2);
+  const fov = 2 * Math.atan((halfHeight * FIT_ASPECT) / aspect);
+  return Math.min(THREE.MathUtils.radToDeg(fov), MAX_FOV);
 }
 
 // The workshop's shot of `view` on a `width` × `height` pixel screen, with
@@ -73,7 +92,7 @@ function workshopShot(
   fov: number,
 ) {
   const base = CUSTOM_CAMERAS[view];
-  const phone = width < WORKSHOP_FRAME.breakpoint;
+  const phone = width < PHONE_BREAKPOINT;
   const panel = phone
     ? { x: 0, y: height * WORKSHOP_FRAME.sheet }
     : { x: WORKSHOP_FRAME.width, y: 0 };
@@ -172,8 +191,15 @@ export default function TrainScene({
   const sunRef = useRef<THREE.DirectionalLight>(null);
   const skyRef = useRef<ComponentRef<typeof Sky>>(null);
   const bloomRef = useRef<BloomEffect>(null);
-  useFrame(({ scene }) => {
+  // 1 in the workshop, 0 elsewhere, eased (see WORKSHOP_GLARE).
+  const glareRef = useRef(0);
+  useFrame(({ scene }, delta) => {
     const weights = seasonWeightsRef.current;
+    const glare =
+      glareRef.current +
+      ((mode === "custom" ? 1 : 0) - glareRef.current) *
+        (1 - Math.exp(-GLARE_EASING * delta));
+    glareRef.current = glare;
     if (scene.background instanceof THREE.Color) {
       mixColor(weights, "haze", scene.background);
     }
@@ -196,9 +222,12 @@ export default function TrainScene({
     if (sky) {
       sky.uniforms.turbidity.value = mixValue(weights, "turbidity");
       sky.uniforms.rayleigh.value = mixValue(weights, "rayleigh");
-      sky.uniforms.mieCoefficient.value = mixValue(weights, "mieCoefficient");
+      sky.uniforms.mieCoefficient.value =
+        mixValue(weights, "mieCoefficient") * (1 - WORKSHOP_GLARE.mie * glare);
     }
     if (bloomRef.current) {
+      bloomRef.current.intensity =
+        bloomIntensity * (1 - WORKSHOP_GLARE.bloom * glare);
       bloomRef.current.luminanceMaterial.threshold = mixValue(
         weights,
         "bloomThreshold",
@@ -228,17 +257,26 @@ export default function TrainScene({
   // At a stop, the wide arrival shot holds for a moment before settling on
   // the stop's view (see config/scene).
   const [stopSettled, setStopSettled] = useState(false);
-  // The workshop's shot is fitted to the screen, the others are fixed:
-  // memoised so that resizing only reframes the workshop, and never snaps
-  // back a camera the visitor has turned elsewhere.
+
+  // Narrow screens see wider (see fittedFov).
   const { width, height } = useThree((state) => state.size);
-  const camera = useThree((state) => state.camera);
-  const fov = camera instanceof THREE.PerspectiveCamera ? camera.fov : 45;
+  const getState = useThree((state) => state.get);
+  const fov = fittedFov(width, height);
+  useLayoutEffect(() => {
+    const { camera } = getState();
+    if (!(camera instanceof THREE.PerspectiveCamera)) return;
+    camera.fov = fov;
+    camera.updateProjectionMatrix();
+  }, [getState, fov]);
+
+  // The workshop's shot is fitted to the screen, the others are fixed
+  // (phones have their own, framed around their panels): memoised so that
+  // resizing only reframes the workshop, and never snaps back a camera the
+  // visitor has turned elsewhere.
+  const phone = width < PHONE_BREAKPOINT;
   const workshop = useMemo(
     () =>
-      mode === "custom"
-        ? workshopShot(workshopView, width, height, fov)
-        : null,
+      mode === "custom" ? workshopShot(workshopView, width, height, fov) : null,
     [mode, workshopView, width, height, fov],
   );
   useEffect(() => {
@@ -256,21 +294,31 @@ export default function TrainScene({
     const shot = workshop
       ? workshop.shot
       : stopped && stop === "station" && boardFocused
-        ? BOARD_CAMERA
+        ? phone
+          ? BOARD_PHONE_CAMERA
+          : BOARD_CAMERA
         : stopped && stopSettled
-          ? shots.view
+          ? phone
+            ? shots.phone
+            : shots.view
           : mode === "arriving" || stopped
             ? shots.arrival
             : RIDE_CAMERA;
     const controls = cameraControlsRef.current;
     controls?.setLookAt(...shot.position, ...shot.target, true);
-    controls?.setFocalOffset(
-      workshop ? workshop.offsetX : 0,
-      workshop ? workshop.offsetY : 0,
-      0,
-      true,
-    );
-  }, [mode, stop, boardFocused, workshop, stopSettled, cameraControlsRef]);
+    const [offsetX, offsetY, offsetZ] = workshop
+      ? [workshop.offsetX, workshop.offsetY, 0]
+      : (shot.offset ?? [0, 0, 0]);
+    controls?.setFocalOffset(offsetX, offsetY, offsetZ, true);
+  }, [
+    mode,
+    stop,
+    boardFocused,
+    workshop,
+    stopSettled,
+    phone,
+    cameraControlsRef,
+  ]);
 
   return (
     <>
