@@ -2,12 +2,7 @@ import { useEffect, useMemo } from "react";
 import * as THREE from "three";
 import type { ForestMaterials } from "../shaders/forestMaterial";
 import { FLOWER_COLORS } from "./StationPrimitives";
-import {
-  FOREST_COLORS,
-  assemble,
-  rock,
-  seededRandom,
-} from "./forestShapes";
+import { FOREST_COLORS, assemble, rock, seededRandom } from "./forestShapes";
 
 // Where a pond lies in its forest tile, and the seed its shape comes from.
 export type PondLayout = { x: number; z: number; radius: number; seed: number };
@@ -18,11 +13,9 @@ export const POND_RADIUS: [number, number] = [0.9, 1.4];
 export const BANK = 1.25;
 export const SHORE = 1.21;
 
-// A small pond in the forest (see Forest): a muddy bank ringed with
-// pebbles, still water, a clump of bulrushes and a few lily pads, one in
-// flower. Frozen over in winter: the water turns to ice (its colour comes
-// from the season), the bulrushes and lily pads sink away, the bank and
-// pebbles take the snow. Centred on the origin: its parent places it.
+// A small pond in the forest: a muddy bank ringed with pebbles, still
+// water, bulrushes and lily pads. In winter the water turns to ice (its
+// colour is the season's) and the plants sink away. Centred on the origin.
 export default function Pond({
   radius,
   seed,
@@ -32,7 +25,10 @@ export default function Pond({
   materials: ForestMaterials;
   water: THREE.Material;
 }) {
-  const geometries = useMemo(() => pondGeometries(radius, seed), [radius, seed]);
+  const geometries = useMemo(
+    () => pondGeometries(radius, seed),
+    [radius, seed],
+  );
   useEffect(
     () => () => Object.values(geometries).forEach((g) => g.dispose()),
     [geometries],

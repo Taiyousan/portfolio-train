@@ -3,6 +3,7 @@ import { Text } from "@react-three/drei";
 import type { SpringValue } from "@react-spring/three";
 import { useStationClick } from "../hooks/useStationProp";
 import { snowy } from "../shaders/snow";
+import { SCENE_FONT } from "../config/scene";
 import HintOrb from "./HintOrb";
 import {
   Block,
@@ -16,30 +17,18 @@ import {
   useHouseGeometry,
   type Vec3,
 } from "./StationPrimitives";
-import {
-  Bench,
-  Clock,
-  Lamp,
-  Luggage,
-  Planter,
-  TrashCan,
-} from "./StationProps";
+import { Bench, Clock, Lamp, Luggage, Planter, TrashCan } from "./StationProps";
 
-// The station's platform, building and props, built from rounded
-// primitives, cartoon style: soft edges everywhere (RoundedBox, bevelled
-// extrusions) and warm lights. In its own units: x from the platform's
-// track-side edge (+ away from the track), y up (platform top at 1.6), z
-// along the track (the platform from -11.7 to 11.7); scaled into the
+// The station's platform, building and props, from rounded primitives. In
+// its own units: x from the platform's track-side edge (+ away from the
+// track), y up (platform top at 1.6), z along the track; scaled into the
 // station's ground frame by StationPlacement.
-
-const FONT = "/fonts/geist-mono-600.woff";
 
 const PLATFORM_TOP = 1.6;
 const PLATFORM_DEPTH = 17.5;
 const PLATFORM_LENGTH = 23.4;
 
-// Where the station sits in its ground frame (origin at the platform centre,
-// at track level; x across the track, + away from it; z along it).
+// Where the station sits in its ground frame (see STATION_PLACEMENT).
 export type StationPlacement = {
   // World units per station unit.
   scale: number;
@@ -54,8 +43,7 @@ export function stationPlatformHeight(scale: number) {
   return PLATFORM_TOP * scale;
 }
 
-// Parts popping in at a stop, each with its own spring (see Station, which
-// staggers them in this order).
+// Parts popping in at the stop, in this order (see useStopPop).
 export const STATION_FITTINGS = [
   "building",
   "planters",
@@ -144,9 +132,7 @@ function Platform() {
         radius={0.35}
         color={COLORS.platformSide}
       />
-      {/* Paving on top, a shade lighter, inset from the edges, and a
-          yellow safety line along the track side: swept clear of the snow,
-          left on the platform's edges all round. */}
+      {/* Paving and the yellow safety line, swept clear of the snow. */}
       <NoSnow>
         <Block
           size={[PLATFORM_DEPTH - 0.5, 0.1, PLATFORM_LENGTH - 0.5]}
@@ -170,8 +156,8 @@ function Platform() {
 
 const BUILDING = { x: 10.5, depth: 6, length: 11, wall: 5, pitch: Math.PI / 6 };
 const EAVE = 0.9;
-// The house's rounded bevel grows it outward by this much all round, so its
-// front face, where the door and windows go, is this far toward the track.
+// The house's bevel grows it outward by this much: its front face, where
+// the door and windows go, is this far toward the track.
 const HOUSE_BEVEL = 0.25;
 const FRONT = BUILDING.x - HOUSE_BEVEL;
 const CANOPY = { front: 5, y: PLATFORM_TOP + 4.7, thickness: 0.3 };
@@ -188,13 +174,12 @@ function Building() {
   const roofRise = (half + EAVE) * Math.tan(BUILDING.pitch);
   const canopyDepth = BUILDING.x - CANOPY.front;
   const canopyTilt = 0.08;
-  // Its windows go dark on a click, and light up again on the next one, or
+  // Its windows go dark on a click, and light up again on the next one or
   // when the train leaves.
   const [lit, setLit] = useState(true);
-  const { bind, hint, atStop } = useStationClick(
-    () => setLit((on) => !on),
-    { wiggle: false },
-  );
+  const { bind, hint, atStop } = useStationClick(() => setLit((on) => !on), {
+    wiggle: false,
+  });
   if (!atStop && !lit) setLit(true);
   const { color: glassColor, emissive: glassGlow } = glass(lit);
 
@@ -320,7 +305,7 @@ function Building() {
       <group position={[CANOPY.front - 0.2, CANOPY.y + 0.2, 0]}>
         <Block size={[0.2, 1, 4.2]} radius={0.1} color={COLORS.sign} />
         <Text
-          font={FONT}
+          font={SCENE_FONT}
           fontSize={0.62}
           letterSpacing={0.18}
           color={COLORS.ink}
@@ -344,8 +329,7 @@ function Building() {
 
 // ---------------------------------------------------------------- station
 
-// Where the props stand on the platform. Each pops from its own feet, with
-// its group's spring.
+// Where the props stand on the platform, each popping from its feet.
 const PLANTERS: { at: Vec3; size: number }[] = [
   { at: [9.2, PLATFORM_TOP, -9.4], size: 1 },
   { at: [9.2, PLATFORM_TOP, 8.2], size: 0.85 },
@@ -359,8 +343,8 @@ const BENCH: Vec3 = [8.4, PLATFORM_TOP, -3.3];
 const LUGGAGE: Vec3 = [7.6, PLATFORM_TOP, -6];
 const TRASH_CAN: Vec3 = [7.2, PLATFORM_TOP, 3.3];
 
-// The platform (already there as the station slides in), with the building
-// and props each popping in by their spring in `pops`.
+// The platform (there as the station slides in), the building and props
+// popping in by their spring in `pops`.
 export default function StationDecor({
   placement,
   pops,

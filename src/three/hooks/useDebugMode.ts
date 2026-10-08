@@ -5,14 +5,11 @@ function subscribe(onChange: () => void) {
   return () => window.removeEventListener("hashchange", onChange);
 }
 
-// True when the URL has "#debug" (or "#debug&..."), or the `flag` given
-// instead. Reactive to hash changes so toggling it doesn't require a full
-// page reload. Always false during server rendering, where there is no URL
-// hash.
-export default function useDebugMode(flag = "debug") {
+// True while the URL has "#debug". False during server rendering.
+export default function useDebugMode() {
   return useSyncExternalStore(
     subscribe,
-    () => window.location.hash.includes(flag),
+    () => window.location.hash.includes("debug"),
     () => false,
   );
 }

@@ -1,4 +1,4 @@
-import { useState, type RefObject } from "react";
+import { type RefObject } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { useTrainContext, type SeasonWeights } from "../state/TrainContext";
@@ -10,11 +10,12 @@ import {
   type SeasonValue,
 } from "../config/seasons";
 import { setSnowCover } from "../shaders/snow";
+import useReducedMotion from "./useReducedMotion";
 
 // How fast the scene blends into a newly picked season (damp rate, ~1.5 s).
 const SEASON_BLEND_RATE = 3;
 
-// Parsed on first use: the config keeps plain hex strings.
+// Parsed on first use.
 const parsedColors = new Map<string, THREE.Color>();
 
 function seasonColor(season: Season, key: SeasonColor) {
@@ -53,8 +54,7 @@ export function mixValue(weights: SeasonWeights, key: SeasonValue) {
   return value;
 }
 
-// Keeps a material's (or light's, or fog's) colour on the blended season
-// palette, every frame.
+// Keeps a material's (or light's, or fog's) colour on the blended season.
 export function useSeasonColor(
   ref: RefObject<{ color: THREE.Color } | null>,
   key: SeasonColor,
@@ -75,16 +75,13 @@ export function useSeasonValue(
 }
 
 // Eases every season's weight toward 1 for the picked season, 0 for the
-// others, framerate-independent. The same damping on each keeps them summing
-// to 1, so a switch picked mid-blend just carries on from where it is.
-// Instant with reduced motion. Then hands the blended snow cover to every
-// material that takes it (see shaders/snow). Mount once inside the Canvas
-// (TrainScene).
+// others: the same damping on each keeps them summing to 1, so a switch
+// mid-blend carries on from where it is. Instant with reduced motion. Then
+// hands the blended snow cover to the materials (see shaders/snow). Mount
+// once inside the Canvas.
 export function useSeasonEasing() {
   const { season, seasonWeightsRef } = useTrainContext();
-  const [reducedMotion] = useState(
-    () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
-  );
+  const reducedMotion = useReducedMotion();
 
   useFrame((_, delta) => {
     const weights = seasonWeightsRef.current;

@@ -1,12 +1,10 @@
 import * as THREE from "three";
 import { SNOW_COLOR } from "../config/seasons";
 
-// Snow settling on whatever faces up, shared by every material that takes
-// it: the forest's (see forestMaterial), and the stops' and the train's
-// (see `snowy`). More of their faces turn white as the season's snow cover
-// grows, down to faces well off the vertical with it all, with a wavy
-// edge. One uniform for the whole scene, set once per frame (see
-// useSeasonEasing).
+// Snow settling on whatever faces up, for every material that takes it
+// (the forest's, and through `snowy` the stops' and the train's). More
+// faces turn white as the snow cover grows, with a wavy edge. One uniform
+// for the whole scene, set every frame by useSeasonEasing.
 const snow = { value: 0 };
 const snowColor = { value: new THREE.Color(SNOW_COLOR) };
 
@@ -31,8 +29,8 @@ const createPin = (): SnowPin => ({
 });
 
 // Per material, made by whichever comes first, its compiling or its
-// pinning; shared by the materials of their own (the forest's), never
-// pinned.
+// pinning; one shared by the materials that are never pinned (the
+// forest's).
 const pins = new WeakMap<THREE.Material, SnowPin>();
 const unpinned = createPin();
 
@@ -70,11 +68,9 @@ varying vec3 vSnowUp;`,
     .replace(
       "#include <project_vertex>",
       `#include <project_vertex>
-// Where on the object, in world units and directions but from its own
-// origin, so that the wavy edge stays put on it however it moves: the
-// stops arriving, the forest scrolling (its instances in their tile's
-// frame). And the world's up, in view space. Pinned, both as they were at
-// rest, turning with the object since.
+// Where on the object, in world units but from its own origin, so the wavy
+// edge stays put on it however it moves; and the world's up, in view
+// space. Pinned, both as they were at rest.
 vec4 snowPosition = vec4(transformed, 1.0);
 #ifdef USE_INSTANCING
   snowPosition = instanceMatrix * snowPosition;
@@ -99,9 +95,8 @@ varying vec3 vSnowUp;`,
     .replace(
       "#include <emissivemap_fragment>",
       `#include <emissivemap_fragment>
-// How far the face turns up (normal is in view space, and so is the up
-// the vertex shader hands over). Past 1 (no face that steep) without snow,
-// down to faces well off the vertical with it all.
+// How far the face turns up (both in view space), against an edge from
+// past 1 (no face) without snow to well off the vertical with it all.
 float snowUp = dot(normal, normalize(vSnowUp));
 float snowEdge = mix(1.15, 0.3, uSnow)
   + 0.07 * sin(vSnowPosition.x * 9.0) * sin(vSnowPosition.z * 7.0);
@@ -123,10 +118,9 @@ export function isSnowy(material: THREE.Material) {
   return material.onBeforeCompile === addSnow;
 }
 
-// Pins `material`'s snow to its object, one that moves (tips over, swings
-// open): the faces that turn up at rest keep their snow as it moves, rather
-// than it sliding onto whatever faces up then. `rest` takes the object to
-// an upright frame, where it is at rest.
+// Pins `material`'s snow to its object, one that tips over or swings open:
+// the faces up at rest keep their snow as it moves. `rest` takes the
+// object to its upright frame at rest.
 export function pinSnow(material: THREE.Material, rest: THREE.Matrix4) {
   const pin = getPin(material);
   pin.uSnowPinned.value = 1;

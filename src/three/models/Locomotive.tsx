@@ -13,18 +13,13 @@ import {
   type Vec3,
 } from "./StationPrimitives";
 
-// A rounded cartoon steam locomotive, built like the station and the home
-// (see StationPrimitives): a boiler with bands and a dome, a dark smokebox
-// with a flared chimney and a headlamp up front, and an open cab at the
-// back, under a roof, for the driver (see Train). Painted in the livery
-// picked in the workshop (see config/livery), red, navy and brass at
-// first. Its
-// wheels roll on the rails with the train's speed, the coupling and
-// connecting rods following them, while the body sways on top of them. In
-// world units, facing +z, centred on the origin, 2 long.
+// A rounded cartoon steam locomotive, built like the stops from
+// StationPrimitives, in the livery picked in the workshop. Its wheels roll
+// with the train's speed, the rods following them, while the body sways on
+// top. In world units, facing +z, centred on the origin, 2 long.
 
-// The livery's colours (Livery's body, roof and trim, and a darker shade
-// of the body for the cab floor and the wheels' spokes and counterweights).
+// The livery, and a darker shade of its body for the cab floor, the
+// spokes and the counterweights.
 type Paint = { body: string; bodyDark: string; roof: string; trim: string };
 
 // Everything else, whatever the livery.
@@ -45,17 +40,15 @@ const ALONG_Z: Vec3 = [HALF_PI, 0, 0];
 const ALONG_X: Vec3 = [0, 0, HALF_PI];
 const SIDES = [-1, 1] as const;
 
-// The body's sway, same motion as drei's <Float speed={50}
-// rotationIntensity={0.1} floatIntensity={0.0035}>, but its phase advances
-// with the train's speed and its amplitude fades to zero at a standstill,
-// so the train comes to rest upright instead of freezing mid-tilt.
+// The body's sway, drei <Float>'s motion, but its phase advances with the
+// train's speed and its amplitude fades out at a standstill, so the train
+// comes to rest upright.
 const SWAY_RATE = 12.5;
 const SWAY_ROTATION = 0.1;
 const SWAY_LIFT = 0.0035;
 
-// Top of rails.glb's rail heads (Rails is at y = -0.57, see TrainScene),
-// where the wheels touch them, and their centre either side of the centre
-// line, the wheels' mid-plane.
+// Top of rails.glb's rail heads (the rails are at y = -0.57), and their
+// distance from the centre line, the wheels' mid-plane.
 export const RAIL_TOP = -0.546;
 const GAUGE_X = 0.2755;
 const WHEEL_WIDTH = 0.05;
@@ -64,9 +57,8 @@ export const DRIVING_RADIUS = 0.19;
 const DRIVING_Y = RAIL_TOP + DRIVING_RADIUS;
 const DRIVING_FRONT_Z = 0.12;
 const DRIVING_BACK_Z = -0.34;
-// Front to back: a small leading pair, the two big driving pairs (joined
-// by the coupling rods, the front one driven by the pistons) and a small
-// trailing pair under the cab.
+// Front to back: a small leading pair, the two driving pairs (joined by
+// the coupling rods) and a small trailing pair under the cab.
 const WHEELS = [
   { z: 0.7, radius: 0.11, driving: false },
   { z: DRIVING_FRONT_Z, radius: DRIVING_RADIUS, driving: true },
@@ -80,9 +72,8 @@ const MAIN_ROD = 0.21;
 // Rods outside the wheels: the coupling rod, then the connecting rod.
 const COUPLING_X = GAUGE_X + WHEEL_WIDTH / 2 + 0.02;
 const MAIN_ROD_X = COUPLING_X + 0.025;
-// Steam cylinders, level with the driving axles, between the crosshead's
-// furthest reach (plus its half length) and the leading wheels, end caps
-// included.
+// Steam cylinders, level with the driving axles, just past the
+// crosshead's furthest reach.
 const PISTON_LENGTH = 0.12;
 const PISTON_BACK = DRIVING_FRONT_Z + CRANK + MAIN_ROD + 0.04;
 const PISTON = {
@@ -93,7 +84,7 @@ const PISTON = {
 };
 
 // The deck everything stands on, just clear of the rods at the top of
-// their stroke (half their height, plus a margin, above the crank pins).
+// their stroke.
 const DECK_THICKNESS = 0.06;
 const DECK = {
   y: DRIVING_Y + CRANK + 0.03 + DECK_THICKNESS / 2,
@@ -113,8 +104,7 @@ const CHIMNEY_BASE = BOILER_Y + SMOKEBOX.radius - 0.03;
 // Centre of the chimney's mouth, where Smoke's puffs start from.
 export const CHIMNEY_TOP: Vec3 = [0, CHIMNEY_BASE + 0.216, CHIMNEY_Z];
 
-// The cab: the driver stands on its floor; open above the sill, between
-// the front wall and the posts at the back.
+// The cab, open above the sill, between the front wall and the back posts.
 const CAB = {
   back: -0.92,
   front: -0.3,
@@ -126,14 +116,13 @@ const CAB = {
 const CAB_LENGTH = CAB.front - CAB.back;
 // Where the driver stands (see Train).
 export const CAB_FLOOR = CAB.floor;
-// The sill's brass cap on the +x side, which the driver leans on in the
-// workshop (see Train): its inner edge and its top.
+// The sill's cap on the +x side, which the driver leans on in the
+// workshop: its inner edge and its top.
 export const CAB_SILL = { x: CAB.width / 2 - 0.07, top: CAB.sill + 0.015 };
 const CAB_Z = (CAB.front + CAB.back) / 2;
 
 // A wheel, its axle along x, centred on its hub; `side` is the way its
-// outer face looks. Driving wheels carry a crank pin at CRANK above the
-// hub and a counterweight opposite.
+// outer face looks. Driving wheels carry a crank pin and a counterweight.
 function Wheel({
   radius,
   side,
@@ -231,8 +220,7 @@ function Splasher({
 }
 
 // A buffer beam across the deck's end, `dir` its way out, with its two
-// buffers. A little wider and longer than the deck, so their faces don't
-// meet in the same planes (z-fighting).
+// buffers. A little wider than the deck, so their faces don't z-fight.
 function BufferBeam({ dir, paint }: { dir: number; paint: Paint }) {
   const end = dir > 0 ? DECK.front : DECK.back;
   return (
@@ -276,11 +264,9 @@ export default function Locomotive({ children }: { children?: ReactNode }) {
   );
   const bodyRef = useRef<THREE.Group>(null);
   const swayPhaseRef = useRef(0);
-  // Distance rolled so far: every wheel's angle follows from it and its
-  // radius, and the rods from the driving wheels' angle.
+  // Distance rolled so far: the wheels' angles and the rods follow from it.
   const distanceRef = useRef(0);
-  // One entry per side (SIDES' order) for the rods, per side and wheel
-  // (WHEELS' order) for the wheels, filled by callback refs.
+  // One entry per side for the rods, per side and wheel for the wheels.
   const wheelRefs = useRef<(THREE.Group | null)[]>([]);
   const couplingRefs = useRef<(THREE.Group | null)[]>([]);
   const mainRodRefs = useRef<(THREE.Group | null)[]>([]);
@@ -305,8 +291,7 @@ export default function Locomotive({ children }: { children?: ReactNode }) {
 
     distanceRef.current += delta * trainSpeedRef.current;
     const distance = distanceRef.current;
-    // Rolling without slipping: angle = distance / radius. A positive
-    // turn about x brings the top forward (+z).
+    // Rolling without slipping: angle = distance / radius.
     wheelRefs.current.forEach((wheel, i) => {
       if (wheel) wheel.rotation.x = distance / WHEELS[i % WHEELS.length].radius;
     });

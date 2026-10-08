@@ -4,12 +4,12 @@ import { useSpring } from "@react-spring/three";
 import type * as THREE from "three";
 import { POP_SPRING } from "../config/scene";
 import { useStationHints, type HintedOrb } from "../state/StationHints";
+import useReducedMotion from "./useReducedMotion";
 
-// A hint at the click (`mesh`: a HintOrb's ball, the departures board's
-// arrow), coming on in turn with the others once the camera has settled
-// (see StationHints), unless its prop has been `discovered` (clicked).
-// Returns its size, 0 to 1 (past it as it overshoots), popping in and out
-// like the stop's fittings, with their spring; at once with reduced
+// A glowing hint (`mesh`: a HintOrb's ball, the board's arrow), coming on
+// in turn with the others once the camera has settled (see StationHints),
+// unless its prop has been `discovered` (clicked). Returns its size, 0 to 1,
+// springing in and out like the stop's fittings; at once with reduced
 // motion.
 export default function useHintReveal(
   mesh: RefObject<THREE.Object3D | null>,
@@ -22,9 +22,7 @@ export default function useHintReveal(
     showAt: null,
   }));
   useEffect(() => hints.registerOrb(orb), [hints, orb]);
-  const [reducedMotion] = useState(
-    () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
-  );
+  const reducedMotion = useReducedMotion();
   const [{ size }, api] = useSpring(() => ({ size: 0 }));
 
   const onRef = useRef(false);
@@ -38,7 +36,7 @@ export default function useHintReveal(
     api.start({
       size: on ? 1 : 0,
       immediate: reducedMotion,
-      // Overshoots on the way in only (see Station).
+      // Overshoots on the way in only.
       config: { ...POP_SPRING, clamp: !on },
     });
   });

@@ -5,12 +5,11 @@ import {
 } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { FLOWER_COLORS, STATION_COLORS } from "./StationPrimitives";
 
-// The forest's props (see Forest), in the rounded cartoon style of the
-// station and the home: each one a single geometry, its parts merged with
-// their colours (see shaders/forestMaterial), so a whole kind draws in one
-// call per tile. Tinted parts are a shade of grey, from 1 at the top of a
-// crown to a little darker under it: their instance's colour comes on top.
-// In world units, standing on y = 0, centred on the origin.
+// The forest's props, in the stops' rounded cartoon style: each one a
+// single geometry, its parts merged with their colours (see
+// shaders/forestMaterial), so a whole kind draws in one call per tile.
+// Tinted parts are a shade of grey, their instance's colour on top. In
+// world units, standing on y = 0, centred on the origin.
 
 export const FOREST_COLORS = {
   bark: "#6b4a32",
@@ -79,8 +78,7 @@ export function assemble(parts: Part[]) {
 
 // ---------------------------------------------------------------- primitives
 
-// Kept coarse throughout, smooth normals hide it: a forest has hundreds of
-// these in sight.
+// Kept coarse, smooth normals hide it: hundreds of these are in sight.
 function ball(radius: number, [x, y, z]: Vec3, scale?: Vec3, detail = 9) {
   const geometry = new THREE.SphereGeometry(
     radius,
@@ -269,8 +267,8 @@ function bush() {
   return assemble(crown(BUSH_BALLS));
 }
 
-// Flowers dotted over a bush's top, apart from it (see Forest), so they
-// can wither in winter while the bush stays.
+// Flowers dotted over a bush's top, a shape of their own so they can
+// wither in winter while the bush stays.
 function bushFlowers() {
   const random = seededRandom(7);
   const flowers = Array.from({ length: 16 }, (_, i) => {

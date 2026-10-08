@@ -1,6 +1,7 @@
 export const site = {
   name: "Shams Benhamou",
   role: "Développeur front-end",
+  headline: "Développeur front-end, React & Three.js",
   city: "Strasbourg",
   title: "Shams Benhamou, développeur front-end React / Three.js",
   description:

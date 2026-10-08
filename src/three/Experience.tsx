@@ -1,25 +1,32 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
-import { Canvas } from "@react-three/fiber";
-import { Leva } from "leva";
+import {
+  Component,
+  useEffect,
+  useState,
+  type ComponentType,
+  type ReactNode,
+} from "react";
+import dynamic from "next/dynamic";
 import { TrainProvider } from "./state/TrainContext";
 import { LiveryProvider } from "./state/LiveryContext";
 import useDebugMode from "./hooks/useDebugMode";
 import useWebGLSupport from "./hooks/useWebGLSupport";
-import TrainScene from "./scenes/TrainScene";
-import { CAMERA_FOV, CAMERA_POSITION } from "./config/scene";
 import Overlay from "./ui/Overlay";
 import LoadingScreen from "./ui/LoadingScreen";
 import type { StationProject } from "./ui/types";
+import type { SceneProps } from "./Scene";
 
 export type { StationProject };
 
-// Full-screen train scene. Append #debug to the URL to show the Leva panel.
-// Content comes in as props: the page reads it on the server. `children` is
-// the page's plain HTML version, first in reading order (screen readers,
-// crawlers) but out of sight, until it holds keyboard focus: then it's
-// shown over the scene. Without WebGL, it's shown on its own instead.
+// Leva, only in debug mode.
+const DebugPanel = dynamic(() => import("./debug/DebugPanel"), { ssr: false });
+
+// Full-screen train scene. `children` is the page's plain HTML version,
+// first in reading order (screen readers, crawlers) but out of sight until
+// it holds keyboard focus, then shown over the scene. Shown on its own
+// instead without WebGL 2, or if the scene fails to load or run. Append
+// #debug to the URL for the Leva panel and a free camera.
 export default function Experience({
   projects,
   children,
@@ -29,13 +36,30 @@ export default function Experience({
 }) {
   const webgl = useWebGLSupport();
   const debug = useDebugMode();
+  const [progress, setProgress] = useState(0);
   // The loading screen has started fading onto the scene.
   const [boarded, setBoarded] = useState(false);
+  // three.js comes in its own chunk, downloaded once the page is up: the
+  // loading screen and the HTML version work meanwhile. Not through
+  // next/dynamic: its Suspense remounts the canvas in development (strict
+  // mode), which loses its WebGL context for good.
+  const [Scene, setScene] = useState<ComponentType<SceneProps> | null>(null);
+  useEffect(() => {
+    if (!webgl) return;
+    import("./Scene").then(
+      (module) => setScene(() => module.default),
+      // Rendered, it throws, and SceneBoundary falls back to the HTML.
+      (error) =>
+        setScene(() => () => {
+          throw error;
+        }),
+    );
+  }, [webgl]);
 
   if (!webgl) return children;
 
   return (
-    <>
+    <SceneBoundary fallback={children}>
       <div className="fixed inset-0 z-50 overflow-y-auto bg-background not-focus-within:sr-only">
         <p className="border-b border-line px-5 py-3 font-mono text-sm text-muted">
           Version texte du portfolio ·{" "}
@@ -54,26 +78,33 @@ export default function Experience({
       >
         <TrainProvider>
           <LiveryProvider>
-            {/* Always mounted: without a <Leva>, useControls auto-mounts its
-                own visible panel. */}
-            <Leva collapsed hidden={!debug} />
-            <Canvas
-              shadows="percentage"
-              camera={{
-                fov: CAMERA_FOV,
-                near: 0.3,
-                far: 150,
-                position: CAMERA_POSITION,
-              }}
-            >
-              <color args={["#3a2a1f"]} attach="background" />
-              <TrainScene projects={projects} />
-            </Canvas>
+            {debug && <DebugPanel />}
+            {Scene && <Scene projects={projects} onProgress={setProgress} />}
             <Overlay projects={projects} boarded={boarded} />
-            <LoadingScreen onBoarded={() => setBoarded(true)} />
+            <LoadingScreen
+              progress={progress}
+              onBoarded={() => setBoarded(true)}
+            />
           </LiveryProvider>
         </TrainProvider>
       </div>
-    </>
+    </SceneBoundary>
   );
+}
+
+// Falls back to the HTML version alone if the scene throws (a chunk that
+// doesn't download, a GPU that gives up).
+class SceneBoundary extends Component<
+  { fallback: ReactNode; children: ReactNode },
+  { failed: boolean }
+> {
+  state = { failed: false };
+
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+
+  render() {
+    return this.state.failed ? this.props.fallback : this.props.children;
+  }
 }

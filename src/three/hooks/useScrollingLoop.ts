@@ -9,10 +9,8 @@ export type ScrollingTile = {
 };
 
 // Returns `tileCount` group refs spaced `tileSpacing` apart along z. Each
-// frame they scroll backward at the train's speed, and whichever tile falls
-// behind the loop point jumps back around to the front — tileCount controls
-// how far away that jump sits, so it can be pushed past the fog's visible
-// range to hide it.
+// frame they scroll back at the train's speed, and a tile falling behind
+// the loop jumps round to the front, out of sight in the fog.
 export default function useScrollingLoop(
   tileCount: number,
   tileSpacing: number,

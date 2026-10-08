@@ -26,15 +26,12 @@ const PROJECT_PATH = /^\/projets\/([^/]+)\/?$/;
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
-// A project's detail over the scene, shaped like a train ticket, as the
-// ticket buttons (Ticket): the details on card stock, then a stub past a
-// perforation with room for images and the actions. The ticket is in the
-// look only, the text stays plain. The stub sits on the right, notched top
-// and bottom; on phones, below, notched on either side. Only the details
-// scroll, so the notches stay put. A native modal <dialog>: focus trap,
-// Escape to close and focus returned to the board row come for free. It
-// stays open from one project to the next (the stub's arrows, looping like
-// the board, or a link to a project in the text), only the details swap.
+// A project's detail over the scene, shaped like a train ticket: the
+// details on card stock, then a stub past a perforation with room for
+// images and the actions (on the right, or below on phones). Only the
+// details scroll, so the notches stay put. A native modal <dialog>: focus
+// trap, Escape and focus return come for free. It stays open from one
+// project to the next (the stub's arrows, or a project link in the text).
 export default function ProjectDialog({
   projects,
   slug,
@@ -102,7 +99,7 @@ export default function ProjectDialog({
       className="theme-ticket pointer-events-auto m-auto max-h-[90dvh] w-[min(52rem,calc(100%-2rem))] flex-col overflow-visible border-0 bg-transparent p-0 text-foreground drop-shadow-2xl transition duration-300 backdrop:bg-black/70 open:flex sm:max-h-[min(36rem,90dvh)] sm:flex-row starting:translate-y-6 starting:-rotate-1 starting:opacity-0"
     >
       {/* The details. */}
-      <div className="notch-bottom flex min-h-0 flex-1 flex-col rounded-t-xl bg-background sm:notch-right sm:rounded-l-xl sm:rounded-tr-none">
+      <div className="flex min-h-0 flex-1 flex-col rounded-t-xl bg-background notch-bottom sm:rounded-l-xl sm:rounded-tr-none sm:notch-right">
         <p
           className={`${LABEL} shrink-0 rounded-t-xl bg-foreground px-6 py-2 text-background sm:rounded-tr-none sm:px-8`}
         >
@@ -117,7 +114,7 @@ export default function ProjectDialog({
         <div
           key={project.slug}
           onClick={onTextClick}
-          className="scrollbar-ink my-2 mr-1.5 min-h-0 overflow-y-auto pt-3 pr-[calc(1.5rem-0.375rem)] pb-5 pl-6 transition duration-300 sm:mr-2 sm:pr-6 sm:pl-8 starting:translate-x-3 starting:opacity-0"
+          className="my-2 mr-1.5 min-h-0 scrollbar-ink overflow-y-auto pt-3 pr-[calc(1.5rem-0.375rem)] pb-5 pl-6 transition duration-300 sm:mr-2 sm:pr-6 sm:pl-8 starting:translate-x-3 starting:opacity-0"
         >
           <h2
             id="project-title"
@@ -165,9 +162,8 @@ export default function ProjectDialog({
       </div>
 
       {/* The stub, past the perforation, tinted like the buttons' stubs. */}
-      <div className="notch-top flex shrink-0 flex-col rounded-b-xl border-t-2 border-dashed border-foreground/25 bg-background bg-linear-to-b from-accent/10 to-accent/10 sm:notch-left sm:w-48 sm:rounded-r-xl sm:rounded-bl-none sm:border-t-0 sm:border-l-2">
-        {/* The details' band runs on across the stub, a blank line of the
-            same type for the same height. */}
+      <div className="flex shrink-0 flex-col rounded-b-xl border-t-2 border-dashed border-foreground/25 bg-background bg-linear-to-b from-accent/10 to-accent/10 notch-top sm:w-48 sm:rounded-r-xl sm:rounded-bl-none sm:border-t-0 sm:border-l-2 sm:notch-left">
+        {/* The details' band runs on across the stub. */}
         <span
           aria-hidden="true"
           className={`${LABEL} hidden shrink-0 rounded-tr-xl bg-foreground py-2 sm:block`}
@@ -175,8 +171,8 @@ export default function ProjectDialog({
           &nbsp;
         </span>
         <div className="flex flex-1 flex-col gap-4 px-6 py-4 sm:justify-between sm:px-5 sm:py-5">
-          {/* Room for a few project images, still to be made. Left out
-              on short screens, where the stub's actions need the height. */}
+          {/* Room for project images. Left out on short screens, where the
+              actions need the height. */}
           <ul
             aria-hidden="true"
             className="grid grid-cols-3 gap-2 sm:grid-cols-1 short:hidden"
@@ -230,7 +226,7 @@ export default function ProjectDialog({
             {/* Printed barcode. */}
             <span
               aria-hidden="true"
-              className="barcode mb-2 hidden h-8 opacity-60 sm:block"
+              className="mb-2 hidden h-8 opacity-60 barcode sm:block"
             />
             {project.href && (
               <a

@@ -16,7 +16,6 @@ import {
   Vignette,
   Noise,
 } from "@react-three/postprocessing";
-import { monitor, useControls } from "leva";
 import * as THREE from "three";
 import type { BloomEffect } from "postprocessing";
 import { useTrainContext, type WorkshopView } from "../state/TrainContext";
@@ -24,11 +23,8 @@ import useTrainSpeedEasing from "../hooks/useTrainSpeedEasing";
 import useStopApproach from "../hooks/useStopApproach";
 import useShaderWarmup from "../hooks/useShaderWarmup";
 import useDebugMode from "../hooks/useDebugMode";
-import {
-  mixColor,
-  mixValue,
-  useSeasonEasing,
-} from "../hooks/useSeason";
+import { useTweaks } from "../debug/tweaks";
+import { mixColor, mixValue, useSeasonEasing } from "../hooks/useSeason";
 import Station from "../models/Station";
 import Home from "../models/Home";
 import Train from "../models/Train";
@@ -46,6 +42,7 @@ import {
   BOARD_PHONE_CAMERA,
   CAMERA_FOV,
   CUSTOM_CAMERAS,
+  ENVIRONMENT_MAP,
   FIT_ASPECT,
   GLARE_EASING,
   MAX_FOV,
@@ -58,16 +55,6 @@ import {
   WORKSHOP_GLARE,
   type CameraShot,
 } from "../config/scene";
-
-// Scratch vectors for the read-only camera monitor below — reused every
-// poll instead of allocating, and module-level since only one TrainScene
-// renders at a time.
-const monitorPosition = new THREE.Vector3();
-const monitorTarget = new THREE.Vector3();
-
-function formatVec3(vec: THREE.Vector3) {
-  return `[${vec.x.toFixed(3)}, ${vec.y.toFixed(3)}, ${vec.z.toFixed(3)}]`;
-}
 
 // The camera's vertical field of view on a `width` × `height` pixel
 // screen, in degrees: CAMERA_FOV, widened on screens narrower than
@@ -82,10 +69,9 @@ function fittedFov(width: number, height: number) {
 
 // The workshop's shot of `view` on a `width` × `height` pixel screen, with
 // a `fov` degree camera (see WORKSHOP_FRAME): pulled back along its line of
-// sight until its subject fits in the room the panel leaves, and the
-// focal offset (world units, along the camera's right and down, as
-// camera-controls takes it) that slides the picture over by half the
-// panel, so the subject sits in the middle of that room.
+// sight until its subject fits in the room the panel leaves, and the focal
+// offset (world units, along the camera's right and down) that centres the
+// subject in that room.
 function workshopShot(
   view: WorkshopView,
   width: number,
@@ -120,7 +106,7 @@ function workshopShot(
   };
 }
 
-// Inside the scene's Suspense, so that it runs once the stops have loaded.
+// Inside the scene's Suspense, so it runs once everything has loaded.
 function ShaderWarmup({
   stationRef,
   homeRef,
@@ -132,8 +118,8 @@ function ShaderWarmup({
   return null;
 }
 
-// Last in the scene's Suspense: once it has drawn a few frames (the first
-// ones still settle in), the loading screen can go.
+// Last in the scene's Suspense: once it has drawn a few frames, the loading
+// screen can go.
 const READY_FRAMES = 3;
 function SceneReady() {
   const { setReady } = useTrainContext();
@@ -168,7 +154,7 @@ export default function TrainScene({
     lightIntensity,
     bloomIntensity,
     vignetteDarkness,
-  } = useControls("Scene", {
+  } = useTweaks("Scene", {
     trainSpeed: { value: initialSpeed, min: 0, max: 20, step: 0.5 },
     fogDensity: { value: 0.04, min: 0, max: 0.15, step: 0.005 },
     lightIntensity: { value: 3, min: 0, max: 10, step: 0.1 },
@@ -185,8 +171,8 @@ export default function TrainScene({
   const homeRef = useRef<THREE.Group>(null);
   useStopApproach(stationRef, homeRef);
 
-  // Season look (config/seasons): haze, light, sky and bloom follow the
-  // blended palette. Leva's fog and light settings scale with it.
+  // Haze, light, sky and bloom follow the blended season (config/seasons),
+  // the fog and light settings scaled by it.
   useSeasonEasing();
   const fogRef = useRef<THREE.FogExp2>(null);
   const ambientRef = useRef<THREE.AmbientLight>(null);
@@ -237,27 +223,8 @@ export default function TrainScene({
     }
   });
 
-  // Read-only, live in the Leva panel: orbit to a framing you like, then
-  // copy these straight into a CameraShot in config/scene.ts. The ref reads
-  // below only ever run from Leva's own polling interval, never during
-  // render, so the react-hooks/refs warning doesn't apply here.
-  useControls("Camera (lecture seule)", {
-    // eslint-disable-next-line react-hooks/refs
-    position: monitor(() => {
-      const controls = cameraControlsRef.current;
-      if (!controls) return "—";
-      return formatVec3(controls.getPosition(monitorPosition));
-    }),
-    // eslint-disable-next-line react-hooks/refs
-    target: monitor(() => {
-      const controls = cameraControlsRef.current;
-      if (!controls) return "—";
-      return formatVec3(controls.getTarget(monitorTarget));
-    }),
-  });
-
   // At a stop, the wide arrival shot holds for a moment before settling on
-  // the stop's view (see config/scene).
+  // the stop's view.
   const [stopSettled, setStopSettled] = useState(false);
 
   // Narrow screens see wider (see fittedFov).
@@ -272,9 +239,8 @@ export default function TrainScene({
   }, [getState, fov]);
 
   // The workshop's shot is fitted to the screen, the others are fixed
-  // (phones have their own, framed around their panels): memoised so that
-  // resizing only reframes the workshop, and never snaps back a camera the
-  // visitor has turned elsewhere.
+  // (phones have their own): memoised so that resizing only reframes the
+  // workshop.
   const phone = width < PHONE_BREAKPOINT;
   const workshop = useMemo(
     () =>
@@ -344,11 +310,11 @@ export default function TrainScene({
         shadow-camera-near={1}
         shadow-camera-far={150}
       />
-      <Environment preset="sunset" background={false} />
+      <Environment files={ENVIRONMENT_MAP} />
       <Sky ref={skyRef} sunPosition={SUN_POSITION} mieDirectionalG={0.9} />
 
-      {/* Moves the camera between shots; only turned by hand in debug mode,
-          to frame new ones (see the camera monitor above). */}
+      {/* Moves the camera between shots; turned by hand in debug mode only,
+          to frame new ones. */}
       <CameraControls ref={cameraControlsRef} enabled={debug} />
 
       <EffectComposer>
@@ -363,7 +329,6 @@ export default function TrainScene({
         <Noise opacity={0.02} />
       </EffectComposer>
 
-      {/* Loading shows on ui/LoadingScreen, over the canvas. */}
       <Suspense fallback={null}>
         <Train />
         <ForestFloor position={[0, -0.6, 0]} />
@@ -376,7 +341,7 @@ export default function TrainScene({
         <Snowfall />
         <Station ref={stationRef} projects={projects} />
         <Home ref={homeRef} />
-        {/* Last, so that the stops are in the scene when it runs. */}
+        {/* Last, so the stops are in the scene when they run. */}
         <ShaderWarmup stationRef={stationRef} homeRef={homeRef} />
         <SceneReady />
       </Suspense>

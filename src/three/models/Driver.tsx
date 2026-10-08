@@ -1,22 +1,17 @@
-import { useImperativeHandle, useRef, useState, type Ref } from "react";
+import { useImperativeHandle, useRef, type Ref } from "react";
 import { useFrame, type ThreeElements } from "@react-three/fiber";
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { Block, Cylinder, NoSnow, STATION_COLORS } from "./StationPrimitives";
 import { DEFAULT_OUTFIT, shade, type Outfit } from "../config/livery";
+import useReducedMotion from "../hooks/useReducedMotion";
 
-// A small cartoon driver, rounded like the station (see StationPrimitives):
-// standing in the locomotive cab, standing on the platform or propped
-// against the departures board while the train waits at the station, or
-// at the desk at home, in a hoodie, typing. Dressed as picked in the
-// workshop (see config/livery). Curly hair, a short beard and a moustache.
-// Kept clear of the snow (see NoSnow).
-// Built as a rig of nested groups (hips, knees, spine, shoulders, elbows,
-// neck) posed every frame: breathing, blinking, glancing around, legs
-// swinging sitting, a toe tapping propped (see PROPPED), and a wave or a
-// look at the camera on demand (see DriverHandle). Standing, the driver
-// can also lean on a ledge, dreamy (see LEANING). Held still with reduced
-// motion. In driver units: about 0.94 tall standing, cap included, facing
+// A small cartoon driver: in the cab, on the platform, or at the desk at
+// home, dressed as picked in the workshop. A rig of nested groups (hips,
+// knees, spine, shoulders, elbows, neck) posed every frame: breathing,
+// blinking, glancing around, and a wave or a look at the camera on demand
+// (see DriverHandle). Standing, it can also lean on a ledge (see LEANING).
+// Held still with reduced motion. In driver units: about 0.94 tall, facing
 // +z.
 
 const COLORS = {
@@ -33,11 +28,9 @@ const COLORS = {
   neckerchief: STATION_COLORS.roof,
 };
 
-// What an outfit (see config/livery) dresses the rig in: `top` for the
-// body and sleeves, `trim` for the cuffs (and the hoodie's pocket),
-// `trousers` for the legs (and the overalls' bib, and the caps). Shoes
-// go with the style: polished with the uniform, work boots with the
-// overalls, sneakers with the hoodie.
+// What an outfit dresses the rig in: `top` for the body and sleeves, `trim`
+// for the cuffs (and the hoodie's pocket), `trousers` for the legs (and
+// the overalls' bib, and the caps); shoes going with the style.
 type Clothes = { top: string; trim: string; trousers: string; shoes: string };
 
 function dress({ style, top, bottom }: Outfit): Clothes {
@@ -110,20 +103,15 @@ export const DRIVER_TYPING_HANDS = {
   radius: HAND_RADIUS,
 };
 
-// Leaning on a ledge (the cab's sill, in the workshop, see Train), dreamy:
-// bent over it, elbows on it, the chin on the right fist and the left
-// forearm along it, the head tipped toward the fist, gazing up and off to
-// the right with heavy lids, breathing deeper, swaying a little. Worked
+// Leaning on a ledge (the cab's sill, in the workshop), dreamy: elbows on
+// it, the chin on the right fist, gazing up and off with heavy lids. Worked
 // out for a ledge `sill` above the feet whose edge is `edge` ahead of them
-// (driver units), with the spine bent by `lean`: shoulders (x, y, z) then
-// elbows (x, z), right arm then left, and the head's pitch, turn and tilt
-// (on top of being kept level). Blended in and out over `ease` seconds,
-// the arms going over the ledge rather than through it: standing `back`
-// from it (fully by `backAt` of the way), they fold across the chest at
-// the ledge's height (both forearms flat, as the left one ends up) by
-// `fold.at`, then the body steps in and they're set down on it, the right
-// fist sliding up under the chin. Bending over it from `bendFrom` of the
-// way. The other way round on the way back.
+// (driver units), the spine bent by `lean`: shoulders (x, y, z) then elbows
+// (x, z), right arm then left, and the head's pitch, turn and tilt. Eased
+// in and out over `ease` seconds, the arms going over the ledge rather than
+// through it: stepping `back` from it (fully by `backAt` of the way), they
+// fold across the chest by `fold.at`, then the body steps in and sets them
+// down, bending over it from `bendFrom` of the way.
 const LEANING = {
   sill: 0.538,
   edge: 0.2,
@@ -157,15 +145,13 @@ export const DRIVER_LEANING_LEDGE = {
   edge: LEANING.edge,
 };
 
-// Propped against something behind (the departures board's edge, see
-// Station), passing the time: the whole body tilted back about the feet
-// by `tilt`, the weight on the left leg (its knee a little bent, the hips
-// down by `drop`), the right knee loose, its toe on the ground, tapping
-// now and then, the hands in the pockets, the shoulders slumped back
-// (`spine`), the head pushed forward by `neck` (its curls would otherwise
-// stick out well behind the back, into what it leans on), glancing around
-// more widely than usual (`look`). Hip joints (x, z) and knees (x), then
-// shoulders (x, y, z) and elbows (x, z), right then left.
+// Propped against something behind (the board's edge), passing the time:
+// tilted back about the feet by `tilt`, the weight on the left leg (the
+// hips down by `drop`), the right toe tapping now and then, the hands in
+// the pockets, the shoulders slumped (`spine`), the head pushed forward by
+// `neck` (or its curls would go through what it leans on), glancing around
+// more widely (`look`). Hip joints (x, z) and knees (x), then shoulders
+// (x, y, z) and elbows (x, z), right then left.
 const PROPPED = {
   tilt: 0.12,
   drop: 0.006,
@@ -199,9 +185,8 @@ export const DRIVER_PROPPED_BACK = {
     PROPPED.drop,
 };
 
-// Idle motion, in seconds and radians: breathing, weight shifting from foot
-// to foot standing, legs swinging sitting, blinks now and then (sometimes
-// twice), and glances held a few seconds each, eased toward.
+// Idle motion, in seconds and radians: breathing, weight shifting
+// standing, legs swinging sitting, blinks (sometimes twice), and glances.
 const IDLE = {
   breathSpeed: 2.1,
   breath: 0.018,
@@ -218,9 +203,8 @@ const IDLE = {
   lookEase: 4,
 };
 
-// Wave (right arm, on -x): raised in, waved about the elbow, lowered.
-// Brows up and head tipped toward it. With reduced motion, the arm is
-// just held up for the wave's length.
+// Wave (right arm, on -x): raised, waved about the elbow, lowered, brows
+// up. With reduced motion, the arm is just held up meanwhile.
 const WAVE = {
   raise: 0.3,
   hold: 1.5,
@@ -236,10 +220,8 @@ const WAVE = {
 const WAVE_DURATION = WAVE.raise + WAVE.hold + WAVE.lower;
 
 // Look at the camera (seconds and radians): the head turns to it, the
-// shoulders a little with it (`spine`, their share of the turn), holds a
-// moment, brows up, and turns back; typing pauses meanwhile. Only so far
-// (`maxYaw`, `maxPitch`). With reduced motion, the head is just held
-// turned for its length.
+// shoulders a little (`spine`, their share), up to `maxYaw` and
+// `maxPitch`, holds a moment and turns back; typing pauses meanwhile.
 const GLANCE = {
   turn: 0.3,
   hold: 1.1,
@@ -252,8 +234,7 @@ const GLANCE = {
 const GLANCE_DURATION = GLANCE.turn + GLANCE.hold + GLANCE.back;
 // The head's centre above the hips (the spine's origin), in driver units.
 const HEAD_HEIGHT = NECK_Y + HEAD_Y;
-// Scratch vector for the camera's position, reused every frame (a driver
-// poses one frame at a time).
+// Scratch vector for the camera's position.
 const toCamera = new THREE.Vector3();
 
 const HALF_PI = Math.PI / 2;
@@ -281,8 +262,7 @@ type Props = Omit<ThreeElements["group"], "ref"> & {
   // at the origin, leaning back against something DRIVER_PROPPED_BACK
   // behind them (see PROPPED).
   pose?: "standing" | "sitting" | "propped";
-  // The conductor's uniform and cap by default (see config/livery's
-  // OUTFITS); at home, where the driver is just the developer, a hoodie.
+  // The conductor's uniform and cap by default.
   outfit?: Outfit;
   // Hands over a keyboard in front, tapping (see DRIVER_TYPING_HANDS).
   typing?: boolean;
@@ -327,12 +307,9 @@ export default function Driver({
     shoulders: [],
     elbows: [],
   });
-  const [reducedMotion] = useState(
-    () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
-  );
-  // Frame-clock state, set up on the first frame: an offset so two drivers
-  // don't move in step, the next blink, the glance eased toward, the wave,
-  // how far into leaning (0 to 1, eased).
+  const reducedMotion = useReducedMotion();
+  // Frame-clock state, set up on the first frame (`seed` keeps two drivers
+  // out of step).
   const stateRef = useRef({
     seed: -1,
     leaning: 0,
@@ -427,13 +404,11 @@ export default function Driver({
       } else {
         glance =
           smoothstep(since / GLANCE.turn) *
-          (1 -
-            smoothstep((since - GLANCE.turn - GLANCE.hold) / GLANCE.back));
+          (1 - smoothstep((since - GLANCE.turn - GLANCE.hold) / GLANCE.back));
       }
     }
-    // Where the camera is from the head, in the hips' frame (the spine's
-    // lean and turn left out): the turn about y, and the tip about x (+
-    // down) after it.
+    // The camera's direction from the head, in the hips' frame: the turn
+    // about y, then the tip about x (+ down).
     let glanceYaw = 0;
     let glancePitch = 0;
     if (glance > 0 && r.hips) {
@@ -451,9 +426,8 @@ export default function Driver({
       );
     }
 
-    // Body: breathing swells the chest and lifts the shoulders and head
-    // (deeper leaning), standing shifts the weight (the hips tilt, the
-    // spine bends back against it, the legs stay upright; not leaning).
+    // Body: breathing swells the chest and lifts the shoulders and head;
+    // standing, the weight shifts from foot to foot.
     const breath =
       idle *
       THREE.MathUtils.lerp(1, LEANING.breath, lean) *
@@ -495,10 +469,8 @@ export default function Driver({
     );
     r.chest?.scale.set(1 + 0.6 * IDLE.breath * breath, lift, 1);
 
-    // Legs: straight standing; sitting, thighs forward and a little apart,
-    // shins down, swinging forward in turn (never back into the ledge),
-    // still under the desk; propped, the right toe tapping in bursts (the
-    // foot lifted by the thigh, the shin kept at its angle).
+    // Legs: straight standing; sitting, swinging in turn (still under the
+    // desk); propped, the right toe tapping in bursts.
     const tapping = smoothstep((Math.sin(t * PROPPED.tapBursts) - 0.3) / 0.4);
     const tap =
       idle *
@@ -527,9 +499,8 @@ export default function Driver({
       r.knees[i]?.rotation.set(sitting ? Math.PI / 2 - swing : 0, 0, 0);
     });
 
-    // Arms: hanging a little out standing, hands on the thighs sitting,
-    // over the keyboard typing, folded on the ledge leaning; the right one
-    // waving on demand.
+    // Arms: hanging standing, on the thighs sitting, over the keyboard
+    // typing, folded on the ledge leaning; the right one waving on demand.
     SIDES.forEach((side, i) => {
       let sx: number;
       let sy = 0;
@@ -582,9 +553,8 @@ export default function Driver({
       r.elbows[i]?.rotation.set(ex, 0, ez);
     });
 
-    // Head: a new glance every few seconds, eased toward (down at the
-    // screen typing), kept level against the spine's bend; leaning, set
-    // dreamily and swaying.
+    // Head: a new glance every few seconds (down at the screen typing), kept
+    // level against the spine's bend; set dreamily and swaying leaning.
     if (!reducedMotion && now >= state.nextLook) {
       state.nextLook = now + between(IDLE.lookGap);
       const range = typing ? 0.25 : propped ? PROPPED.look : 1;
@@ -594,8 +564,8 @@ export default function Driver({
     const ease = 1 - Math.exp(-IDLE.lookEase * delta);
     state.yaw += (state.targetYaw - state.yaw) * ease;
     state.pitch += (state.targetPitch - state.pitch) * ease;
-    // Or turned to the camera: turned about y last ("YXZ"), so it tips
-    // toward it rather than rolling.
+    // Turned to the camera about y last ("YXZ"), so it tips toward it
+    // rather than rolling.
     const [lookPitch, lookYaw, lookTilt] = LEANING.look;
     const sway = idle * LEANING.sway * Math.sin(t * LEANING.swaySpeed);
     r.head?.position.set(0, NECK_Y * lift, propped ? PROPPED.neck : 0);
@@ -769,7 +739,7 @@ function Leg({
   );
 }
 
-// Body, from the hips up to the shoulders (see Uniform and Hoodie).
+// Body, from the hips up to the shoulders.
 function Body({ color }: { color: string }) {
   return (
     <Block
@@ -929,11 +899,7 @@ function Overalls({ shirt, denim }: { shirt: string; denim: string }) {
           </mesh>
         </group>
       ))}
-      <mesh
-        castShadow
-        position={[0, 0.278, 0]}
-        rotation-x={Math.PI / 2 + 0.15}
-      >
+      <mesh castShadow position={[0, 0.278, 0]} rotation-x={Math.PI / 2 + 0.15}>
         <torusGeometry args={[0.058, 0.02, 8, 20]} />
         <meshStandardMaterial color={COLORS.neckerchief} roughness={0.85} />
       </mesh>
@@ -945,9 +911,7 @@ function Overalls({ shirt, denim }: { shirt: string; denim: string }) {
   );
 }
 
-// Shoulder to hand, hanging down (-y) at rest: a gold stripe at the cuff
-// of the uniform, a ribbed cuff on the hoodie (a rolled one on the
-// overalls' shirt).
+// Shoulder to hand, hanging down (-y) at rest, with a cuff.
 function Arm({
   side,
   clothes,
@@ -991,10 +955,10 @@ function Arm({
   );
 }
 
-// Curly hair: small balls over the head, merged into one geometry, on a
-// Fibonacci lattice (points spread evenly over a sphere) filtered to the
-// hair's area. The hair's dark base
-// is a cap of sphere tipped back by HAIR_TILT, HAIR_RIM from its pole.
+// Curly hair: small balls on a Fibonacci lattice (points spread evenly
+// over a sphere), filtered to the hair's area and merged into one
+// geometry, over a dark base: a cap of sphere tipped back by HAIR_TILT,
+// HAIR_RIM from its pole.
 const HAIR_TILT = 0.6;
 const HAIR_RIM = 1.5;
 const HAIR_POLE = new THREE.Vector3(
@@ -1046,9 +1010,8 @@ function curls(
   return geometry;
 }
 
-// Hair: over the scalp, tipped back off the forehead, and down the temples
-// to the sideburns. Under the cap, only the curls poking out below it;
-// bareheaded, fuller on top.
+// Hair over the scalp and down the temples: under a cap, only the curls
+// poking out below it.
 function hairCurls(cap: boolean) {
   return curls(cap ? "hair-cap" : "hair", 220, (p, i) => {
     const scalp = p.dot(HAIR_POLE) > Math.cos(HAIR_RIM - 0.05);
@@ -1062,10 +1025,9 @@ function hairCurls(cap: boolean) {
   });
 }
 
-// Short beard: a thin shell over the face (the triangles of a sphere just
-// larger than the head whose centre is in its area), trimmed to the jaw,
-// the chin and the sideburns in front of the ears, leaving the mouth and
-// the upper cheeks clear. `p` is a direction from the head's centre.
+// Short beard: the triangles of a sphere just larger than the head whose
+// centre lies on the jaw, the chin or the sideburns. `p` is a direction
+// from the head's centre.
 function inBeard(p: THREE.Vector3) {
   if (p.y > Math.min(0.05, -0.62 + 0.75 * p.x * p.x)) return false;
   return p.z > (p.y > -0.4 ? 0.12 : -0.3);
@@ -1103,7 +1065,10 @@ function beardShell() {
       "position",
       new THREE.Float32BufferAttribute(positions, 3),
     );
-    geometry.setAttribute("normal", new THREE.Float32BufferAttribute(normals, 3));
+    geometry.setAttribute(
+      "normal",
+      new THREE.Float32BufferAttribute(normals, 3),
+    );
     geometryCache.set("beard", geometry);
   }
   return geometry;
@@ -1118,12 +1083,8 @@ const HATS: Record<Outfit["style"], Hat> = {
   hoodie: null,
 };
 
-// Round head, centred HEAD_Y above the neck joint: dot eyes with a
-// highlight, brows, button nose, a thin moustache, a smile above a short
-// beard, ears, and curly hair over a dark base tipped back off the face.
-// Topped, worn a little askew, with the conductor's cap (crown, dark band
-// with a gold stripe, badge, glossy visor), or an engine driver's soft
-// round cap (puffed crown, band, cloth visor), in `hatColor`.
+// Round head, centred HEAD_Y above the neck joint, topped (a little askew)
+// with the conductor's cap or an engine driver's soft cap, in `hatColor`.
 function Head({
   hat,
   hatColor,

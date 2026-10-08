@@ -1,19 +1,16 @@
 import { useRef, useState, type RefObject } from "react";
 import { useFrame } from "@react-three/fiber";
 import type * as THREE from "three";
-import { useControls } from "leva";
+import { useTweaks } from "../debug/tweaks";
 import useHintReveal from "../hooks/useHintReveal";
 import type { HintedProp } from "../state/StationHints";
+import useReducedMotion from "../hooks/useReducedMotion";
 
-// A small glowing yellow ball floating over a clickable prop not clicked yet
-// (see useStationClick), while the train waits at its stop, once the
-// camera has settled there, in turn with the other hints, popping in like
-// the stop's fittings (see useHintReveal). It bobs gently, brightens a
-// little while its prop is hovered, and shrinks away once the prop is
-// clicked. Its colour is pushed
-// past white so the scene's bloom makes it glow. Still with reduced
-// motion, appearing and going at once. Sizes in the prop's units, speeds
-// per second. Tunable in the Leva "Indices" group, shared by all the balls.
+// A small glowing ball floating over a clickable prop not clicked yet, once
+// the camera has settled at its stop (see useHintReveal). It bobs gently,
+// brightens while its prop is hovered, and shrinks away once it's clicked.
+// Its colour is pushed past white for the bloom to make it glow. Still with
+// reduced motion. Sizes in the prop's units, speeds per second.
 const ORB = {
   radius: 0.04,
   color: "#ffd35c",
@@ -33,7 +30,7 @@ export default function HintOrb({
   hint: RefObject<HintedProp>;
   position: [number, number, number];
 }) {
-  const orb = useControls("Indices", {
+  const orb = useTweaks("Indices", {
     radius: { value: ORB.radius, min: 0.02, max: 0.5, step: 0.01 },
     color: ORB.color,
     glow: { value: ORB.glow, min: 0, max: 5, step: 0.1 },
@@ -48,9 +45,7 @@ export default function HintOrb({
   const materialRef = useRef<THREE.MeshBasicMaterial>(null);
   // Each ball bobs out of step with the others.
   const [phase] = useState(() => Math.random() * TAU);
-  const [reducedMotion] = useState(
-    () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
-  );
+  const reducedMotion = useReducedMotion();
   // Eased hover (0 to 1).
   const hoverRef = useRef(0);
 

@@ -2,13 +2,11 @@ import { useEffect, useState } from "react";
 import type { ThreeEvent } from "@react-three/fiber";
 import { claimPointer, releasePointer } from "../state/pointerCursor";
 
-// Pointer handlers for something in the scene reacting to clicks (a
-// driver, the train), spread on it: clicked while `active` (in view),
-// `onClick` (a wave, a jump...), with a pointer cursor over it (see
-// pointerCursor), let go if it stops being active under the pointer. The
-// events stop at it, so nothing behind takes them.
+// Pointer handlers to spread on something in the scene that reacts to
+// clicks while `active`, with a pointer cursor over it. The events stop at
+// it, so nothing behind takes them.
 export default function useClickable(active: boolean, onClick: () => void) {
-  // Its claim on the pointer cursor.
+  // Its claim on the pointer cursor (see pointerCursor).
   const [owner] = useState(() => ({}));
   useEffect(() => {
     if (!active) releasePointer(owner);

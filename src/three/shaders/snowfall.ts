@@ -1,10 +1,9 @@
 import * as THREE from "three";
 import { SNOW_COLOR } from "../config/seasons";
 
-// Falling snowflakes as points. Each flake starts somewhere in a box (its
-// `position`) and the shader moves it: falling at its own speed, swaying,
-// and carried back along -z as the world scrolls past the train (uScroll),
-// wrapping around inside the box so the snowfall never runs out.
+// Falling snowflakes as points, moved by the shader from their place in a
+// box: falling at their own speed, swaying, and carried back along -z as
+// the world scrolls (uScroll), wrapping round inside the box.
 
 const vertexShader = /* glsl */ `
   #include <fog_pars_vertex>
@@ -88,8 +87,8 @@ export function createSnowfallMaterial(box: THREE.Vector3) {
 }
 
 // Advances the flakes by `delta` seconds, the world having scrolled
-// `scrolled` units along -z meanwhile. `scale` is the pixels per world unit
-// at a distance of 1, for the flakes' size.
+// `scrolled` units meanwhile. `scale`: pixels per world unit at a distance
+// of 1, for the flakes' size.
 export function updateSnowfall(
   material: THREE.ShaderMaterial,
   {

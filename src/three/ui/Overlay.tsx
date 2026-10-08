@@ -6,9 +6,7 @@ import {
   type Stop,
   type TrainMode,
 } from "../state/TrainContext";
-import useDebugMode from "../hooks/useDebugMode";
 import AboutPanel from "./AboutPanel";
-import CameraReadout from "./CameraReadout";
 import DeparturesBoard from "./DeparturesBoard";
 import ProjectDialog from "./ProjectDialog";
 import SeasonSwitch from "./SeasonSwitch";
@@ -46,16 +44,14 @@ const STATUS: Record<Stop, Record<TrainMode, string>> = {
   },
 };
 
-// HTML layer over the canvas. The name in the corner (back to the site's
-// home), then the navigation as train tickets at the bottom. The ride is
-// its hub: there, one big ticket per screen; on a screen, only small ones,
-// the way back to the ride, and at the station one into the 3D board. One
-// set is gathered away as the other is dealt. On phones, the about card's
-// and the workshop's panels have their own return ticket instead. The
-// current mode and stop also pick the panel: the about card at home, the departures board's HTML twin at the
-// station, a project's dialog once a row is picked (on either board), and
-// the workshop in "custom" mode. Out of reach under the loading screen,
-// and the ride's tickets are only dealt once it starts going (`boarded`).
+// HTML layer over the canvas: the name in the corner, the season switch,
+// and the navigation as train tickets at the bottom. The ride is the hub:
+// there, one big ticket per screen; on a screen, small ones back to the
+// ride (and at the station, into the 3D board). The mode and stop also
+// pick the panel: the about card at home, the departures board's HTML twin
+// and a project's dialog at the station, the workshop in "custom" mode.
+// Out of reach under the loading screen; the ride's tickets are dealt once
+// it fades out (`boarded`).
 export default function Overlay({
   projects,
   boarded,
@@ -74,7 +70,6 @@ export default function Overlay({
     setBoardFocused,
   } = useTrainContext();
   const selected = projects.find((p) => p.slug === selectedSlug);
-  const showCamera = useDebugMode("cam");
   // Set when "Mes projets" was pressed from the keyboard, so the HTML board
   // takes focus on arrival (and shows up, see DeparturesBoard). A mouse or
   // a finger leaves the 3D board in charge.
@@ -90,16 +85,14 @@ export default function Overlay({
   const atHome = mode === "stopped" && stop === "home";
   const inWorkshop = mode === "custom";
   // Once the board has been open at this stop, "Voir les projets" comes
-  // back as a swap with "Fermer", not after the arrival's wait. Kept from
-  // render to render while the train waits there (React's way to adjust
-  // state to a change, without an effect).
+  // back as a swap with "Fermer", not after the arrival's wait (state
+  // adjusted while rendering, without an effect).
   const [boardOpened, setBoardOpened] = useState(false);
   if (atStation && boardFocused && !boardOpened) setBoardOpened(true);
   if (!atStation && boardOpened) setBoardOpened(false);
   const seeProjectsRef = useRef<HTMLButtonElement>(null);
 
-  // Out of the workshop ("custom"): Escape, the return ticket or the
-  // panel's own button go back to the ride.
+  // Escape leaves the workshop, as the return tickets do.
   useEffect(() => {
     if (mode !== "custom") return;
     const onKeyDown = (e: KeyboardEvent) => {
@@ -136,18 +129,14 @@ export default function Overlay({
 
       {atHome && <AboutPanel onDepart={depart} />}
 
-      {/* After the about card and the workshop's (tab order), before the
-          departures board's HTML twin (drawn over it). Both rows sit at
-          the bottom of the screen, over each other. */}
+      {/* After the about card and the workshop (tab order), before the
+          departures board's HTML twin (drawn over it). */}
       <nav aria-label="Voyage" className="absolute inset-0">
-        {/* On a screen (on phones, only at the station: the about card's
-            and the workshop's panels have their own): a small return
-            ticket, and at the station a small outbound one beside it, into
-            the 3D board (a click on it, or its arrow, works too), swapped
-            for "Fermer" while it's open, back out to the station. The two share a slot, as wide as the wider,
-            so "Retour" doesn't move. Beside the about card and the
-            workshop's, centred in the room they leave (their width and
-            right margin). */}
+        {/* On a screen: a small return ticket (on phones, the about card and
+            the workshop have their own), and at the station "Voir les
+            projets" into the 3D board, swapped for "Fermer" while it's
+            open. The two share a slot so "Retour" doesn't move. Beside a
+            side panel, centred in the room it leaves. */}
         <div
           className={`absolute inset-x-0 bottom-0 flex items-center justify-center gap-4 p-4 pb-8 transition-[right] duration-500 ease-out short:pb-4 ${atHome || inWorkshop ? "right-[25.25rem] max-sm:hidden" : ""}`}
         >
@@ -166,7 +155,7 @@ export default function Overlay({
             />
           </Dealt>
           {/* Mounted while the station is the stop, so they're gathered
-              away as the train departs rather than gone at once. */}
+              away as the train departs. */}
           {stop === "station" && (
             <div className="grid justify-items-start">
               <Dealt
@@ -183,8 +172,8 @@ export default function Overlay({
                   size="mini"
                   onClick={(e) => {
                     setBoardFocused(true);
-                    // From the keyboard, hand over to the HTML board (see
-                    // DeparturesBoard), which shows up once it holds focus.
+                    // From the keyboard, on to the HTML board, which shows
+                    // up once it holds focus.
                     if (e.detail === 0) {
                       document.getElementById("departures-title")?.focus();
                     }
@@ -206,8 +195,7 @@ export default function Overlay({
                   onClick={(e) => {
                     setBoardFocused(false);
                     // From the keyboard, back on "Voir les projets" once
-                    // it's dealt in again (visible, so focusable, a little
-                    // after its delay).
+                    // it's dealt in again (focusable once visible).
                     if (e.detail === 0) {
                       setTimeout(
                         () => seeProjectsRef.current?.focus(),
@@ -221,10 +209,8 @@ export default function Overlay({
           )}
         </div>
 
-        {/* On the ride, one big ticket per screen: on phones, stacked and
-            spread over the room under the train (the ride's shot keeps it
-            in the middle of the screen), in a row past them, narrowing to
-            fit. */}
+        {/* On the ride, one big ticket per screen: stacked under the train
+            on phones, in a row past them, narrowing to fit. */}
         <div
           inert={!riding}
           className="absolute inset-x-0 top-[58%] bottom-0 flex flex-col items-center justify-center gap-6 p-4 pb-8 sm:top-auto sm:flex-row sm:gap-3 sm:px-3 lg:gap-6 short:pb-4"
@@ -232,7 +218,7 @@ export default function Overlay({
           <Dealt
             shown={riding}
             delay={RIDE_DEAL_MS}
-            className="w-full max-w-56 sm:min-w-0 sm:max-w-72 sm:flex-1"
+            className="w-full max-w-56 sm:max-w-72 sm:min-w-0 sm:flex-1"
           >
             <Ticket
               kicker="Billet · Aller simple"
@@ -251,7 +237,7 @@ export default function Overlay({
             shown={riding}
             delay={RIDE_DEAL_MS + DEAL_MS}
             gather={GATHER_MS}
-            className="w-full max-w-56 sm:min-w-0 sm:max-w-72 sm:flex-1"
+            className="w-full max-w-56 sm:max-w-72 sm:min-w-0 sm:flex-1"
           >
             <Ticket
               kicker="Billet · Aller simple"
@@ -268,7 +254,7 @@ export default function Overlay({
             shown={riding}
             delay={RIDE_DEAL_MS + 2 * DEAL_MS}
             gather={2 * GATHER_MS}
-            className="w-full max-w-56 sm:min-w-0 sm:max-w-72 sm:flex-1"
+            className="w-full max-w-56 sm:max-w-72 sm:min-w-0 sm:flex-1"
           >
             <Ticket
               kicker="Billet · Personnaliser"
@@ -289,8 +275,6 @@ export default function Overlay({
           onDepart={depart}
         />
       )}
-
-      {showCamera && <CameraReadout />}
 
       {atStation && selected && (
         <ProjectDialog

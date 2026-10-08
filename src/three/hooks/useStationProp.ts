@@ -1,15 +1,15 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useFrame, type ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
 import { useTrainContext } from "../state/TrainContext";
 import { useStationHints, type HintedProp } from "../state/StationHints";
 import { claimPointer, releasePointer } from "../state/pointerCursor";
+import useReducedMotion from "./useReducedMotion";
 
-// A clickable prop's wiggle: a quick stretch up, then a rocking that dies
-// out, seen sideways from the track (about x). Played in full now and then
-// to hint at the click (see StationHints), and `hover` as strong as the
-// pointer comes onto the prop. None with reduced motion. Seconds and
-// radians.
+// A clickable prop's wiggle: a quick stretch up, then a rocking about x
+// that dies out. In full now and then to hint at the click (see
+// StationHints), `hover` as strong as the pointer comes onto the prop. None
+// with reduced motion. Seconds and radians.
 const NUDGE = {
   duration: 0.9,
   stretch: 0.08,
@@ -25,20 +25,18 @@ type ClickOptions = {
   // Point the wiggle stretches and rocks about, in the prop's own frame
   // (default its origin, at its feet).
   pivot?: [number, number, number];
-  // Whether it wiggles at all (not the building: it looks wrong; nothing
-  // does where the stop's props aren't hinted, see StationHints).
+  // Whether it wiggles at all (not a building; nothing does where the
+  // stop's props aren't hinted).
   wiggle?: boolean;
   // Whether it's playing its click animation: no wiggle on hover then.
   isAnimating?: () => boolean;
 };
 
-// Pointer handlers making a prop clickable while the train waits at its stop
-// (see StationHints) and the departures board isn't open: a pointer cursor on
-// hover, and `onClick` on click. Only the nearest prop along the ray takes
-// either, so a prop in front of another (the clock on the building) takes
-// them alone. `bind` goes on the prop's outer group and `pose` on a group
-// just inside it, which wiggles to hint at the click, and a little on
-// hover. `hint` (hovered, discovered yet) is for its HintOrb.
+// Makes a prop clickable while the train waits at its stop and the board
+// isn't open: a pointer cursor on hover, `onClick` on click. Only the
+// nearest prop along the ray takes either (the clock, not the building
+// behind it). `bind` goes on the prop's outer group and `pose` on a group
+// just inside it, which wiggles. `hint` is for its HintOrb.
 export function useStationClick(
   onClick: () => void,
   { pivot = [0, 0, 0], wiggle = true, isAnimating }: ClickOptions = {},
@@ -47,13 +45,10 @@ export function useStationClick(
   const hints = useStationHints();
   const atStop = mode === "stopped" && stop === hints.stop;
   const clickable = atStop && !boardFocused;
-  const [reducedMotion] = useState(
-    () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
-  );
+  const reducedMotion = useReducedMotion();
   const poseRef = useRef<THREE.Group>(null);
   // The wiggle playing: when it started on the frame clock, and how strong
-  // (1 in full); null at rest. On hover it's asked for with its strength,
-  // and starts on the next frame.
+  // (1 in full); null at rest. A hover asks for one on the next frame.
   const nudgeRef = useRef<{ start: number; amount: number } | null>(null);
   const hoverNudgeRef = useRef(false);
   const hintedRef = useRef<HintedProp>({
@@ -69,9 +64,8 @@ export function useStationClick(
     if (wiggles) return hints.register(hintedRef.current);
   }, [hints, wiggles]);
 
-  // Whether this prop claims the pointer cursor (see pointerCursor), let go
-  // if the prop stops being clickable while hovered (departure, board
-  // opened).
+  // Whether this prop claims the pointer cursor, let go if it stops being
+  // clickable while hovered.
   const pointingRef = useRef(false);
   useEffect(() => {
     if (!clickable && pointingRef.current) {
@@ -117,7 +111,7 @@ export function useStationClick(
   });
 
   // The pointer comes onto the prop: a pointer cursor, and a little wiggle
-  // (not while it's already wiggling or playing its click animation).
+  // unless it's already moving.
   const enter = () => {
     pointingRef.current = true;
     hintedRef.current.hovered = true;
@@ -131,11 +125,9 @@ export function useStationClick(
       hoverNudgeRef.current = true;
     }
   };
-  // Hover follows the nearest prop along the ray only, rather than stopping
-  // the event there: stopped, R3F drops a prop's hover when the pointer
-  // moves from one of its parts to another, and only brings it back on the
-  // next move (the cursor flickering at every seam). Not stopped, it ends
-  // the old part's hover and starts the new one's in the same move.
+  // Hover follows the nearest prop along the ray, rather than stopping the
+  // event: stopped, R3F drops a prop's hover between two of its parts until
+  // the next move, and the cursor flickers at every seam.
   const inFront = (e: ThreeEvent<PointerEvent>) =>
     e.intersections[0]?.eventObject === e.eventObject;
 
@@ -149,8 +141,7 @@ export function useStationClick(
     onPointerOver: (e: ThreeEvent<PointerEvent>) => {
       if (clickable && !pointingRef.current && inFront(e)) enter();
     },
-    // Coming out from behind a prop in front of it (the clock on the
-    // building) is no new hover: caught here.
+    // Coming out from behind a prop in front is no new hover: caught here.
     onPointerMove: (e: ThreeEvent<PointerEvent>) => {
       if (clickable && !pointingRef.current && inFront(e)) enter();
     },
@@ -166,9 +157,9 @@ export function useStationClick(
 }
 
 // A prop playing a `duration`-second animation when clicked, one at a
-// time. `animate` runs every frame with the seconds since the click, or
-// null at rest, and whether the visitor prefers reduced motion. Cut short
-// (back to rest) as soon as the train leaves.
+// time. `animate` runs every frame with the seconds since the click (null
+// at rest) and whether to reduce motion. Cut short as soon as the train
+// leaves.
 export default function useStationProp(
   duration: number,
   animate: (t: number | null, reducedMotion: boolean) => void,
@@ -176,9 +167,7 @@ export default function useStationProp(
 ) {
   const startRef = useRef<number | null>(null);
   const clickedRef = useRef(false);
-  const [reducedMotion] = useState(
-    () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
-  );
+  const reducedMotion = useReducedMotion();
   const { bind, pose, hint, atStop } = useStationClick(
     () => {
       if (startRef.current === null) clickedRef.current = true;

@@ -1,9 +1,8 @@
 import type { ReactNode } from "react";
 import type { Project } from "@/lib/projects";
 
-// A project as the station UI needs it. `body` is the MDX body rendered on
-// the server and handed down ready to show, since the content readers use
-// node:fs and can't run in this client tree.
+// A project as the scene needs it. `body` is the MDX body, rendered on the
+// server: the content readers use node:fs.
 export type StationProject = Pick<
   Project,
   | "slug"

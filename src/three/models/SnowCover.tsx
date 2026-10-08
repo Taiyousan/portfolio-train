@@ -5,10 +5,9 @@ import { SNOW_COLOR } from "../config/seasons";
 
 type Vec3 = [number, number, number];
 
-// A slab of snow on a flat top (canopy, roof), rising out of it as the
-// season's snow cover grows. `top` is the centre of that top surface. With
-// no snow the slab sinks inside what it rests on, so `size`'s thickness
-// must not exceed it.
+// A slab of snow on a flat top, rising out of it as the snow cover grows.
+// `top` is the centre of that top surface. Without snow the slab sinks
+// inside what it rests on, which must be at least as thick.
 export default function SnowCover({ top, size }: { top: Vec3; size: Vec3 }) {
   const ref = useRef<THREE.Mesh>(null);
   const [x, y, z] = top;

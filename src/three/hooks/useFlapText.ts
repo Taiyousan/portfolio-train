@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import useReducedMotion from "./useReducedMotion";
 
 const FLAP_GLYPHS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 // How often the unsettled letters flip, and how long each letter waits
@@ -14,12 +15,11 @@ function randomGlyph() {
 // random glyphs; each time it turns true, they settle one by one after
 // `delay`. Always the real text with reduced motion.
 export default function useFlapText(text: string, delay = 0, settle = true) {
+  const reducedMotion = useReducedMotion();
   const [shown, setShown] = useState(text);
 
   useEffect(() => {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      return;
-    }
+    if (reducedMotion) return;
     const start = performance.now() + delay;
     let lastFlip = -Infinity;
     let frame = requestAnimationFrame(function tick(now) {
@@ -41,7 +41,7 @@ export default function useFlapText(text: string, delay = 0, settle = true) {
       frame = requestAnimationFrame(tick);
     });
     return () => cancelAnimationFrame(frame);
-  }, [text, delay, settle]);
+  }, [text, delay, settle, reducedMotion]);
 
-  return shown;
+  return reducedMotion ? text : shown;
 }

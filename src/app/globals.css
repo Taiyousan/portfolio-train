@@ -7,13 +7,11 @@
   --line: #e4e4e7;
   --accent: #4f46e5;
   --on-accent: #ffffff;
-  /* Split-flap departures board (train prototype): always dark, whatever
-     the colour scheme, like the real thing. */
+  /* Split-flap departures board: dark whatever the colour scheme. */
   --board: #16140f;
   --board-flap: #26231c;
   --board-ink: #f5c542;
-  /* Train tickets (train prototype navigation): ivory card stock, printed
-     ink, a red stamp. */
+  /* Train tickets: ivory card stock, printed ink, a red stamp. */
   --ticket: #f4efe4;
   --ticket-ink: #26211b;
   --ticket-stamp: #a63d2a;
@@ -36,8 +34,8 @@
   --font-mono: var(--font-geist-mono);
 }
 
-/* Short screens, phones held sideways above all: the train overlay
-   tightens its margins and drops what doesn't fit (short:hidden). */
+/* Short screens (phones held sideways): the scene's overlay tightens its
+   margins and drops what doesn't fit. */
 @custom-variant short (@media (max-height: 32rem));
 
 @media (prefers-color-scheme: dark) {
@@ -50,9 +48,8 @@
   }
 }
 
-/* Re-themes a subtree in the departures board's palette (train prototype
-   panels): components styled with the tokens above follow along without
-   knowing about it. */
+/* Re-themes a subtree in the departures board's palette: components
+   styled with the tokens above follow along. */
 .theme-board {
   --background: #1d1a14;
   --foreground: #eee4cf;
@@ -63,9 +60,8 @@
   color-scheme: dark;
 }
 
-/* Re-themes a subtree as a printed train ticket (train prototype project
-   dialog and workshop): ink on card stock, with the stamp as accent. Cream
-   whatever the colour scheme, like the ticket buttons. */
+/* Re-themes a subtree as a printed train ticket: ink on card stock, the
+   stamp as accent, whatever the colour scheme. */
 .theme-ticket {
   --background: var(--ticket);
   --foreground: var(--ticket-ink);
@@ -76,12 +72,9 @@
   color-scheme: light;
 }
 
-/* Half notches cut at the two ends of a perforation, on either part: at
-   the bottom corners of the part above it (notch-bottom) and the top
-   corners of the part below (notch-top) for a horizontal one, at the right
-   corners of the part before it (notch-right) and the left corners of the
-   part after (notch-left) for a vertical one. Put together, they make two
-   round notches on either side of the perforation. Utilities, so a
+/* Half notches cut at the two ends of a perforation, on either part
+   (notch-bottom over notch-top, notch-right before notch-left): put
+   together, two round notches either side of it. Utilities, so a
    breakpoint can turn the seam (sm:notch-right). */
 @utility notch-bottom {
   --notch: 0.75rem;
@@ -152,8 +145,8 @@
 }
 
 /* Train ticket shape (three/ui/Ticket): rounded corners, and two notches
-   cut top and bottom at the stub's perforation, 4rem from the right edge.
-   Each mask layer covers one half, so no mask compositing is needed. */
+   at the stub's perforation. Each mask layer covers one half, so no mask
+   compositing is needed. */
 .ticket {
   --notch: 0.45rem;
   --notch-x: calc(100% - 4rem);
@@ -179,8 +172,7 @@
   --ticket-stamp: #3d6656;
 }
 
-/* Printed barcode in the current ink, decorative (project ticket, about
-   railcard). Height and opacity are set where it's used. */
+/* Printed barcode in the current ink, decorative. */
 @utility barcode {
   background: repeating-linear-gradient(
     90deg,
@@ -193,10 +185,9 @@
   );
 }
 
-/* A thin scrollbar in the subtree's ink, on no track, so a scrolling panel
-   keeps its look (the project ticket). Chrome and Safari get a rounded
-   thumb without the arrow buttons that their thin standard scrollbar keeps
-   on Windows; Firefox, the standard properties. */
+/* A thin scrollbar in the subtree's ink, on no track. Chrome and Safari
+   get a rounded thumb without the arrow buttons their thin standard one
+   keeps on Windows; Firefox, the standard properties. */
 @utility scrollbar-ink {
   --scrollbar-thumb: color-mix(in oklab, var(--foreground) 35%, transparent);
 
@@ -217,8 +208,7 @@
   }
 }
 
-/* Chimney puff of the loading screen's locomotive (three/ui/LoadingScreen):
-   blown back and up as it swells and clears. */
+/* Chimney puff of the loading screen's locomotive. */
 @keyframes puff {
   0% {
     translate: 0 0;
@@ -235,8 +225,8 @@
   }
 }
 
-/* The site's own cursor (components/Cursor) stands in for the system's,
-   save over text fields and while the train scene loads. */
+/* The site's cursor (components/Cursor) stands in for the system's, save
+   over text fields and while the scene loads. */
 .custom-cursor:not([data-loading]),
 .custom-cursor:not([data-loading]) * {
   cursor: none !important;
@@ -245,14 +235,14 @@
 .custom-cursor
   :is(
     input:not(
-        [type="checkbox"],
-        [type="radio"],
-        [type="range"],
-        [type="color"],
-        [type="button"],
-        [type="submit"],
-        [type="reset"]
-      ),
+      [type="checkbox"],
+      [type="radio"],
+      [type="range"],
+      [type="color"],
+      [type="button"],
+      [type="submit"],
+      [type="reset"]
+    ),
     textarea,
     [contenteditable="true"]
   ) {

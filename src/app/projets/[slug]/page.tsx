@@ -5,6 +5,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { getProject, getProjects, type Project } from "@/lib/projects";
+import { site } from "@/lib/site";
+
+// Every project page is built ahead; any other slug is a 404.
+export const dynamicParams = false;
 
 export function generateStaticParams() {
   return getProjects().map((p) => ({ slug: p.slug }));
@@ -16,7 +20,21 @@ export async function generateMetadata({
   const { slug } = await params;
   const project = getProject(slug);
   if (!project) return {};
-  return { title: project.title, description: project.summary };
+  const url = `/projets/${slug}`;
+  return {
+    title: project.title,
+    description: project.summary,
+    alternates: { canonical: url },
+    openGraph: {
+      type: "article",
+      locale: "fr_FR",
+      siteName: site.name,
+      url,
+      title: project.title,
+      description: project.summary,
+      images: [{ url: project.thumb, alt: project.title }],
+    },
+  };
 }
 
 export default async function ProjectPage({
@@ -55,23 +73,8 @@ export default async function ProjectPage({
         </p>
       </header>
 
-      {/* Video set aside for now, may come back later.
-      {project.video && (
-        <video
-          src={project.video}
-          poster={project.thumb}
-          controls
-          muted
-          playsInline
-          loop
-          preload="none"
-          className="mt-8 w-full rounded-2xl border border-line bg-foreground/5 shadow-2xl shadow-foreground/10"
-        />
-      )}
-      */}
-
-      {/* The fact sheet sits on top on smaller screens, in a sticky side
-          column on larger ones. */}
+      {/* The fact sheet: on top on smaller screens, a sticky side column on
+          larger ones. */}
       <div className="mt-10 grid gap-10 lg:grid-cols-[minmax(0,1fr)_17rem] lg:gap-16">
         <aside
           aria-label="Fiche du projet"
@@ -190,6 +193,7 @@ function ProjectLink({
         alt=""
         width={320}
         height={180}
+        sizes="112px"
         className="aspect-video w-28 shrink-0 rounded-lg object-cover"
       />
       <span>

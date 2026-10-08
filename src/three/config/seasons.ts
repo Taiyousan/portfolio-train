@@ -1,7 +1,6 @@
-// Seasons the scene can be switched to (see ui/SeasonSwitch). Only a look:
-// colours, light, sky and snow; nothing else in the scene depends on them.
-// Switching blends every value below from one season to the next (see
-// hooks/useSeason). "summer" is the original dusk scene.
+// Seasons the scene can be switched to (see ui/SeasonSwitch): only a look,
+// colours, light, sky and snow. Switching blends every value below from
+// one season to the next (see hooks/useSeason).
 export const SEASONS = ["summer", "winter"] as const;
 export type Season = (typeof SEASONS)[number];
 
@@ -28,7 +27,7 @@ type SeasonLook = {
   };
   values: {
     ambientIntensity: number;
-    // Multiply the Leva "Scene" lightIntensity and fogDensity.
+    // Multiply the "Scene" settings' lightIntensity and fogDensity.
     sunScale: number;
     fogScale: number;
     // Snow is bright: raised so the bloom doesn't flood it.

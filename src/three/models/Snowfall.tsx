@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { useTrainContext } from "../state/TrainContext";
@@ -8,6 +8,7 @@ import {
   createSnowfallMaterial,
   updateSnowfall,
 } from "../shaders/snowfall";
+import useReducedMotion from "../hooks/useReducedMotion";
 
 const FLAKE_COUNT = 6000;
 // Box the flakes fall and wrap around in, from the ground (y = -0.6) up,
@@ -15,13 +16,11 @@ const FLAKE_COUNT = 6000;
 const BOX = new THREE.Vector3(18, 6, 26);
 const BOX_CENTER: [number, number, number] = [-1, -0.6 + BOX.y / 2, 0];
 
-// Snowflakes in winter, faded in and out with the season's "snowfall".
-// Hidden with reduced motion (the snow cover stays).
+// Snowflakes, faded in and out with the season's "snowfall". None with
+// reduced motion (the snow cover stays).
 export default function Snowfall() {
   const { trainSpeedRef, seasonWeightsRef } = useTrainContext();
-  const [reducedMotion] = useState(
-    () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
-  );
+  const reducedMotion = useReducedMotion();
   const pointsRef = useRef<THREE.Points>(null);
 
   const geometry = useMemo(() => createSnowfallGeometry(FLAKE_COUNT, BOX), []);

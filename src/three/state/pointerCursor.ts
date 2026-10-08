@@ -1,12 +1,11 @@
 // The pointer cursor over what's clickable in the scene. Each thing under
 // the pointer claims it, and lets go when the pointer leaves it or it stops
-// being clickable; the latest claim still held shows. So a prop still
-// hovered behind another (a planter behind a lamp) gets it back as soon as
-// the one in front lets go, without the pointer having to leave it first.
+// being clickable; the latest claim still held shows. So a prop hovered
+// behind another gets it back as soon as the one in front lets go.
 //
 // "ui" claims, from what stands for the interface in the scene (the open
 // departures board), are marked on the body (data-cursor), for the site's
-// cursor to show them as it does the page's buttons (components/Cursor).
+// cursor to show them as it does the page's buttons.
 export type PointerKind = "scene" | "ui";
 
 const claims = new Map<unknown, PointerKind>();

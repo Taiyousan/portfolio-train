@@ -11,23 +11,21 @@ import {
 import type { CameraControls } from "@react-three/drei";
 import { SEASONS, type Season } from "../config/seasons";
 
-// See docs/proto-train.md — one mode drives target speed, camera position
-// and HTML overlay together. arriving / stopped / departing apply to the
-// current stop. "custom" is the workshop, where the locomotive is
-// repainted and the driver dressed (see ui/Workshop).
+// One mode drives the train's speed, the camera and the HTML overlay
+// together. arriving / stopped / departing apply to the current stop.
+// "custom" is the workshop (see ui/Workshop).
 export type TrainMode =
   "ride" | "arriving" | "stopped" | "departing" | "custom";
 
-// Where the train stops: the station (projects, departures board) or home
-// (about: the driver, cap off, working at a desk on the terrace).
+// Where the train stops: the station (the projects) or home (about).
 export type Stop = "station" | "home";
 
-// What the workshop is showing (its tab), and the camera closing in on.
+// The workshop's tab, which the camera closes in on.
 export type WorkshopView = "train" | "driver";
 
 // The locomotive's hop when clicked (see Train): lifted off the rails by
-// `lift` (world units), stretched up by `stretch` about them, and bulging
-// out by `bulge` across; 0, 1 and 1 at rest.
+// `lift` (world units), stretched up by `stretch` and bulging out by
+// `bulge`; 0, 1 and 1 at rest.
 export type TrainHop = { lift: number; stretch: number; bulge: number };
 
 // How far the scene has blended into each season, summing to 1.
@@ -35,15 +33,13 @@ export type SeasonWeights = Record<Season, number>;
 
 type TrainContextValue = {
   cameraControlsRef: RefObject<CameraControls | null>;
-  // Current, smoothed speed — eased toward targetTrainSpeed once per frame
-  // (see useTrainSpeedEasing). A ref rather than state: it changes every
-  // frame, and useFrame consumers (Train, Smoke, useScrollingLoop) read it
-  // directly without needing a re-render.
+  // Current speed, eased toward targetTrainSpeed (see useTrainSpeedEasing).
+  // A ref, not state: it changes every frame and is read in useFrame.
   trainSpeedRef: RefObject<number>;
   targetTrainSpeed: number;
   setTargetTrainSpeed: (speed: number) => void;
   // Set every frame by Train, for the smoke to leave the chimney where it
-  // is (see Smoke). A ref, like trainSpeedRef.
+  // is.
   trainHopRef: RefObject<TrainHop>;
   mode: TrainMode;
   setMode: (mode: TrainMode) => void;
@@ -51,24 +47,22 @@ type TrainContextValue = {
   // switching to "arriving".
   stop: Stop;
   setStop: (stop: Stop) => void;
-  // Project opened from the departures board (3D rows or their HTML twin),
-  // by slug. Only shown while at the station.
+  // Project opened from the departures board, by slug.
   selectedSlug: string | null;
   setSelectedSlug: (slug: string | null) => void;
-  // At the station, the camera has zoomed onto the departures board (a
-  // click on it) and its rows can be picked.
+  // At the station, the camera has zoomed onto the departures board and its
+  // rows can be picked.
   boardFocused: boolean;
   setBoardFocused: (focused: boolean) => void;
   workshopView: WorkshopView;
   setWorkshopView: (view: WorkshopView) => void;
-  // Season picked with the switch (see config/seasons). The scene blends
-  // into it gradually: seasonWeightsRef, eased once per frame by
-  // useSeasonEasing and read from useFrame, like trainSpeedRef.
+  // Season picked with the switch. The scene blends into it gradually:
+  // seasonWeightsRef, eased every frame by useSeasonEasing.
   season: Season;
   setSeason: (season: Season) => void;
   seasonWeightsRef: RefObject<SeasonWeights>;
-  // The scene has loaded and drawn its first frames (see SceneReady in
-  // scenes/TrainScene): the loading screen can go.
+  // The scene has loaded and drawn its first frames: the loading screen can
+  // go.
   ready: boolean;
   setReady: (ready: boolean) => void;
 };

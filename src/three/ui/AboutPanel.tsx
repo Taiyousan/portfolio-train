@@ -20,17 +20,12 @@ const CONTACTS = [
   { label: "LinkedIn", href: site.links.linkedin },
 ];
 
-// "About" panel, shown while the train waits at home, beside the driver at
-// the desk. Dressed as a railcard, like the workshop's work order: a
-// split-flap strip with the name, in the card's ink like the project
-// ticket's band, then card stock below a perforation (.theme-ticket), the
-// driver's portrait as the holder's photo, in the hoodie worn at the desk
-// beside it (see models/Home). The look is the railcard's, the text stays
-// plain. A side card on larger screens. On phones, a bottom sheet with the
-// return ticket riding on top of it (Overlay's is left out there), lowered
-// to leave the scene in view: it rises to take most of the screen once its
-// text is scrolled, or with a tap or a swipe up on its header, which lower
-// it again. Escape sets off again too.
+// "About" panel, shown while the train waits at home, dressed as a
+// railcard: a split-flap strip with the name, then card stock below a
+// perforation, the driver in a hoodie as the holder's photo. A side card on
+// larger screens. On phones, a bottom sheet with its own return ticket,
+// lowered to leave the scene in view: it rises once its text is scrolled,
+// or with a tap or a swipe on its header. Escape sets off again.
 export default function AboutPanel({ onDepart }: { onDepart: () => void }) {
   const { outfit: picked } = useLivery();
   const outfit = picked.style === "hoodie" ? picked : OUTFITS.hoodie;
@@ -40,8 +35,8 @@ export default function AboutPanel({ onDepart }: { onDepart: () => void }) {
   const [raised, setRaised] = useState(false);
   const swipeFrom = useRef<number | null>(null);
   const textRef = useRef<HTMLDivElement>(null);
-  // Lowered, the sheet shows its top again: and its text, scrolled back,
-  // won't raise it straight away.
+  // Lowered, the sheet scrolls back to its top, so it isn't raised again at
+  // once.
   const raise = (up: boolean) => {
     if (!up) textRef.current?.scrollTo({ top: 0 });
     setRaised(up);
@@ -59,12 +54,11 @@ export default function AboutPanel({ onDepart }: { onDepart: () => void }) {
     <section
       aria-labelledby="about-title"
       // Dealt in after the camera has moved, raised and lowered at once.
-      className={`theme-ticket pointer-events-auto absolute inset-x-0 bottom-0 flex flex-col text-foreground drop-shadow-2xl [transition:translate_500ms_ease-out_500ms,opacity_500ms_ease-out_500ms,max-height_300ms_ease-out] starting:translate-y-6 starting:opacity-0 sm:inset-x-auto ${raised ? "max-h-[calc(100dvh-8rem)]" : "max-h-[45dvh]"} sm:top-20 sm:right-5 sm:bottom-auto sm:max-h-[calc(100dvh-7rem)] sm:short:top-16 sm:short:max-h-[calc(100dvh-5rem)] sm:w-96`}
+      className={`theme-ticket pointer-events-auto absolute inset-x-0 bottom-0 flex flex-col text-foreground drop-shadow-2xl [transition:translate_500ms_ease-out_500ms,opacity_500ms_ease-out_500ms,max-height_300ms_ease-out] sm:inset-x-auto starting:translate-y-6 starting:opacity-0 ${raised ? "max-h-[calc(100dvh-8rem)]" : "max-h-[45dvh]"} sm:top-20 sm:right-5 sm:bottom-auto sm:max-h-[calc(100dvh-7rem)] sm:w-96 sm:short:top-16 sm:short:max-h-[calc(100dvh-5rem)]`}
     >
       {/* Split-flap header, in the card's ink. */}
-      <header className="notch-bottom relative shrink-0 rounded-t-xl bg-foreground px-5 pt-4 pb-4 text-background">
-        {/* On phones, the whole header raises and lowers the sheet, a
-            grab bar on top and its action spelled out on the right. */}
+      <header className="relative shrink-0 rounded-t-xl bg-foreground px-5 pt-4 pb-4 text-background notch-bottom">
+        {/* On phones, the whole header raises and lowers the sheet. */}
         <button
           type="button"
           aria-expanded={raised}
@@ -130,7 +124,7 @@ export default function AboutPanel({ onDepart }: { onDepart: () => void }) {
         onScroll={(e) => {
           if (!raised && e.currentTarget.scrollTop > 0) setRaised(true);
         }}
-        className="notch-top scrollbar-ink min-h-0 overflow-y-auto border-t-2 border-dashed border-ticket-ink/30 bg-background px-5 pt-5 pb-6 sm:rounded-b-xl"
+        className="min-h-0 scrollbar-ink overflow-y-auto border-t-2 border-dashed border-ticket-ink/30 bg-background px-5 pt-5 pb-6 notch-top sm:rounded-b-xl"
       >
         <div className="flex items-start gap-4">
           {/* The holder's photo, stamped in a corner. */}
@@ -192,7 +186,7 @@ export default function AboutPanel({ onDepart }: { onDepart: () => void }) {
         {/* Printed barcode. */}
         <span
           aria-hidden="true"
-          className="barcode mt-6 block h-8 opacity-60"
+          className="mt-6 block h-8 opacity-60 barcode"
         />
       </div>
 

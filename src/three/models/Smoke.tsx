@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
-import { useControls } from "leva";
 import { useTrainContext } from "../state/TrainContext";
+import { useTweaks } from "../debug/tweaks";
 import { createSmokeMaterial } from "../shaders/smoke";
 import { CHIMNEY_TOP, DRIVING_RADIUS, RAIL_TOP } from "./Locomotive";
 
@@ -56,22 +56,18 @@ function step(puff: Puff, dt: number, airSpeed: number) {
   puff.position.addScaledVector(velocity, dt);
 }
 
-// Puffs of smoke blasted out of the chimney, toon-shaded by a custom shader
-// (see shaders/smoke.ts), all drawn in one call by an InstancedMesh. Out of
-// the chimney wherever it is, hopping (see Train); once out, a puff stays
-// in the air.
+// Puffs of smoke blasted out of the chimney (wherever the locomotive's hop
+// puts it), toon-shaded (see shaders/smoke), all drawn in one call.
 //
 // Like a real steam engine, the chimney puffs in time with the driving
-// wheels: a puff every so much distance rolled, so they come faster as the
-// train speeds up and space out, then stop, as it brakes — plus a gentle
-// idle rate, so the engine still breathes at a standstill. Each puff, once
-// out, lives on its own: it is moved frame by frame (blast, then buoyancy,
-// then carried off by the air) rather than placed from the current speed,
-// so a change of speed never drags the puffs already out along with it.
+// wheels: a puff every so much distance rolled, plus a gentle idle rate at
+// a standstill. Once out, each puff lives on its own, moved frame by frame
+// (blast, buoyancy, then carried off by the air), so a change of speed
+// never drags the puffs already out along with it.
 export default function Smoke() {
   const { trainSpeedRef, targetTrainSpeed, trainHopRef } = useTrainContext();
 
-  const { lifetime, puffsPerTurn, idleRate, blast } = useControls("Smoke", {
+  const { lifetime, puffsPerTurn, idleRate, blast } = useTweaks("Smoke", {
     // Seconds a puff lasts.
     lifetime: { value: 2.4, min: 0.5, max: 6, step: 0.1 },
     // Puffs per turn of the driving wheels (a real engine gives 4).
@@ -177,8 +173,7 @@ export default function Smoke() {
       live.push(puff);
     }
 
-    // Hand them to the instances (through the mesh: the material and the
-    // geometry are render-time values, not to be modified from here).
+    // Through the mesh: the material and geometry are render-time values.
     const ages = mesh.geometry.getAttribute("aAge");
     const seeds = mesh.geometry.getAttribute("aSeed");
     live.forEach((puff, i) => {
@@ -203,8 +198,8 @@ export default function Smoke() {
   return (
     <instancedMesh
       ref={meshRef}
-      // Its count starts at MAX_PUFFS, so the shader warm-up (see
-      // useShaderWarmup) draws it; the first frame sets the real count.
+      // Its count starts at MAX_PUFFS, so the shader warm-up draws it; the
+      // first frame sets the real count.
       args={[geometry, material, MAX_PUFFS]}
       // Its puffs drift far from the mesh's own bounds.
       frustumCulled={false}

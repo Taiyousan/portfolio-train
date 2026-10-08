@@ -10,20 +10,18 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { POP_STAGGER_MS, STOP_SETTLE_MS } from "../config/scene";
 import { useTrainContext, type Stop } from "./TrainContext";
+import useReducedMotion from "../hooks/useReducedMotion";
 
-// Hints that a stop's props can be clicked (the station's, or the home's):
-// while the train waits there, every few seconds one prop not clicked yet
-// gives a little wiggle (see useStationClick, which draws it), one at a
-// time. None with reduced motion. Timings in seconds: the first wiggle once the train has
-// stopped, then a random gap between two, also held off after a click.
+// Hints that a stop's props can be clicked: while the train waits there,
+// every few seconds one prop not clicked yet gives a little wiggle (drawn
+// by useStationClick). None with reduced motion. In seconds: the first
+// wiggle after the stop, then a random gap between two, also held off
+// after a click.
 const HINTS = { first: 1.5, gapMin: 2, gapMax: 3.5 };
-// The hints at the click (the balls over the props, see HintOrb, and the
-// arrow over the departures board) come on once the camera has settled on
-// the stop, so that they're seen coming: no sooner than `settle` seconds
-// after the props become clickable (the camera may still rest on its
-// arrival shot before moving on, see config/scene), then once it has come
-// to rest, popping in one after the other like the stop's fittings, left
-// to right on screen (see useHintReveal).
+// The glowing hints (the balls over the props, the arrow over the board)
+// come on once the camera has settled on the stop, popping in left to right
+// on screen (see useHintReveal). No sooner than SETTLE seconds after the
+// stop: the camera may still rest on its arrival shot.
 const SETTLE = STOP_SETTLE_MS / 1000 + 0.2;
 // Scratch vector for the hints' places on screen.
 const onScreen = new THREE.Vector3();
@@ -36,9 +34,9 @@ export type HintedProp = {
   nudge: (at: number) => void;
 };
 
-// A hint at the click, as registered by useHintReveal: its mesh, whether
-// its prop has been clicked already (it's left out then), and when it
-// comes on (on the frame clock; null while the hints are off).
+// A glowing hint, as registered by useHintReveal: its mesh, whether its
+// prop has been clicked already, and when it comes on (on the frame clock;
+// null while the hints are off).
 export type HintedOrb = {
   mesh: RefObject<THREE.Object3D | null>;
   discovered: () => boolean;
@@ -48,8 +46,8 @@ export type HintedOrb = {
 type StationHintsValue = {
   // The stop these props stand at: they're clickable only there.
   stop: Stop;
-  // Whether they hint at the click at all (wiggles, HintOrbs): not at
-  // home, where they're left to be found.
+  // Whether they hint at the click at all: not at home, where they're left
+  // to be found.
   hinted: boolean;
   register: (prop: HintedProp) => () => void;
   registerOrb: (orb: HintedOrb) => () => void;
@@ -91,9 +89,7 @@ export function StationHints({
   // have been lined up to come on since.
   const sinceRef = useRef<number | null>(null);
   const shownRef = useRef(false);
-  const [reducedMotion] = useState(
-    () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
-  );
+  const reducedMotion = useReducedMotion();
   const gap = () =>
     HINTS.gapMin + Math.random() * (HINTS.gapMax - HINTS.gapMin);
 
@@ -101,8 +97,8 @@ export function StationHints({
     const now = clock.elapsedTime;
     nowRef.current = now;
 
-    // The hints: off with the props unclickable, lined up to come on once
-    // the camera has settled.
+    // The glowing hints: off with the props unclickable, lined up to come on
+    // once the camera has settled.
     if (!hinting) {
       sinceRef.current = null;
       shownRef.current = false;

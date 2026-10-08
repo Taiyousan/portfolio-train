@@ -10,10 +10,8 @@ const ICONS: Record<Season, string> = {
     "M12 2v20M3.3 7l17.4 10M3.3 17 20.7 7M9 3.5l3 2.5 3-2.5M9 20.5l3-2.5 3 2.5M3.9 10.5l2.8-1.2-.5-3M20.1 13.5l-2.8 1.2.5 3M3.9 13.5l2.8 1.2-.5 3M20.1 10.5l-2.8-1.2.5-3",
 };
 
-// Picks the scene's season (see config/seasons), printed on card stock like
-// the name card beside it and the tickets. Only changes the look. Icons
-// alone, their names for screen readers and as tooltips, as tall as
-// the name card.
+// Picks the scene's season, on card stock like the name card beside it.
+// Icons alone, their names for screen readers and as tooltips.
 export default function SeasonSwitch() {
   const { season, setSeason } = useTrainContext();
 
@@ -32,7 +30,7 @@ export default function SeasonSwitch() {
             aria-pressed={active}
             title={SEASON_LABELS[option]}
             onClick={() => setSeason(option)}
-            className={`grid aspect-square h-full place-items-center rounded transition outline-offset-2 outline-foreground focus-visible:outline-2 ${active ? "bg-foreground text-background" : "text-foreground/70 hover:bg-line hover:text-foreground"}`}
+            className={`grid aspect-square h-full place-items-center rounded outline-offset-2 outline-foreground transition focus-visible:outline-2 ${active ? "bg-foreground text-background" : "text-foreground/70 hover:bg-line hover:text-foreground"}`}
           >
             <svg
               aria-hidden="true"

@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { useTrainContext } from "../state/TrainContext";
 import { mixColor } from "../hooks/useSeason";
+import useReducedMotion from "../hooks/useReducedMotion";
 
 // Puffs of each cloud shape, [x, y, z, radius], about 3 long.
 const SHAPES: [number, number, number, number][][] = [
@@ -44,7 +45,8 @@ const LOOP = 200;
 const PARALLAX = 0.04;
 const BREEZE = 0.25;
 
-const rand = ([min, max]: [number, number]) => min + Math.random() * (max - min);
+const rand = ([min, max]: [number, number]) =>
+  min + Math.random() * (max - min);
 
 function randomClouds() {
   return Array.from({ length: COUNT }, (_, i) => {
@@ -66,14 +68,11 @@ function randomClouds() {
   });
 }
 
-// Puffy cartoon clouds in the sky, drifting slowly along. Out of the fog,
-// which would hide them, and lit by a glow of their own in the season's
-// colour (warm at dusk, grey-blue in winter) so they never go dark.
+// Puffy cartoon clouds drifting slowly along. Out of the fog, which would
+// hide them, and glowing in the season's colour so they never go dark.
 export default function Clouds() {
   const { trainSpeedRef, seasonWeightsRef } = useTrainContext();
-  const [reducedMotion] = useState(
-    () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
-  );
+  const reducedMotion = useReducedMotion();
 
   const geometries = useMemo(
     () =>

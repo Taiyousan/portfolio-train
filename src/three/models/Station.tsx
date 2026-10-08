@@ -1,20 +1,15 @@
 import { forwardRef, useImperativeHandle, useRef } from "react";
-import { useFrame } from "@react-three/fiber";
-import {
-  animated,
-  useSpring,
-  useSprings,
-  type SpringValue,
-} from "@react-spring/three";
+import { animated, useSpring } from "@react-spring/three";
 import * as THREE from "three";
-import { useControls } from "leva";
 import { useTrainContext } from "../state/TrainContext";
 import useClickable from "../hooks/useClickable";
+import useStopPop from "../hooks/useStopPop";
+import { useTweaks } from "../debug/tweaks";
 import { StationHints } from "../state/StationHints";
 import { useLivery } from "../state/LiveryContext";
 import {
-  POP_SPRING,
-  POP_STAGGER_MS,
+  DRIVER_SPRING,
+  DRIVER_SWAP_DELAY_MS,
   STATION_BOARD,
   STATION_DRIVER,
   STATION_PLACEMENT,
@@ -31,34 +26,23 @@ import StationDecor, {
   stationPlatformHeight,
 } from "./StationDecor";
 
-// The fittings start popping once the platform is this close to its stop.
-const POP_DISTANCE = 2;
 const toDeg = THREE.MathUtils.radToDeg;
 const toRad = THREE.MathUtils.degToRad;
 
-// Matches Train's delay, so the driver leaves the cab before appearing here.
-const DRIVER_SWAP_DELAY_MS = 250;
-const DRIVER_SPRING = { mass: 1, tension: 260, friction: 12, precision: 0.001 };
-// The fittings pop one after the other, in this order (the board last, as
-// the thing to click), POP_STAGGER_MS apart (see config/scene); in
-// reverse order on departure.
+// The board pops in last, as the thing to click.
 const POP_ORDER = [...STATION_FITTINGS, "board"] as const;
-// On departure, the station itself sinks away this long after its last
-// fitting.
-const BASE_DEPOP_DELAY_MS = 250 + (POP_ORDER.length - 1) * POP_STAGGER_MS;
 
-// Station (see StationDecor) on the +x side of the track so the camera
-// (on -x) sees it behind the train. Its group is moved along z by
-// useStopApproach. Track is at y = -0.57 (see TrainScene), so the
-// station sits on the ground at that level.
+// The first stop, for the projects: the station (see StationDecor) and its
+// departures board, on the side of the track opposite the camera, on the
+// ground at the track's level (y = -0.57). Its group is moved along z by
+// useStopApproach.
 const Station = forwardRef<THREE.Group, { projects: StationProject[] }>(
   function Station({ projects }, ref) {
     const { mode, stop, boardFocused } = useTrainContext();
     // Off the train, still in the outfit picked in the workshop.
     const { outfit } = useLivery();
-    const here = stop === "station";
     // Rotations in degrees in the panel, radians in config and the scene.
-    const board = useControls("Tableau", {
+    const board = useTweaks("Tableau", {
       x: { value: STATION_BOARD.x, min: -4, max: 2, step: 0.01 },
       lift: { value: STATION_BOARD.lift, min: 0, max: 2, step: 0.01 },
       z: { value: STATION_BOARD.z, min: -3, max: 8, step: 0.01 },
@@ -67,7 +51,7 @@ const Station = forwardRef<THREE.Group, { projects: StationProject[] }>(
       roll: { value: toDeg(STATION_BOARD.roll), min: -45, max: 45, step: 0.5 },
       scale: { value: STATION_BOARD.scale, min: 0.2, max: 1.5, step: 0.01 },
     });
-    const placement = useControls("Gare", {
+    const placement = useTweaks("Gare", {
       scale: {
         value: STATION_PLACEMENT.scale,
         min: 0.05,
@@ -79,29 +63,14 @@ const Station = forwardRef<THREE.Group, { projects: StationProject[] }>(
     });
     const platformHeight = stationPlatformHeight(placement.scale);
     const boardHeight = stationBoardHeight(projects.length) * board.scale;
-    // The fittings pop in with an elastic overshoot once the train has
-    // stopped, and shrink away again as soon as it departs. Each is scaled
-    // from its feet so it grows out of the floor or wall.
-    const [popSprings, popApi] = useSprings(POP_ORDER.length, () => ({
-      scale: 0,
-      config: POP_SPRING,
-    }));
-    const pops = Object.fromEntries(
-      POP_ORDER.map((name, i) => [name, popSprings[i].scale]),
-    ) as Record<(typeof POP_ORDER)[number], SpringValue<number>>;
-    // The rest of the station is already there as it slides in, but shrinks
-    // into the ground on departure, just after the fittings. Clamped so it
-    // doesn't overshoot into a negative (mirrored) scale.
-    const [{ base }, baseApi] = useSpring(() => ({
-      base: 1,
-      config: { ...POP_SPRING, clamp: true },
-    }));
-    const sunkRef = useRef(false);
-    // The driver, stepped off the cab (see Train), waits on the platform:
-    // standing left of the departures board, or propped against its right
-    // side while it's open (so BOARD_CAMERA frames both). Each pops in once
-    // the other (or the cab one) has gone.
-    const atStation = here && mode === "stopped";
+    const groupRef = useRef<THREE.Group>(null);
+    useImperativeHandle(ref, () => groupRef.current!, []);
+    const { pops, base } = useStopPop("station", POP_ORDER, groupRef);
+
+    // The driver, off the cab (see Train), waits on the platform: standing
+    // left of the board, or propped against its right side while it's open.
+    // Each pops in once the other (or the cab one) has gone.
+    const atStation = stop === "station" && mode === "stopped";
     const standing = atStation && !boardFocused;
     const propped = atStation && boardFocused;
     const { standingScale } = useSpring({
@@ -114,8 +83,8 @@ const Station = forwardRef<THREE.Group, { projects: StationProject[] }>(
       delay: propped ? DRIVER_SWAP_DELAY_MS : 0,
       config: { ...DRIVER_SPRING, clamp: !propped },
     });
-    // Propped: the back against the board's right-hand side edge (on +z,
-    // the board facing the track unturned), the feet out from it.
+    // Propped: the back against the board's right edge (on +z, the board
+    // facing the track unturned), the feet out from it.
     const proppedYaw = STATION_DRIVER.propped.yaw;
     const proppedOut = DRIVER_PROPPED_BACK.behind * STATION_DRIVER.scale;
     const proppedX =
@@ -126,8 +95,7 @@ const Station = forwardRef<THREE.Group, { projects: StationProject[] }>(
       board.z +
       STATION_BOARD_SIDE.x * board.scale +
       Math.cos(proppedYaw) * proppedOut;
-    // Clicked, the standing driver waves; propped, hands in the pockets,
-    // it looks at the camera.
+    // Clicked, the standing driver waves; the propped one looks up.
     const standingDriverRef = useRef<DriverHandle>(null);
     const standingClick = useClickable(standing, () =>
       standingDriverRef.current?.wave(),
@@ -136,58 +104,14 @@ const Station = forwardRef<THREE.Group, { projects: StationProject[] }>(
     const proppedClick = useClickable(propped, () =>
       proppedDriverRef.current?.glance(),
     );
-    const groupRef = useRef<THREE.Group>(null);
-    useImperativeHandle(ref, () => groupRef.current!, []);
-    const shownRef = useRef(false);
-
-    // Pops just before the train has fully stopped, so the overshoot lands as
-    // it comes to rest.
-    useFrame(() => {
-      const z = groupRef.current?.position.z ?? Infinity;
-      // z > 0: on the first "arriving" frame this can run before
-      // useStopApproach moves the stop out to STOP_DISTANCE, while it's
-      // still where it was left (0 at first, STOP_EXIT_Z after a
-      // departure): that frame must not count as close.
-      // Once shown, kept shown for the rest of the approach: on the frame the
-      // stop reaches z = 0, mode is still "arriving" until React re-renders
-      // with "stopped", and that frame must not pop the fittings out and in.
-      const approaching = shownRef.current || (z > 0 && z < POP_DISTANCE);
-      const show = atStation || (here && mode === "arriving" && approaching);
-      if (show !== shownRef.current) {
-        shownRef.current = show;
-        const last = POP_ORDER.length - 1;
-        popApi.start((i) => ({
-          scale: show ? 1 : 0,
-          delay: (show ? i : last - i) * POP_STAGGER_MS,
-          // Overshoots on the way in only: on the way out it would dip below
-          // 0 and bounce back, flashing the fittings and lamps on again.
-          // Set either way, as react-spring merges config into the last one.
-          config: { ...POP_SPRING, clamp: !show },
-        }));
-        if (!show) {
-          sunkRef.current = true;
-          baseApi.start({ base: 0, delay: BASE_DEPOP_DELAY_MS });
-        }
-      }
-      // Back to full size, out of sight, before sliding in again.
-      if (sunkRef.current && here && mode === "arriving") {
-        sunkRef.current = false;
-        baseApi.stop();
-        baseApi.set({ base: 1 });
-      }
-    });
 
     return (
       <group ref={groupRef} visible={false}>
         <animated.group position={[3.2 * STOP_SIDE, -0.57, 0]} scale={base}>
-          {/* The board's arrow and the props are hinted at together (see
-              StationHints). */}
           <StationHints stop="station">
-            {/* Departures board on the platform, facing the track (-x),
-                popping in with the fittings from its feet. */}
+            {/* The board on the platform, facing the track (-x), turned
+                about its feet: yaw, then tilt and roll in its own frame. */}
             <animated.group position={[board.x, 0, board.z]} scale={pops.board}>
-              {/* Turned about its feet: yaw from facing the track, then tilt
-                  (back/forward) and roll in the board's own frame. */}
               <group rotation-y={-Math.PI / 2 + toRad(board.yaw)}>
                 <group rotation={[toRad(board.tilt), 0, toRad(board.roll)]}>
                   <StationBoard
@@ -201,8 +125,6 @@ const Station = forwardRef<THREE.Group, { projects: StationProject[] }>(
             </animated.group>
             <StationDecor placement={placement} pops={pops} />
           </StationHints>
-          {/* Driver standing left of the board, facing the track (-x),
-              waving when clicked. */}
           <animated.group
             position={[
               STATION_DRIVER.standing.x,
@@ -218,8 +140,6 @@ const Station = forwardRef<THREE.Group, { projects: StationProject[] }>(
               {...standingClick}
             />
           </animated.group>
-          {/* Driver propped against the board's right-hand side, passing
-              the time, looking up when clicked. */}
           <animated.group
             position={[proppedX, platformHeight, proppedZ]}
             rotation={[0, proppedYaw, 0]}

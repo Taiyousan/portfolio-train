@@ -7,13 +7,12 @@ import { ARRIVE_DURATION, STOP_EXIT_Z, STOP_DISTANCE } from "../config/scene";
 // Fraction of the cruise speed at which departure counts as finished.
 const DEPARTED_SPEED_RATIO = 0.95;
 
-// Drives the arriving / stopped / departing modes, for whichever stop the
-// train is heading to. That stop's group is moved along z by a quadratic
-// ease over a fixed duration, and the train's speed is set to that motion's
-// derivative so the forest and rails scroll in lockstep with it.
-//   arriving:  z = D·(1 − t/T)²   (constant deceleration, stops at z = 0)
-//   departing: useTrainSpeedEasing accelerates back to the cruise speed
-//              and the stop scrolls away at that speed.
+// Drives the arriving / stopped / departing modes for the train's stop.
+//   arriving:  the stop's z = D·(1 − t/T)², a constant deceleration to
+//              z = 0, the train's speed set to its derivative so the world
+//              scrolls in step.
+//   departing: useTrainSpeedEasing speeds the train back up, and the stop
+//              scrolls away.
 export default function useStopApproach(
   stationRef: RefObject<THREE.Group | null>,
   homeRef: RefObject<THREE.Group | null>,
@@ -51,16 +50,14 @@ export default function useStopApproach(
         setMode("stopped");
       }
     } else if (mode === "departing") {
-      // Speed is eased toward cruise by useTrainSpeedEasing; hand back to
-      // "ride" once it has (nearly) got there — never above it.
+      // Back to "ride" once (nearly) at cruising speed.
       if (trainSpeedRef.current >= targetTrainSpeed * DEPARTED_SPEED_RATIO) {
         setMode("ride");
       }
     }
 
-    // Every other visible stop (the one just left, still in sight) keeps
-    // scrolling away with the world, until it is far enough to be hidden by
-    // the fog.
+    // A stop left behind scrolls away with the world, until hidden in the
+    // fog.
     for (const key of Object.keys(groups) as Stop[]) {
       const group = groups[key];
       if (!group?.visible) continue;

@@ -17,16 +17,10 @@ type ScrollingTilesProps = Omit<
   receiveShadow?: boolean;
 };
 
-// Copies of a tiled model scroll along z to fake an endless track/ground —
-// the scrolling/looping itself is handled by useScrollingLoop.
-//
-// Each tile gets its OWN <Resize>, not one wrapping the whole row: Resize
-// scales to fit the combined bounding box of everything inside it, so a
-// single Resize around N positioned tiles rescales (and desyncs the speed
-// of) every tile whenever N changes. Tiles are authored with their longest
-// side along z, so after an individual Resize that side is exactly
-// `resizeScale` world units — tiles spaced that far apart abut seamlessly,
-// and world-space speed no longer depends on tileCount.
+// Copies of a tiled model scrolling along z (see useScrollingLoop), for an
+// endless track. Each tile has its own <Resize>, scaling its longest side
+// (along z) to `resizeScale` world units, so tiles spaced that far apart
+// abut seamlessly whatever their count.
 export default function ScrollingTiles({
   modelPath,
   resizeScale,
@@ -39,8 +33,7 @@ export default function ScrollingTiles({
   const tiles = useScrollingLoop(tileCount, resizeScale);
   const scale = usePopIn();
 
-  // The original scene can only be mounted once, so every other tile
-  // gets its own clone.
+  // A scene can only be mounted once: every other tile gets a clone.
   const copies = useMemo(
     () =>
       Array.from({ length: tileCount }, (_, index) =>
@@ -49,9 +42,7 @@ export default function ScrollingTiles({
     [scene, tileCount],
   );
 
-  // frustumCulled only affects the object it's set on, not its children —
-  // setting it on the root <primitive> group is a no-op for a multi-mesh
-  // glTF scene, so it has to be set per mesh here instead.
+  // Set on each mesh: frustumCulled doesn't carry down to children.
   useEffect(() => {
     copies.forEach((copy) =>
       copy.traverse((child) => {

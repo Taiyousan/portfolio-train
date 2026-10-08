@@ -5,6 +5,7 @@ import type { ThreeElements } from "@react-three/fiber";
 import { useTrainContext } from "../state/TrainContext";
 import { STOP_SIDE } from "../config/scene";
 import { STATION_COLORS } from "./StationPrimitives";
+import useReducedMotion from "../hooks/useReducedMotion";
 
 const COLORS = {
   fur: "#a9805c",
@@ -22,21 +23,21 @@ const FIRST_WAIT: [number, number] = [6, 15];
 const HOP_TIME = 0.34;
 const HOP_HEIGHT = 0.14;
 const HOP_LENGTH: [number, number] = [0.28, 0.48];
-// Distance from the track a bunny keeps to, on either side: mostly the
-// stops' side, in the clear strip behind the train; or between the train
-// and the camera.
+// Distance from the track a bunny keeps to: mostly in the clear strip
+// behind the train, sometimes between the train and the camera.
 const BANDS: { side: number; band: [number, number]; share: number }[] = [
   { side: STOP_SIDE, band: [1.4, 4.4], share: 0.75 },
   { side: -STOP_SIDE, band: [1.2, 2.4], share: 0.25 },
 ];
-// Starts just out of frame ahead of the train (+z), and is gone once this
-// far behind it, or after its hops, off into the forest.
+// Starts just out of frame ahead of the train (+z); gone once this far
+// behind it, or off into the forest after its hops.
 const START_Z: [number, number] = [8.5, 10.5];
 const END_Z = -12;
 const HOPS: [number, number] = [14, 30];
 const POP_RATE = 8;
 
-const rand = ([min, max]: [number, number]) => min + Math.random() * (max - min);
+const rand = ([min, max]: [number, number]) =>
+  min + Math.random() * (max - min);
 
 type Run = {
   active: boolean;
@@ -99,7 +100,8 @@ function startRun(run: Run) {
   run.fromX = run.toX = run.x;
   run.fromZ = run.toZ = run.z;
   // Mostly racing the train, sometimes off the other way.
-  run.heading = (Math.random() < 0.7 ? 0 : Math.PI) + (Math.random() - 0.5) * 0.6;
+  run.heading =
+    (Math.random() < 0.7 ? 0 : Math.PI) + (Math.random() - 0.5) * 0.6;
   run.hop = null;
   run.rest = Math.random() * 0.5;
   run.hops = Math.round(rand(HOPS));
@@ -133,7 +135,11 @@ function nextHop(run: Run) {
   const toZ = run.z + Math.cos(run.heading) * length;
   // Bounced back into its band, never onto the track.
   const distance = Math.abs(toX);
-  if (distance < near || (!away && distance > far) || Math.sign(toX) !== run.side) {
+  if (
+    distance < near ||
+    (!away && distance > far) ||
+    Math.sign(toX) !== run.side
+  ) {
     run.heading = -run.heading;
     toX = run.x + Math.sin(run.heading) * length;
   }
@@ -147,13 +153,10 @@ function nextHop(run: Run) {
 
 const easeInOut = (t: number) => t * t * (3 - 2 * t);
 
-// The bunny and its runs, in world units along the scrolling forest floor,
-// kept in a ref and stepped each frame.
+// The bunny and its runs, in world units on the scrolling forest floor.
 function HoppingBunny({ firstWait }: { firstWait: number }) {
   const { mode, trainSpeedRef } = useTrainContext();
-  const [reducedMotion] = useState(
-    () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
-  );
+  const reducedMotion = useReducedMotion();
   const runRef = useRef<Run>(idleRun(firstWait));
   const rootRef = useRef<THREE.Group>(null);
   const bodyRef = useRef<THREE.Group>(null);
@@ -186,7 +189,12 @@ function HoppingBunny({ firstWait }: { firstWait: number }) {
     run.toZ -= scroll;
 
     if (mode !== "ride") run.leaving = true;
-    run.size = THREE.MathUtils.damp(run.size, run.leaving ? 0 : 1, POP_RATE, delta);
+    run.size = THREE.MathUtils.damp(
+      run.size,
+      run.leaving ? 0 : 1,
+      POP_RATE,
+      delta,
+    );
     const gone =
       run.z < END_Z ||
       Math.abs(run.x) > run.band[1] + 3 ||
@@ -238,11 +246,17 @@ function HoppingBunny({ firstWait }: { firstWait: number }) {
     root.scale.setScalar(SCALE * run.size);
     if (bodyRef.current) {
       bodyRef.current.rotation.x = pitch;
-      bodyRef.current.scale.set(1 - 0.06 * stretch, 1 - 0.04 * stretch, 1 + 0.12 * stretch);
+      bodyRef.current.scale.set(
+        1 - 0.06 * stretch,
+        1 - 0.04 * stretch,
+        1 + 0.12 * stretch,
+      );
     }
     if (headRef.current) headRef.current.rotation.y = run.look;
     if (noseRef.current) {
-      noseRef.current.scale.setScalar(1 + 0.25 * Math.max(Math.sin(clock.elapsedTime * 22), 0));
+      noseRef.current.scale.setScalar(
+        1 + 0.25 * Math.max(Math.sin(clock.elapsedTime * 22), 0),
+      );
     }
     earRefs.current.forEach((ear, i) => {
       if (!ear) return;
@@ -296,10 +310,8 @@ function Ball({
   );
 }
 
-// A round cartoon bunny, facing +z, its pivot under its middle: an egg of
-// a body with a cream chest and cotton tail, a round head with a muzzle,
-// a pink nose and two long ears, and small front paws (the big hind feet
-// are its parent's, to kick out in a hop).
+// A round cartoon bunny, facing +z, its pivot under its middle. The big
+// hind feet are its parent's, to kick out in a hop.
 function BunnyBody({
   headRef,
   noseRef,
@@ -311,9 +323,25 @@ function BunnyBody({
 }) {
   return (
     <>
-      <Ball radius={0.5} position={[0, 0.36, -0.05]} scale={[0.78, 0.72, 1]} color={COLORS.fur} shadow />
-      <Ball radius={0.3} position={[0, 0.32, 0.17]} scale={[0.85, 0.9, 0.9]} color={COLORS.light} />
-      <Ball radius={0.13} position={[0, 0.42, -0.5]} color={COLORS.light} detail={10} />
+      <Ball
+        radius={0.5}
+        position={[0, 0.36, -0.05]}
+        scale={[0.78, 0.72, 1]}
+        color={COLORS.fur}
+        shadow
+      />
+      <Ball
+        radius={0.3}
+        position={[0, 0.32, 0.17]}
+        scale={[0.85, 0.9, 0.9]}
+        color={COLORS.light}
+      />
+      <Ball
+        radius={0.13}
+        position={[0, 0.42, -0.5]}
+        color={COLORS.light}
+        detail={10}
+      />
       {[-1, 1].map((side) => (
         <Ball
           key={side}
@@ -326,7 +354,13 @@ function BunnyBody({
       ))}
       <group ref={headRef} position={[0, 0.68, 0.36]}>
         <Ball radius={0.3} position={[0, 0, 0]} color={COLORS.fur} shadow />
-        <Ball radius={0.13} position={[0, -0.08, 0.22]} scale={[1.2, 0.85, 1]} color={COLORS.light} detail={10} />
+        <Ball
+          radius={0.13}
+          position={[0, -0.08, 0.22]}
+          scale={[1.2, 0.85, 1]}
+          color={COLORS.light}
+          detail={10}
+        />
         <mesh ref={noseRef} position={[0, -0.03, 0.33]}>
           <sphereGeometry args={[0.045, 8, 6]} />
           <meshStandardMaterial color={COLORS.pink} roughness={0.6} />
@@ -364,10 +398,9 @@ function BunnyBody({
   );
 }
 
-// A bunny that now and then hops along the line beside the train, pausing
-// to look round, before falling behind or darting off into the forest.
-// Only while riding, and not at all with reduced motion. Place on the
-// forest floor.
+// A bunny that now and then hops along beside the train, pausing to look
+// round, before falling behind or darting off into the forest. Only on the
+// ride, and not with reduced motion. Place on the forest floor.
 export default function Bunny(props: ThreeElements["group"]) {
   const [firstWait] = useState(() => rand(FIRST_WAIT));
   return (

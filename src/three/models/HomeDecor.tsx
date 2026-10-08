@@ -1,15 +1,17 @@
 import { useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
-import { RoundedBox, Text } from "@react-three/drei";
+import { Text } from "@react-three/drei";
 import { animated, useSprings, type SpringValue } from "@react-spring/three";
 import type * as THREE from "three";
 import { site } from "@/lib/site";
+import { SCENE_FONT } from "../config/scene";
 import { useStationClick } from "../hooks/useStationProp";
 import { snowy } from "../shaders/snow";
 import {
   Block,
   Cylinder,
   NoSnow,
+  RoundedBox,
   Pop,
   STATION_COLORS,
   Window,
@@ -18,18 +20,13 @@ import {
   type Vec3,
 } from "./StationPrimitives";
 import { Lamp, Mailbox, PingPong, Planter } from "./StationProps";
+import useReducedMotion from "../hooks/useReducedMotion";
 
-// The home stop, for "about", built like the station (see StationDecor)
-// from the same rounded primitives and props: from the track, a small
-// wooden halt with a name sign and a mailbox, a terrace level with it
-// between two railings (the desk goes there, see Home), then a wooden
-// cabin with a slate roof, a chimney, shuttered windows, a teal door and a
-// wall lantern; a ping-pong paddle left on the terrace. In its own units,
-// the station's: x from the halt's centre (+ away from the track), y up
-// from the track's level, z along the track; scaled into the halt's ground
-// frame by HOME_SCALE.
-
-const FONT = "/fonts/geist-mono-600.woff";
+// The home stop, built like the station from the same primitives and
+// props: from the track, a wooden halt with a name sign and a mailbox, a
+// terrace between two railings (the desk goes there, see Home), then a
+// wooden cabin. In the station's units: x from the halt's centre (+ away
+// from the track), y up from the track, z along it; scaled by HOME_SCALE.
 
 const COLORS = {
   ...STATION_COLORS,
@@ -83,8 +80,7 @@ const WINDOW_Z = -3.3;
 const DOOR_Z = 2.2;
 const LANTERN_Z = 4.2;
 
-// Parts popping in at a stop, each with its own spring (see Home, which
-// staggers them in this order).
+// Parts popping in at the stop, in this order (see useStopPop).
 export const HOME_FITTINGS = [
   "house",
   "lamp",
@@ -97,8 +93,8 @@ type Fitting = (typeof HOME_FITTINGS)[number];
 // ---------------------------------------------------------------- decks
 
 // A wooden deck from `x` to `x + width`, centred on z: its frame, then
-// planks laid along `along`, in two alternating shades. The planks are
-// swept clear of the snow, left on the frame's edges all round.
+// planks laid along `along` in alternating shades, swept clear of the
+// snow.
 function Deck({
   x,
   width,
@@ -185,9 +181,9 @@ function Railing({ z, from, to }: { z: number; from: number; to: number }) {
   );
 }
 
-// The site's name on the halt, on two posts under a little roof, facing the
-// track (-x), toward the +z end: seen in the wide arrival shot, out of
-// HOME_VIEW_CAMERA's frame (it would hide the desk).
+// The site's name on the halt, facing the track (-x), toward the +z end:
+// seen in the arrival shot, out of HOME_VIEW_CAMERA's (it would hide the
+// desk).
 const SIGN = { x: 0.6, z: 5.9, width: 4.8, height: 1.1, top: 5.4 };
 
 function NameSign() {
@@ -221,7 +217,7 @@ function NameSign() {
         color={COLORS.slate}
       />
       <Text
-        font={FONT}
+        font={SCENE_FONT}
         fontSize={0.42}
         letterSpacing={0.12}
         color={COLORS.ink}
@@ -238,9 +234,8 @@ function NameSign() {
 
 // ---------------------------------------------------------------- house
 
-// Horizontal boards over the cladding, on the front wall and both gables
-// (shorter up the gables, following the roof's slopes). Too thin to hold
-// the snow: it would stripe the walls.
+// Horizontal boards over the cladding, on the front and both gables. No
+// snow: it would stripe the walls.
 const BOARD_GAP = 0.6;
 
 function Clapboards({ cx, base }: { cx: number; base: number }) {
@@ -281,11 +276,10 @@ function Clapboards({ cx, base }: { cx: number; base: number }) {
   );
 }
 
-// The house's lights, kept soft (a home at dusk, not a lit platform): the
-// windows' glow, the wall lantern's, and its light's intensity and reach
-// (world units), held out in front of the lantern (home units) so it
-// doesn't burn a hot spot into the wall just behind; the terrace lamp's
-// brightness (see Lamp).
+// The house's lights, kept soft: the windows' glow, the wall lantern's, its
+// light's intensity and reach (world units), held out in front of it (home
+// units) so it doesn't burn a hot spot into the wall; the terrace lamp's
+// brightness.
 const WINDOW_GLOW = 0.6;
 const LANTERN_GLOW = 0.9;
 const LANTERN_INTENSITY = 0.25;
@@ -320,7 +314,7 @@ function WallLantern({
         radius={0.05}
         color={COLORS.iron}
       />
-      <RoundedBox args={[0.45, 0.6, 0.45]} radius={0.1} smoothness={3}>
+      <RoundedBox args={[0.45, 0.6, 0.45]} radius={0.1}>
         <meshStandardMaterial
           color={color}
           roughness={0.75}
@@ -354,11 +348,9 @@ function WallLantern({
   );
 }
 
-// Shutters either side of the front window, hinged on their outer edges:
-// open, flat against the wall; they swing shut over the window (out
-// through the front, meeting in the middle) when the lights go out. Each
-// sits a little off its hinge toward the wall, so it's flat against the
-// wall open and clear of the window's frame shut.
+// Shutters either side of the front window, hinged on their outer edges,
+// swinging shut when the lights go out. Each sits a little off its hinge,
+// flat against the wall open and clear of the window's frame shut.
 const SHUTTER = {
   width: 1,
   height: 2.1,
@@ -372,11 +364,8 @@ const SHUTTER = {
 const SHUTTER_SPRING = { tension: 170, friction: 20, clamp: true };
 
 function Shutters({ y, shut }: { y: number; shut: boolean }) {
-  const [reducedMotion] = useState(
-    () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
-  );
-  // 0 open, 1 shut, the -z one first; clamped, so they neither swing into
-  // the wall nor into the window.
+  const reducedMotion = useReducedMotion();
+  // 0 open, 1 shut, the -z one first; clamped, so they don't swing past.
   const [springs] = useSprings(
     2,
     (i) => ({
@@ -417,21 +406,18 @@ function House({ pop }: { pop: SpringValue<number> }) {
   const roofRise = (half + EAVE) * Math.tan(HOUSE.pitch);
   const chimney = { x: cx + 1.1, z: -3.6, top: base + HOUSE.wall + 2.6 };
   // Its lights go out on a click and its shutters close, and the other way
-  // round on the next one, or when the train leaves (as the station's
-  // building).
+  // round on the next one or when the train leaves.
   const [lit, setLit] = useState(true);
-  const { bind, atStop } = useStationClick(
-    () => setLit((on) => !on),
-    { wiggle: false },
-  );
+  const { bind, atStop } = useStationClick(() => setLit((on) => !on), {
+    wiggle: false,
+  });
   if (!atStop && !lit) setLit(true);
   const lights = glass(lit, WINDOW_GLOW);
 
   return (
     <group>
-      {/* Stone plinth and doormat, level with the terrace: its floor as
-          much as the house's, so left out of the click (the lights go out
-          on a click on the house itself). */}
+      {/* Stone plinth and doormat: the terrace's floor as much as the
+          house's, so left out of the click. */}
       <group>
         <Block
           size={[
@@ -609,10 +595,8 @@ const MAILBOX: Vec3 = [0.9, DECK_TOP, -7.4];
 // In front of the lamp, clear of the desk.
 const PADDLE_AT: Vec3 = [4.3, DECK_TOP, -3.8];
 
-// The halt, terrace, railings and sign (already there as the halt slides
-// in), with the house and props each popping in by their spring in `pops`.
-// Within Home's StationHints, which makes them clickable, and its group
-// stopping clicks on everything else (see Home).
+// The halt, terrace, railings and sign (there as the halt slides in), the
+// house and props popping in by their spring in `pops`.
 export default function HomeDecor({
   scale,
   pops,

@@ -1,41 +1,37 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { animated, easings, to, useSpring } from "@react-spring/three";
 import { useTrainContext } from "../state/TrainContext";
 import { useLivery } from "../state/LiveryContext";
 import useClickable from "../hooks/useClickable";
 import usePopIn from "../hooks/usePopIn";
+import { DRIVER_SPRING, DRIVER_SWAP_DELAY_MS } from "../config/scene";
 import Driver, {
   DRIVER_HEIGHT,
   DRIVER_LEANING_LEDGE,
   type DriverHandle,
 } from "./Driver";
 import Locomotive, { CAB_FLOOR, CAB_SILL, RAIL_TOP } from "./Locomotive";
+import useReducedMotion from "../hooks/useReducedMotion";
 
-// Driver standing in the cab, in world units (its height and place along
-// it; across it, see driverX), and size in world units per driver unit
-// (see Station for the matching size on the platform).
+// Driver standing in the cab, in world units, and its size in world units
+// per driver unit.
 const DRIVER_Y = CAB_FLOOR;
 const DRIVER_Z = -0.58;
 const DRIVER_SCALE = 0.53;
-const DRIVER_SWAP_DELAY_MS = 250;
-// In the workshop, the driver turns from the track toward the camera (on
-// +x, see CUSTOM_CAMERAS) by this much, radians, to show off the outfit.
+// In the workshop, the driver turns toward the camera (on +x) by this much,
+// in radians, to show off the outfit.
 const WORKSHOP_DRIVER_TURN = 1.1;
 // While the locomotive is being repainted, the driver leans on the cab's
-// sill on the camera's side, facing out (+x), dreamy (see Driver's
-// LEANING): this far over, so that the sill is where the pose expects it.
-// The pose is worked out for a sill DRIVER_LEANING_LEDGE.height above the
-// cab floor, (CAB_SILL.top - CAB_FLOOR) / DRIVER_SCALE: keep the two in
+// sill on the camera's side, facing out (see Driver's LEANING), this far
+// over. The pose is worked out for a sill DRIVER_LEANING_LEDGE.height above
+// the cab floor, (CAB_SILL.top - CAB_FLOOR) / DRIVER_SCALE: keep the two in
 // step.
-const LEANING_DRIVER_X =
-  CAB_SILL.x - DRIVER_LEANING_LEDGE.edge * DRIVER_SCALE;
+const LEANING_DRIVER_X = CAB_SILL.x - DRIVER_LEANING_LEDGE.edge * DRIVER_SCALE;
 const LEANING_DRIVER_TURN = Math.PI / 2;
-// On the way, the pointer's target for the driver, wider than it: an
-// unseen box round its head and shoulders over the sill, in driver units,
-// so that the pointer doesn't keep slipping off the little figure (the
-// cursor flickering) as it sways along. Left out in the workshop, where
-// the driver is seen up close.
+// On the ride, an unseen box round the driver's head and shoulders, in
+// driver units, so the pointer doesn't keep slipping off the little swaying
+// figure. Left out in the workshop, where it's seen up close.
 const DRIVER_HITBOX = {
   width: 0.8,
   depth: 0.7,
@@ -61,7 +57,7 @@ const HOP = {
   land: 0.8,
   landMs: 70,
 };
-// One timed step of the hop, to `hop` and `lift`.
+// One timed step of the hop.
 const hopStep = (
   hop: number,
   lift: number,
@@ -74,13 +70,11 @@ export default function Train() {
   const { livery, outfit } = useLivery();
   const scale = usePopIn();
   const driverRef = useRef<DriverHandle>(null);
-  const [reducedMotion] = useState(
-    () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
-  );
+  const reducedMotion = useReducedMotion();
 
-  // Picks in the workshop (see ui/Workshop), not the first render: a new
-  // livery gives the locomotive a little bounce, a new outfit has the
-  // driver turn to the camera to show it off.
+  // Picks in the workshop (not the first render): a new livery gives the
+  // locomotive a little bounce, a new outfit has the driver turn to the
+  // camera.
   const [{ squash }, squashApi] = useSpring(() => ({ squash: 1 }));
   // The hop's own height and stretch, on top of that.
   const [{ lift, hop }, hopApi] = useSpring(() => ({ lift: 0, hop: 1 }));
@@ -129,22 +123,14 @@ export default function Train() {
     driverRef.current?.glance();
   }, [outfit]);
 
-  // While the train waits at a stop the driver steps off (onto the
-  // platform, see Station, or to the desk, see Home): pop out of the cab,
-  // then back in once the other one has gone.
+  // While the train waits at a stop, the driver steps off (see Station and
+  // Home): out of the cab, then back in once the other one has gone.
   const stopped = mode === "stopped";
   const { driverScale } = useSpring({
     driverScale: stopped ? 0 : DRIVER_SCALE,
     delay: stopped ? 0 : DRIVER_SWAP_DELAY_MS,
-    // Overshoots on the way in only: clamped, it doesn't dip below 0 and
-    // bounce back on the way out.
-    config: {
-      mass: 1,
-      tension: 260,
-      friction: 12,
-      precision: 0.001,
-      clamp: stopped,
-    },
+    // Overshoots on the way in only.
+    config: { ...DRIVER_SPRING, clamp: stopped },
   });
   // In the workshop: leaning on the sill while the locomotive is shown,
   // up and turned to the camera while the driver is.
@@ -161,9 +147,8 @@ export default function Train() {
     config: { mass: 1, tension: 120, friction: 16 },
   });
 
-  // Clicked while in the cab, the driver waves, up and turned to the camera
-  // in the workshop, or looks at it, leaning on the sill there (its arms
-  // folded on it) or at the controls on the way.
+  // Clicked in the cab, the driver waves when turned to the camera in the
+  // workshop, or else looks at it.
   const driverClick = useClickable(!stopped, () => {
     if (workshop && !leaning) driverRef.current?.wave();
     else driverRef.current?.glance();

@@ -10,42 +10,42 @@ export const CAMERA_POSITION: Vec3 = [
 // Low sun behind the train, warm dusk mood. Also lights the smoke shader.
 export const SUN_POSITION: Vec3 = [-30, 6, -20];
 
+// Image-based lighting for the standard materials (a halved copy of drei's
+// "sunset" preset, served from public/).
+export const ENVIRONMENT_MAP = "/hdri/sunset.hdr";
+
+// Face of every text in the scene (drei <Text>, which reads woff but not
+// woff2): the HTML board's font-mono.
+export const SCENE_FONT = "/fonts/geist-mono-600.woff";
+
+// Length of one rails.glb tile once resized (see ScrollingTiles): the forest
+// tiles scroll in the same units.
+export const RAIL_TILE_LENGTH = 12.5;
+
 // `offset`, if any, is camera-controls' focal offset (the camera moved
 // right, down and back, in world units): it slides the picture without
-// turning it, as the "#cam" readout shows it.
+// turning it.
 export type CameraShot = { position: Vec3; target: Vec3; offset?: Vec3 };
 
-// One shot per mode: where CameraControls.setLookAt() animates to. See
-// docs/proto-train.md's state machine.
+// One shot per mode, where CameraControls.setLookAt() animates to (see
+// TrainScene). Framed with CameraControls in #debug mode, read off the
+// "Camera" monitor.
 export const RIDE_CAMERA: CameraShot = {
   position: CAMERA_POSITION,
   target: [0, 0, 0],
 };
 
-// Station shots, in order (see TrainScene):
-// 1. STATION_CAMERA, wide, while the train pulls in and just after it stops:
-//    the locomotive, the platform and its departures board.
+// Station shots, in order:
+// 1. STATION_CAMERA, wide, while the train pulls in and just after it stops.
 // 2. STATION_VIEW_CAMERA, STOP_SETTLE_MS after the stop: three-quarter
 //    view over the train onto the station, where the board can be clicked.
 // 3. BOARD_CAMERA once the board is clicked, back to 2 on "× Fermer".
-// All tuned live via the Leva "Camera (lecture seule)" monitor.
 export const STATION_CAMERA: CameraShot = {
   position: [-2.4, 1.2, -1.2],
   target: [1.6, 0.0, 1.0],
 };
 
 export const STOP_SETTLE_MS = 300;
-
-// At a stop, its fittings pop in one after the other with this spring, this
-// far apart (see Station and Home), and so do the hints at the click once
-// the camera has settled (see StationHints).
-export const POP_SPRING = {
-  mass: 1,
-  tension: 220,
-  friction: 9,
-  precision: 0.001,
-};
-export const POP_STAGGER_MS = 70;
 
 export const STATION_VIEW_CAMERA: CameraShot = {
   position: [0.409, 0.663, -1.572],
@@ -60,14 +60,11 @@ export const BOARD_CAMERA: CameraShot = {
 };
 
 // Below this width (px), Tailwind's `sm`, the screen is a phone's: the
-// panels are sheets over the bottom (ui/), and the stops have their own
-// shots, framed on a phone in portrait (with the "#cam" readout).
+// panels are sheets over the bottom, and the stops have their own shots.
 export const PHONE_BREAKPOINT = 640;
 
-// The station's view on phones: further back and higher, over the
-// platform, the whole station with the driver and the board in view, so
-// they can still be tapped. Then the board, whole, with the driver propped
-// against it.
+// The station on phones: further back and higher, the driver and the board
+// in view so they can still be tapped. Then the board, whole.
 export const STATION_PHONE_CAMERA: CameraShot = {
   position: [0.697, 0.985, -3.512],
   target: [2.981, 0.191, -1.121],
@@ -78,13 +75,10 @@ export const BOARD_PHONE_CAMERA: CameraShot = {
   target: [3.106, 0.115, 0.934],
 };
 
-// Home shots, same sequence as the station's 1 and 2: HOME_CAMERA wide while
-// the train pulls in, then HOME_VIEW_CAMERA from above the train, three
-// quarters onto the terrace and the house front, the desk in the part of
-// the frame left free (the about panel covers the right on larger
-// screens). Update with HOME_DESK. Keep HOME_CAMERA close to
-// STATION_CAMERA: Forest's cull zone (trees shrunk away in front of the
-// lens while stopping) is sized from it.
+// Home shots, same sequence as the station's 1 and 2. The view leaves the
+// desk in the part of the frame the about panel doesn't cover. Update with
+// HOME_DESK. Keep HOME_CAMERA close to STATION_CAMERA: Forest's cull zone
+// is sized from the latter.
 export const HOME_CAMERA: CameraShot = {
   position: [-2.4, 1.3, -1.6],
   target: [2.6, 0.1, 0.4],
@@ -95,18 +89,14 @@ export const HOME_VIEW_CAMERA: CameraShot = {
   target: [3.767, -0.124, 0.311],
 };
 
-// The home's view on phones, where the about card is a sheet over the
-// bottom of the screen: from high above the track, looking down on the
-// terrace, the desk and the sign in the room above the sheet (slid there
-// by the offset).
+// The home on phones: from high above the track, the terrace and the desk
+// slid by the offset into the room above the bottom sheet.
 export const HOME_PHONE_CAMERA: CameraShot = {
   position: [0.56, 2.116, 1.403],
   target: [3.977, -0.005, -0.226],
   offset: [0, 1.133, 0],
 };
 
-// Wide (arrival) and settled shot of each stop, and the settled one on
-// phones.
 type StopShots = { arrival: CameraShot; view: CameraShot; phone: CameraShot };
 
 export const STOP_CAMERAS: Record<Stop, StopShots> = {
@@ -122,19 +112,15 @@ export const STOP_CAMERAS: Record<Stop, StopShots> = {
   },
 };
 
-// In the workshop, the camera faces the low sun, right behind the cab on
-// phones' wider view: the sky's glow around it (mie) and the bloom ease
-// down by these shares, so the sun no longer dazzles over the train.
+// In the workshop the camera faces the low sun, which phones' wider view
+// brings into the frame: the sky's glow (mie) and the bloom ease down by
+// these shares, at GLARE_EASING (exponential, per second).
 export const WORKSHOP_GLARE = { mie: 0.85, bloom: 0.7 };
-// How fast they ease, exponential, per second.
 export const GLARE_EASING = 3;
 
-// "custom" mode, the workshop (ui/Workshop), one shot per tab: the whole
-// locomotive, side on from a little ahead, low enough to see the driver in
-// the cab over its side; or close on the driver, turned to it (see Train),
-// through the cab's side, from a little above. Framed for the whole
-// screen: TrainScene then pulls them back and shifts them to fit the room
-// the workshop's panel leaves (WORKSHOP_FRAME).
+// The workshop, one shot per tab: the whole locomotive side on, or close on
+// the driver through the cab's side. Framed for the whole screen, then
+// pulled back and shifted to fit beside the panel (WORKSHOP_FRAME).
 export const CUSTOM_CAMERAS: Record<WorkshopView, CameraShot> = {
   train: {
     position: [3.0, 0.85, 0.6],
@@ -146,22 +132,19 @@ export const CUSTOM_CAMERAS: Record<WorkshopView, CameraShot> = {
   },
 };
 
-// Vertical field of view, in degrees, the shots are framed with. Screens
-// narrower than FIT_ASPECT (portrait) widen it so they see as wide as a
-// FIT_ASPECT screen would, up to MAX_FOV, rather than cut the subject's
-// sides (see fittedFov in TrainScene).
+// Vertical field of view, in degrees. Screens narrower than FIT_ASPECT
+// (portrait) widen it to see as wide as a FIT_ASPECT screen would, up to
+// MAX_FOV (see fittedFov in TrainScene).
 export const CAMERA_FOV = 45;
 export const FIT_ASPECT = 1;
 export const MAX_FOV = 70;
 
-// The room the workshop's panel takes on screen, in step with its classes
-// (ui/Workshop): past PHONE_BREAKPOINT, a card of `width` pixels, margin
-// included, on the right; below it, a sheet over the bottom `sheet` share
-// of the height. And the size, in world units, each shot's subject needs
-// to fit in the rest: the train's full length side on is a little more,
-// so on phones its buffers may be cut, rather than backing the camera
-// into the forest (kept off only up to STOP_CLEAR_X); the driver, from
-// the sill up, with some of the cab around.
+// The room the workshop's panel takes, in step with its classes
+// (ui/Workshop): a card `width` px wide (margin included) on the right, or
+// on phones a sheet over the bottom `sheet` share of the height. Then the
+// size, in world units, each shot's subject needs in the rest. The train's
+// is a little short of its length, so on phones its buffers may be cut
+// rather than the camera backing into the forest.
 export const WORKSHOP_FRAME: {
   width: number;
   sheet: number;
@@ -175,47 +158,58 @@ export const WORKSHOP_FRAME: {
   },
 };
 
-// Approach to a stop (see hooks/useStopApproach), the same for both. The
-// train stays at z = 0 and the world scrolls, so a stop is placed by its own
-// z: it appears STOP_DISTANCE ahead, the train brakes so the platform
-// centre stops at z = 0 after ARRIVE_DURATION seconds. On departure the train
-// just eases back to its cruise speed; the stop is hidden once past
-// STOP_EXIT_Z.
+// Approach to a stop (see useStopApproach). The train stays at z = 0 and
+// the world scrolls: a stop appears STOP_DISTANCE ahead, and the train
+// brakes so the platform's centre stops at z = 0 after ARRIVE_DURATION
+// seconds. On departure, the stop is hidden once past STOP_EXIT_Z.
 export const STOP_DISTANCE = 14;
 export const ARRIVE_DURATION = 1.6;
 export const STOP_EXIT_Z = -40;
 
-// Both stops are on the side of the track opposite the camera, and reach out
-// to STOP_CLEAR_X from it (the station's roof, at its back, is the
-// furthest). Forest keeps every prop off that side out to there, their
-// whole width (foliage, bush) included, so nothing grows into a stop,
-// whatever the scroll position.
+// At a stop, the fittings pop in one after the other with this spring, this
+// far apart, and so do the hints at the click (see StationHints).
+export const POP_SPRING = {
+  mass: 1,
+  tension: 220,
+  friction: 9,
+  precision: 0.001,
+};
+export const POP_STAGGER_MS = 70;
+
+// At a stop the driver leaves the cab and pops up on the platform or at
+// the desk this long after, with this spring (see Train, Station, Home).
+export const DRIVER_SWAP_DELAY_MS = 250;
+export const DRIVER_SPRING = {
+  mass: 1,
+  tension: 260,
+  friction: 12,
+  precision: 0.001,
+};
+
+// Both stops stand on the side of the track opposite the camera, out to
+// STOP_CLEAR_X (the station's roof is the furthest): Forest keeps that side
+// clear out to there. STOP_HALF_LENGTH is half a stop's length along the
+// track, stairs included: small details may grow by the track, and shrink
+// away within it of a stop in sight.
 export const STOP_SIDE = -Math.sign(CAMERA_POSITION[0]);
 export const STOP_CLEAR_X = 5.6;
-// Half a stop's length along the track, stairs included (the station's
-// platform is the longest). The forest's small details may grow by the
-// track on the stops' side, and shrink away within it of a stop in sight.
 export const STOP_HALF_LENGTH = 2.8;
 
 // Station (models/StationDecor) in its ground frame (origin at the platform
 // centre, at track level; x across the track, + away from it; z along it):
 // scale in world units per station unit, edgeX = x of the platform's
-// track-side edge, z = shift along the track. Tunable in the Leva "Gare"
-// group.
+// track-side edge, z = shift along the track.
 export const STATION_PLACEMENT = {
   scale: 0.17,
   edgeX: -0.7,
   z: 0,
 };
 
-// Departures board (models/StationBoard), standing on the platform in front
-// of the canopy, a real board's size, parallel to the platform. In the
-// station's ground frame (same as STATION_PLACEMENT): x across the track
-// (+ away from it), z along it, lift = gap between the ground and the
-// board's bottom edge (the platform is about 0.27 high). Rotations
-// in radians, about the board's feet: yaw = turn from facing the track
-// squarely, then tilt (+ tips the top forward) and roll in the board's own
-// frame. Tunable in the Leva "Tableau" group (degrees there).
+// Departures board (models/StationBoard) on the platform, parallel to it,
+// in the station's ground frame. lift = gap between the ground and the
+// board's bottom edge (the platform is about 0.27 high). Rotations in
+// radians, about the board's feet: yaw from facing the track squarely, then
+// tilt (+ tips the top forward) and roll in the board's own frame.
 export const STATION_BOARD = {
   x: -0.41,
   z: 0.85,
@@ -226,15 +220,10 @@ export const STATION_BOARD = {
   scale: 0.28,
 };
 
-// Driver on the platform while the train waits (models/Station), in the
-// platform's frame (x across it, + away from the track; z along it):
-// standing left of the board in STATION_VIEW_CAMERA; once the board is
-// open, propped against its right-hand side, so BOARD_CAMERA frames both,
-// turned from facing +z by `propped.yaw` radians (-π/2 would face the
-// track squarely): three-quarter on, turned any further toward the camera,
-// it would stand over the board's rows in BOARD_CAMERA. Placed from the
-// board (see Station). scale in world units per driver unit (same
-// on-screen size as in the cab, where Train's Resize applies its own).
+// Driver on the platform (models/Station): standing left of the board, or
+// once it's open, propped against its right side, turned from facing +z by
+// `propped.yaw` (any further toward the camera, it would hide the board's
+// rows in BOARD_CAMERA). scale in world units per driver unit.
 export const STATION_DRIVER = {
   standing: { x: -0.45, z: -0.9 },
   propped: { yaw: -0.35 },
@@ -242,17 +231,13 @@ export const STATION_DRIVER = {
 };
 
 // Home (models/HomeDecor), in world units per home unit: the station's
-// scale, so the props they share (lamp, planters, windows) are the same
-// size.
+// scale, so the props they share are the same size.
 export const HOME_SCALE = 0.17;
 
-// Desk on the home terrace (models/Home), with the driver sitting at it, in a
-// hoodie, typing. In the halt's ground frame (origin at the platform centre, at
-// track level): x across the track (+ away from it), z along it. yaw turns
-// the driver and the desk from facing +z, in radians (negative: toward the
-// track, so the camera sees the driver three-quarter on). scale in
-// world units per driver unit, as STATION_DRIVER.scale. Tunable in the Leva
-// "Maison" group (degrees there).
+// Desk on the home terrace (models/Home), the driver sitting at it, in the
+// halt's ground frame (as STATION_BOARD's). yaw turns the driver and the
+// desk from facing +z (negative: toward the track, so the camera sees the
+// driver three-quarter on).
 export const HOME_DESK = {
   x: 0.95,
   z: -0.2,

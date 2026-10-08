@@ -1,16 +1,13 @@
 import * as THREE from "three";
 import { addSnow } from "./snow";
 
-// Materials shared by the forest's props (see Forest and forestShapes),
-// whose geometries carry their own colours: a `color` attribute, and an
-// `aTint` one (1 where the part takes its instance's colour, the crowns,
-// bushes and rocks; 0 where it keeps its own, trunks, flowers...).
+// Materials shared by the forest's props, whose geometries carry their own
+// colours: a `color` attribute, and an `aTint` one (1 where the part takes
+// its instance's colour: crowns, bushes, rocks; 0 where it keeps its own).
 //
-// Snow settles on whatever faces up, as everywhere (see shaders/snow):
-// one uniform covers every tree, bush and rock at once, whatever its
-// shape. "wither" props (grass, flowers, mushrooms, reeds) flatten into the
-// ground instead as it grows, so nothing blooms in the snow; they cast no
-// shadow, the depth pass doesn't flatten them.
+// Snow settles on whatever faces up (see shaders/snow). The "withering"
+// material's props (grass, flowers, reeds) flatten into the ground instead
+// as it grows; they cast no shadow, the depth pass doesn't flatten them.
 export function createForestMaterials() {
   const create = (wither: boolean) => {
     const material = new THREE.MeshStandardMaterial({

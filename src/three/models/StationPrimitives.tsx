@@ -1,16 +1,13 @@
 import { createContext, use, useMemo, useRef, type ReactNode } from "react";
-import { useFrame } from "@react-three/fiber";
-import { RoundedBox } from "@react-three/drei";
+import { useFrame, type ThreeElements } from "@react-three/fiber";
 import { animated, type SpringValue } from "@react-spring/three";
 import * as THREE from "three";
+import { toCreasedNormals } from "three-stdlib";
 import { isSnowy, pinSnow, snowy } from "../shaders/snow";
 
-// Rounded building blocks and palette shared by the station's decor
-// (StationDecor), its props (StationProps) and its departures board, and by
-// the home (HomeDecor), built in the same units: the house shape, windows,
-// window boxes, and the group the fittings pop in with. Blocks and
-// cylinders take the snow (see shaders/snow), except inside a NoSnow; it's
-// pinned to them inside a PinnedSnow.
+// Rounded building blocks and palette shared by the stops, their props and
+// the locomotive. Blocks and cylinders take the snow (see shaders/snow),
+// except inside a NoSnow; it's pinned to them inside a PinnedSnow.
 
 export type Vec3 = [number, number, number];
 
@@ -43,18 +40,17 @@ export const STATION_COLORS = {
 export const FLOWER_COLORS = ["#f08a5d", "#f5d36b", "#e2769a", "#fff3e0"];
 
 const SnowContext = createContext(true);
+const PinnedContext = createContext(false);
 
-// Keeps the snow off the blocks and cylinders inside: off what's in use
-// (floors, the desk) or warm (the boiler), what turns (wheels, rods) and
-// would carry it round, and the characters.
+// Keeps the snow off the blocks and cylinders inside: what's in use or
+// warm, what turns, and the characters.
 export function NoSnow({ children }: { children: ReactNode }) {
   return <SnowContext value={false}>{children}</SnowContext>;
 }
 
-// Pins the snow on the parts inside to them (see pinSnow), for parts that
-// move: what's white at rest stays white as they tip over or swing open.
-// Read on the first frame, when they're all at rest (as they lie inside
-// it: it must be upright then).
+// Pins the snow to the parts inside (see pinSnow), for parts that move:
+// what's white at rest stays white as they tip over or swing open. Read on
+// the first frame, when they must be at rest and upright.
 export function PinnedSnow({
   position,
   children,
@@ -85,9 +81,106 @@ export function PinnedSnow({
     });
   });
   return (
-    <group ref={ref} position={position}>
+    <PinnedContext value={true}>
+      <group ref={ref} position={position}>
+        {children}
+      </group>
+    </PinnedContext>
+  );
+}
+
+function createMaterial(color: string, snow: boolean, emissive = 0) {
+  const material = new THREE.MeshStandardMaterial({
+    color,
+    roughness: 0.75,
+    emissive: emissive ? color : "#000000",
+    emissiveIntensity: emissive,
+  });
+  if (snow) Object.assign(material, snowy);
+  return material;
+}
+
+// The blocks' and cylinders' material, shared by all those alike: hundreds
+// of them, but few looks, and every material costs at setup. Their own
+// under a PinnedSnow, which pins the snow per material.
+const sharedMaterials = new Map<string, THREE.MeshStandardMaterial>();
+
+function PartMaterial({
+  color,
+  emissive,
+}: {
+  color: string;
+  emissive?: number;
+}) {
+  const snow = use(SnowContext);
+  const pinned = use(PinnedContext);
+  const own = useMemo(
+    () => (pinned ? createMaterial(color, snow, emissive) : null),
+    [pinned, color, snow, emissive],
+  );
+  const key = `${color}:${snow}:${emissive ?? 0}`;
+  let material = own ?? sharedMaterials.get(key);
+  if (!material) {
+    material = createMaterial(color, snow, emissive);
+    sharedMaterials.set(key, material);
+  }
+  return (
+    <primitive
+      object={material}
+      attach="material"
+      dispose={own ? undefined : null}
+    />
+  );
+}
+
+// drei's RoundedBox geometry (smoothness 3), built once per size and
+// shared: the scene has hundreds of blocks, many alike, and creasing their
+// normals is what slows its setup down the most.
+const EPS = 0.00001;
+const roundedBoxes = new Map<string, THREE.BufferGeometry>();
+
+function roundedBoxGeometry([width, height, depth]: Vec3, radius: number) {
+  const key = `${width}:${height}:${depth}:${radius}`;
+  let geometry = roundedBoxes.get(key);
+  if (!geometry) {
+    const r = radius - EPS;
+    const shape = new THREE.Shape();
+    shape.absarc(EPS, EPS, EPS, -Math.PI / 2, -Math.PI, true);
+    shape.absarc(EPS, height - r * 2, EPS, Math.PI, Math.PI / 2, true);
+    shape.absarc(width - r * 2, height - r * 2, EPS, Math.PI / 2, 0, true);
+    shape.absarc(width - r * 2, EPS, EPS, 0, -Math.PI / 2, true);
+    const extruded = new THREE.ExtrudeGeometry(shape, {
+      depth: depth - radius * 2,
+      bevelEnabled: true,
+      bevelSegments: 8,
+      steps: 1,
+      bevelSize: radius - EPS,
+      bevelThickness: radius,
+      curveSegments: 3,
+    });
+    extruded.center();
+    geometry = toCreasedNormals(extruded, 0.4);
+    roundedBoxes.set(key, geometry);
+  }
+  return geometry;
+}
+
+// A mesh on a shared rounded box geometry, `args` its size.
+export function RoundedBox({
+  args,
+  radius,
+  children,
+  ...props
+}: Omit<ThreeElements["mesh"], "args"> & { args: Vec3; radius: number }) {
+  return (
+    <mesh {...props}>
+      <primitive
+        object={roundedBoxGeometry(args, radius)}
+        attach="geometry"
+        dispose={null}
+      />
       {children}
-    </group>
+    </mesh>
   );
 }
 
@@ -106,24 +199,16 @@ export function Block({
   color: string;
   emissive?: number;
 }) {
-  const snow = use(SnowContext);
   return (
     <RoundedBox
       args={size}
       radius={Math.min(radius, ...size.map((d) => d / 2 - 0.001))}
-      smoothness={3}
       position={position}
       rotation={rotation}
       castShadow
       receiveShadow
     >
-      <meshStandardMaterial
-        {...(snow && snowy)}
-        color={color}
-        roughness={0.75}
-        emissive={emissive ? color : "#000000"}
-        emissiveIntensity={emissive ?? 0}
-      />
+      <PartMaterial color={color} emissive={emissive} />
     </RoundedBox>
   );
 }
@@ -145,15 +230,10 @@ export function Cylinder({
   top?: number;
   segments?: number;
 }) {
-  const snow = use(SnowContext);
   return (
     <mesh position={position} rotation={rotation} castShadow receiveShadow>
       <cylinderGeometry args={[top, radius, height, segments]} />
-      <meshStandardMaterial
-        {...(snow && snowy)}
-        color={color}
-        roughness={0.75}
-      />
+      <PartMaterial color={color} />
     </mesh>
   );
 }
@@ -175,10 +255,9 @@ export function Pop({
   );
 }
 
-// House-shaped section (walls and gables in one), `depth` across x and
-// centred on it, from y = 0 to the ridge, extruded along z (`length`,
-// centred) with a rounded `bevel`, which grows it outward by as much all
-// round.
+// House-shaped section (walls and gables in one), `depth` across x, from
+// y = 0 to the ridge, extruded along z (`length`), both centred, with a
+// rounded `bevel` that grows it outward by as much all round.
 export function useHouseGeometry({
   depth,
   length,

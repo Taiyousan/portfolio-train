@@ -1,5 +1,4 @@
 import { useRef, type ReactNode, type RefObject } from "react";
-import { RoundedBox } from "@react-three/drei";
 import type { SpringValue } from "@react-spring/three";
 import * as THREE from "three";
 import useStationProp from "../hooks/useStationProp";
@@ -10,19 +9,15 @@ import {
   Cylinder,
   FLOWER_COLORS,
   NoSnow,
+  RoundedBox,
   PinnedSnow,
   STATION_COLORS as COLORS,
   type Vec3,
 } from "./StationPrimitives";
 
-// The props of the station and the home (see StationDecor and HomeDecor,
-// which place them), each playing a little animation when clicked while the
-// train waits there: the clock spins its hands, a lamp blinks out, the bin
-// tips over, the suitcase opens, the mailbox opens on its letters, the
-// ping-pong paddle plays a little rally with its ball, the bench and
-// planters hop. With reduced motion, movements jump straight to their end
-// (or are left out when they are only a flourish). Same units as
-// StationDecor.
+// The stops' props, each playing a little animation when clicked while the
+// train waits there. With reduced motion, movements jump straight to their
+// end, or are left out when only a flourish. In StationDecor's units.
 
 const TAU = Math.PI * 2;
 
@@ -41,10 +36,9 @@ function span(t: number, start: number, duration: number, jump = false) {
 
 // ---------------------------------------------------------------- clock
 
-// Shakes, then the hands race round as if a whole day went by before
-// landing back on the time (seconds): the hour hand makes a full turn, the
-// minute hand `minuteTurns` (not the real 12, which would just blur). The
-// shake is left out with reduced motion.
+// Shakes, then the hands race round as if a whole day went by, landing
+// back on the time (seconds): the hour hand makes a full turn, the minute
+// hand `minuteTurns` (the real 12 would blur).
 const CLOCK_SPIN = {
   shake: 0.5,
   shakeSpeed: 40,
@@ -61,9 +55,8 @@ const CLOCK_HANDS = [
 // The bracket's top, which the clock shakes about.
 const CLOCK_HANG = 1.2;
 
-// Hung under the canopy, its face toward the track (-x), showing the real
-// time. Hands turn about x: from the track, a positive turn reads
-// clockwise.
+// Hung under the canopy, facing the track (-x), showing the real time.
+// From the track, a positive turn about x reads clockwise.
 export function Clock({ position }: { position: Vec3 }) {
   const bodyRef = useRef<THREE.Group>(null);
   const handRefs = useRef<(THREE.Group | null)[]>([]);
@@ -80,9 +73,7 @@ export function Clock({ position }: { position: Vec3 }) {
         if (!reducedMotion) {
           const fade = 1 - span(t, 0, CLOCK_SPIN.shake);
           shake =
-            CLOCK_SPIN.shakeAngle *
-            fade *
-            Math.sin(t * CLOCK_SPIN.shakeSpeed);
+            CLOCK_SPIN.shakeAngle * fade * Math.sin(t * CLOCK_SPIN.shakeSpeed);
         }
       }
       const [hour, minute] = handRefs.current;
@@ -148,8 +139,7 @@ export function Clock({ position }: { position: Vec3 }) {
           </group>
         </group>
       </group>
-      {/* Up over the canopy it hangs from (its underside is just above
-          the bracket), on the track side. */}
+      {/* Over the canopy it hangs from, on the track side. */}
       <HintOrb hint={hint} position={[-0.3, 1.75, 0]} />
     </group>
   );
@@ -157,8 +147,7 @@ export function Clock({ position }: { position: Vec3 }) {
 
 // ---------------------------------------------------------------- lamp
 
-// Lamps: post height (the lantern sits on top), and their warm light's
-// intensity and reach (world units).
+// Lamps: post height, and their light's intensity and reach (world units).
 const LAMP_HEIGHT = 4.6;
 const LAMP_INTENSITY = 4;
 const LAMP_DISTANCE = 2.5;
@@ -190,9 +179,8 @@ const LAMP_BLINK = {
 const LANTERN_OFF = new THREE.Color(COLORS.glassOff);
 const LANTERN_ON = new THREE.Color(COLORS.light);
 
-// Lit as it pops in (`pop`, its fitting's spring).
-// `brightness` scales its light and its lantern's glow (dimmer by a
-// house's wall than out on the platform).
+// Lit as it pops in (`pop`). `brightness` scales its light and its
+// lantern's glow (dimmer by a house's wall than out on the platform).
 export function Lamp({
   position,
   pop,
@@ -245,7 +233,7 @@ export function Lamp({
           <RoundedBox
             args={[0.5, 0.65, 0.5]}
             radius={0.12}
-            smoothness={3}
+
             castShadow
           >
             <meshStandardMaterial
@@ -297,8 +285,8 @@ const BIN_FALLEN = Math.PI / 2 - 0.08;
 // The lid swings open about its hinge, on the track side.
 const BIN_LID_OPEN = 2;
 // Timeline (seconds): it falls toward -z and bounces, the lid swings open,
-// the litter spills out one piece after the other; then the litter vanishes,
-// the lid closes and the can rights itself.
+// the litter spills out; then the litter vanishes, the lid closes and the
+// can rights itself.
 const BIN_SPILL = {
   fall: 0.4,
   bounce: 0.25,
@@ -315,9 +303,8 @@ const BIN_SPILL = {
 };
 // Height the litter rests at: the paving's top.
 const PAVING = 0.05;
-// Spilled litter: from just inside the fallen can's mouth to the ground in
-// front of it, tumbling on the way (`turn`, radians about x), landing turned
-// `yaw` about y.
+// Spilled litter: from the fallen can's mouth to the ground, tumbling on
+// the way (`turn`, radians about x), landing turned `yaw` about y.
 const LITTER: {
   kind: "paper" | "can" | "newspaper" | "core";
   from: Vec3;
@@ -381,9 +368,7 @@ function LitterItem({ kind }: { kind: (typeof LITTER)[number]["kind"] }) {
         />
       );
     case "newspaper":
-      return (
-        <Block size={[0.42, 0.03, 0.32]} radius={0.01} color="#e8e2d0" />
-      );
+      return <Block size={[0.42, 0.03, 0.32]} radius={0.01} color="#e8e2d0" />;
     case "core":
       return (
         <mesh castShadow scale={[0.8, 1, 0.8]}>
@@ -519,10 +504,9 @@ const SUITCASE_OPEN = {
   close: 0.35,
   duration: 3.15,
 };
-// Meanwhile its contents jump out one after the other (`gap` apart),
-// growing `grow` times bigger and spreading apart, float a moment, tipped
-// toward the track to show themselves, and drop back in before the lid
-// closes (seconds). Left in place with reduced motion.
+// Meanwhile its contents jump out one after the other, growing and
+// spreading apart, float a moment tipped toward the track, and drop back
+// in before the lid closes (seconds). Left in place with reduced motion.
 const CONTENTS_JUMP = {
   at: 0.2,
   gap: 0.15,
@@ -536,18 +520,16 @@ const CONTENTS_JUMP = {
 };
 // How high each item jumps, how far it drifts away from the others
 // (x, z) and turns about y on the way.
-const CONTENTS: { height: number; drift: [number, number]; spin: number }[] =
-  [
-    { height: 0.4, drift: [-0.15, -0.35], spin: 0.3 },
-    { height: 0.85, drift: [0.2, -0.3], spin: -0.4 },
-    { height: 0.6, drift: [-0.2, 0.35], spin: 0.6 },
-    { height: 1.05, drift: [0.2, 0.35], spin: -0.3 },
-  ];
+const CONTENTS: { height: number; drift: [number, number]; spin: number }[] = [
+  { height: 0.4, drift: [-0.15, -0.35], spin: 0.3 },
+  { height: 0.85, drift: [0.2, -0.3], spin: -0.4 },
+  { height: 0.6, drift: [-0.2, 0.35], spin: 0.6 },
+  { height: 1.05, drift: [0.2, 0.35], spin: -0.3 },
+];
 const easeOut = (x: number) => 1 - (1 - x) ** 2;
 
-// What's packed, on the suitcase's floor: a folded shirt, a book, a few
-// papers and an alarm clock, each in its own group (`itemRefs`, in
-// CONTENTS order) centred on it, so it can jump.
+// What's packed, each item in its own group (`itemRefs`, in CONTENTS
+// order) centred on it, so it can jump.
 function SuitcaseContents({
   itemRefs,
 }: {
@@ -712,8 +694,7 @@ export function Luggage({ position }: { position: Vec3 }) {
           />
         ))}
         <group position={[0.02, 0.77, 0.05]} rotation-y={0.25}>
-          {/* Hollow shell: lined floor, then four walls. What's inside, the
-              lining and contents, keeps clear of the snow. */}
+          {/* Hollow shell: lined floor, then four walls. */}
           <NoSnow>
             <Block
               size={[width, wall, length]}
@@ -764,8 +745,7 @@ export function Luggage({ position }: { position: Vec3 }) {
           <NoSnow>
             <SuitcaseContents itemRefs={itemRefs} />
           </NoSnow>
-          {/* Lid, hinged along the back edge, lined inside, its snow
-              along as it opens */}
+          {/* Lid, hinged along the back edge */}
           <group ref={lidRef} position={[width / 2, depth, 0]}>
             <PinnedSnow>
               <Block
@@ -825,11 +805,9 @@ function roundedRect<T extends THREE.Path>(
   return path;
 }
 
-// The mailbox's body, a hollow tube open at both ends (its section: a
-// rounded rectangle with a hole), and a plate of the same outline closing
-// it (the back, and the door). Both with rounded edges, along x, centred on
-// it and on z; the body centred on y, the plate from y = 0 up. Built once,
-// shared by every mailbox (hence dispose={null} on the meshes).
+// The mailbox's body, a hollow tube with rounded edges, and a plate of the
+// same outline (the back, and the door), along x. Built once, shared by
+// every mailbox (hence dispose={null} on the meshes).
 let mailboxGeometries: {
   body: THREE.BufferGeometry;
   plate: THREE.BufferGeometry;
@@ -879,9 +857,8 @@ function getMailboxGeometries() {
   return mailboxGeometries;
 }
 
-// Sorts the faces of a tube along x, centred on y and z (non-indexed, as
-// extruded), into two material groups: the outside (0), and the inside (1),
-// facing in toward its axis, where the snow doesn't fall.
+// Sorts the faces of a non-indexed tube along x into two material groups:
+// the outside (0), and the inside (1), where the snow doesn't fall.
 function splitInside(geometry: THREE.BufferGeometry) {
   const position = geometry.getAttribute("position");
   const normal = geometry.getAttribute("normal");
@@ -917,9 +894,8 @@ function splitInside(geometry: THREE.BufferGeometry) {
   geometry.addGroup(outside.length * 3, inside.length * 3, 1);
   return geometry;
 }
-// Timeline (seconds): the door drops open flat, the letters slide out over
-// it toward the track one after the other, fanning out unevenly, wait a
-// moment, slide back in, and the door closes.
+// Timeline (seconds): the door drops open, the letters slide out over it,
+// fanning out unevenly, then slide back in and the door closes.
 const MAIL = {
   door: 0.35,
   doorAngle: Math.PI / 2,
@@ -932,9 +908,8 @@ const MAIL = {
   close: 0.3,
   duration: 2.3,
 };
-// The stacked letters, bottom first, lying on the box's floor, a little
-// askew: size (x along the box, z across), colour, where each rests (x, z,
-// turn about y), how far it slides out (-x) and turns on the way; a stamp
+// The stacked letters, bottom first: size (x along the box, z across),
+// colour, how far each slides out (-x) and turns, where it rests; a stamp
 // on some.
 const LETTERS: {
   size: [number, number];
@@ -1011,8 +986,7 @@ export function Mailbox({ position }: { position: Vec3 }) {
           position={[0, post / 2, 0]}
           color={COLORS.darkWood}
         />
-        {/* Hollow body, closed at the back, no snow inside (on its floor,
-            seen with the door open) */}
+        {/* Hollow body, no snow inside */}
         <mesh
           geometry={body}
           dispose={null}
@@ -1032,8 +1006,7 @@ export function Mailbox({ position }: { position: Vec3 }) {
             roughness={0.75}
           />
         </mesh>
-        {/* Back: the plate, a little smaller and set in, its edges hidden
-            in the body's walls (not flush with them, which would flicker) */}
+        {/* Back: the plate, set in a little (flush, it would z-fight) */}
         <mesh
           geometry={plate}
           dispose={null}
@@ -1048,8 +1021,7 @@ export function Mailbox({ position }: { position: Vec3 }) {
             roughness={0.75}
           />
         </mesh>
-        {/* Door over the whole front, hinged along its bottom edge,
-            dropping flat toward the track, its handle's snow along */}
+        {/* Door, hinged along its bottom edge */}
         <group ref={doorRef} position={[-length / 2 - wall / 2, post, 0]}>
           <mesh geometry={plate} dispose={null} castShadow receiveShadow>
             <meshStandardMaterial color={COLORS.edge} roughness={0.75} />
@@ -1081,8 +1053,7 @@ export function Mailbox({ position }: { position: Vec3 }) {
             color={COLORS.roof}
           />
         </group>
-        {/* Letters, stacked inside, each turning about its centre, kept
-            clear of the snow */}
+        {/* Letters, each turning about its centre */}
         <NoSnow>
           {LETTERS.map(({ size, color, rest, stamp }, i) => (
             <group
@@ -1090,11 +1061,7 @@ export function Mailbox({ position }: { position: Vec3 }) {
               ref={(letter) => {
                 letterRefs.current[i] = letter;
               }}
-              position={[
-                rest.x,
-                floor + LETTER_THICKNESS * (i + 0.5),
-                rest.z,
-              ]}
+              position={[rest.x, floor + LETTER_THICKNESS * (i + 0.5), rest.z]}
               rotation-y={rest.yaw}
             >
               <Block
@@ -1125,15 +1092,15 @@ export function Mailbox({ position }: { position: Vec3 }) {
 
 // ---------------------------------------------------------------- ping-pong
 
-// A ping-pong paddle left lying on the floor, red side up, its ball beside
-// it; cartoon-sized (about twice a real one). In play: no snow on them.
+// A ping-pong paddle left lying on the floor, its ball beside it, about
+// twice a real one's size. In play: no snow on them.
 const PADDLE = { radius: 0.26, rubber: 0.02, core: 0.03, handle: 0.36 };
 const BALL_RADIUS = 0.07;
 const BALL_REST: Vec3 = [-0.35, BALL_RADIUS, 0.5];
-// Timeline (seconds): the paddle lifts off the floor, the ball hops onto
-// it and bounces on it a few times (the paddle giving at each hit and
-// rocking side to side), hops back to where it lay with a little rebound,
-// and the paddle settles back down. Heights in the prop's units.
+// Timeline (seconds): the paddle lifts off the floor, the ball hops onto it
+// and bounces a few times (the paddle giving at each hit), hops back down
+// with a little rebound, and the paddle settles. Heights in the prop's
+// units.
 const RALLY = {
   lift: 0.9,
   rise: 0.35,
@@ -1159,14 +1126,11 @@ const RALLY_LAST = RALLY_FIRST + RALLY.bounces * RALLY.bounce;
 const RALLY_DURATION = RALLY_LAST + RALLY.hopOff + RALLY.rebound + 0.05;
 // A hop's height `p` of the way through it (0 to 1), peaking at 1.
 const arc = (p: number) => 4 * p * (1 - p);
-// Where the ball lies, and scratch space for where it sits on the blade:
-// reused every frame, shared by every paddle (they animate one frame at a
-// time).
+// Where the ball lies, and scratch space for where it sits on the blade.
 const ballRest = new THREE.Vector3(...BALL_REST);
 const ballOnBlade = new THREE.Vector3();
 
-// Clicked, it plays a little rally on its own. Left still with reduced
-// motion (only a flourish).
+// Clicked, it plays a little rally on its own. Still with reduced motion.
 export function PingPong({ position, yaw }: { position: Vec3; yaw: number }) {
   const paddleRef = useRef<THREE.Group>(null);
   const ballRef = useRef<THREE.Group>(null);
@@ -1300,7 +1264,7 @@ function hopPose(t: number, height: number): [number, number] {
 }
 
 // Hops from its feet (`position`) when clicked, keeping its volume as it
-// squashes and stretches. Left still with reduced motion.
+// squashes and stretches. Still with reduced motion.
 function Hop({
   position,
   height,

@@ -1,15 +1,13 @@
 import * as THREE from "three";
 import { SUN_POSITION } from "../config/scene";
 
-// Toon-shaded smoke puff, replacing the old NodeToy shader (its React
-// binding only supports R3F 8). Same look: hard-stepped sun lighting, a
-// sharp specular highlight and a bright fresnel rim. On top of that, the
-// sphere is displaced by animated noise so it churns like a puff, and it
-// dissolves (noise-driven discard) at the end of its life instead of
-// fading out, so it stays opaque and needs no depth sorting.
+// Toon-shaded smoke puff: hard-stepped sun lighting, a sharp specular
+// highlight and a bright fresnel rim. The sphere churns with animated
+// noise, and dissolves (noise-driven discard) at the end of its life rather
+// than fading out, so it stays opaque and needs no depth sorting.
 //
-// Made for an InstancedMesh (see models/Smoke): one draw call for every
-// puff, each with its own age and noise seed as instanced attributes.
+// For an InstancedMesh (see models/Smoke), each puff with its own age and
+// noise seed as instanced attributes.
 
 const NOISE = /* glsl */ `
   // Value noise by Inigo Quilez, returns 0 → 1.

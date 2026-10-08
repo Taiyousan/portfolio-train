@@ -12,12 +12,10 @@ type Props = {
   onDepart: () => void;
 };
 
-// HTML twin of the 3D departures board (models/StationBoard), there while
-// the train waits at the station: one row per project, a row opens the
-// project's detail. The 3D board is in charge: this one stays invisible,
-// still read by screen readers, and fades in as soon as it holds focus
-// (only reachable from the keyboard while it's invisible), as a bottom
-// sheet on phones, a card on the left on larger screens.
+// HTML twin of the 3D departures board, while the train waits at the
+// station: a row opens the project's dialog. The 3D board is in charge:
+// this one stays invisible, still read by screen readers, and shows up as
+// soon as it holds keyboard focus.
 export default function DeparturesBoard({
   projects,
   autoFocus,
@@ -32,7 +30,7 @@ export default function DeparturesBoard({
   return (
     <section
       aria-labelledby="departures-title"
-      className="absolute inset-x-0 bottom-0 flex max-h-[60dvh] flex-col rounded-t-2xl bg-board p-4 text-board-ink shadow-2xl transition delay-300 duration-500 starting:translate-y-6 starting:opacity-0 sm:inset-x-auto sm:top-20 sm:bottom-auto sm:left-5 sm:max-h-[calc(100dvh-7rem)] sm:short:top-16 sm:short:max-h-[calc(100dvh-5rem)] sm:w-[34rem] sm:rounded-2xl sm:p-5 pointer-events-none opacity-0 has-focus:pointer-events-auto has-focus:opacity-100 has-focus:delay-0"
+      className="pointer-events-none absolute inset-x-0 bottom-0 flex max-h-[60dvh] flex-col rounded-t-2xl bg-board p-4 text-board-ink opacity-0 shadow-2xl transition delay-300 duration-500 has-focus:pointer-events-auto has-focus:opacity-100 has-focus:delay-0 sm:inset-x-auto sm:top-20 sm:bottom-auto sm:left-5 sm:max-h-[calc(100dvh-7rem)] sm:w-[34rem] sm:rounded-2xl sm:p-5 starting:translate-y-6 starting:opacity-0 sm:short:top-16 sm:short:max-h-[calc(100dvh-5rem)]"
     >
       <header className="flex items-baseline justify-between gap-4 border-b border-board-flap pb-3">
         <h2

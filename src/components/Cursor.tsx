@@ -2,9 +2,8 @@
 
 import { useEffect, useRef } from "react";
 
-// What takes a click on the page. The train scene's objects set a pointer
-// cursor on the body while they're hovered instead (see
-// three/state/pointerCursor).
+// What takes a click on the page. The scene's objects set a pointer cursor
+// on the body instead (see three/state/pointerCursor).
 const CLICKABLE =
   'a[href], button:not(:disabled), [role="button"], label, select, summary, input:is([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="button"], [type="submit"], [type="reset"])';
 // Where the text cursor stays (see .custom-cursor in globals.css).
@@ -12,13 +11,11 @@ const TEXT_FIELD =
   'input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="button"], [type="submit"], [type="reset"]), textarea, [contenteditable="true"]';
 
 // The site's cursor, with a mouse or a trackpad: a red dot ringed in
-// ivory, like the ink and card stock of the tickets. Over something
-// clickable, a ring opens around it like a ticket punch, and closes in a
-// little on the click; tinted the departures board's yellow over the
-// scene's objects. Left to the system on touch screens, over text fields,
-// and while the train scene loads (data-loading on the root, see
-// three/ui/LoadingScreen): drawn by the page, it would stutter while the
-// page is held up.
+// ivory, like the tickets. Over something clickable, a ring opens around
+// it like a ticket punch, tinted yellow over the scene's objects. Left to
+// the system on touch screens, over text fields, and while the scene loads
+// (data-loading on the root): drawn by the page, it would stutter while
+// the page is held up.
 export default function Cursor() {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -42,8 +39,7 @@ export default function Cursor() {
           !root.hasAttribute("data-loading") &&
           !target?.closest(TEXT_FIELD),
       );
-      // The scene's objects, unless marked as standing for the interface
-      // (data-cursor="ui", the open departures board).
+      // The scene's objects, unless marked as standing for the interface.
       const body = document.body;
       const pointer = body.style.cursor === "pointer";
       const ui =
@@ -69,8 +65,7 @@ export default function Cursor() {
       cursor.toggleAttribute("data-pressed", true);
     };
     const release = () => cursor.toggleAttribute("data-pressed", false);
-    // The scene's objects stop being clickable under a still pointer too
-    // (the train leaving), putting the body's cursor back.
+    // The scene's objects also stop being clickable under a still pointer.
     const observer = new MutationObserver(update);
     observer.observe(document.body, {
       attributeFilter: ["style", "data-cursor"],
@@ -97,7 +92,7 @@ export default function Cursor() {
       aria-hidden
       className="group pointer-events-none fixed top-0 left-0 z-[2147483647] opacity-0 transition-opacity duration-150 data-visible:opacity-100"
     >
-      <span className="absolute -top-5 -left-5 size-10 scale-40 rounded-full border-[1.5px] border-ticket opacity-0 ring-1 ring-ticket-ink/25 inset-ring-1 inset-ring-ticket-ink/25 transition-[scale,opacity,background-color] duration-200 ease-out group-data-hover:scale-100 group-data-hover:bg-ticket/15 group-data-hover:opacity-100 group-data-hover:group-data-scene:bg-board-ink/60 group-data-hover:group-data-pressed:scale-75" />
+      <span className="absolute -top-5 -left-5 size-10 scale-40 rounded-full border-[1.5px] border-ticket opacity-0 ring-1 inset-ring-1 ring-ticket-ink/25 inset-ring-ticket-ink/25 transition-[scale,opacity,background-color] duration-200 ease-out group-data-hover:scale-100 group-data-hover:bg-ticket/15 group-data-hover:opacity-100 group-data-hover:group-data-pressed:scale-75 group-data-hover:group-data-scene:bg-board-ink/60" />
       <span className="absolute -top-1 -left-1 size-2 rounded-full bg-ticket-stamp ring-[1.5px] ring-ticket transition-[scale] duration-200 ease-out group-data-hover:scale-75 group-data-pressed:scale-75 group-data-hover:group-data-pressed:scale-50" />
     </div>
   );

@@ -1,7 +1,7 @@
 import { useEffect, useEffectEvent, useRef, useState } from "react";
-import { useProgress } from "@react-three/drei";
 import { site } from "@/lib/site";
 import { useTrainContext } from "../state/TrainContext";
+import useReducedMotion from "../hooks/useReducedMotion";
 import FlapText from "./FlapText";
 
 // Share of the track the downloads fill; the rest waits for the scene's
@@ -10,7 +10,8 @@ const ASSETS_SHARE = 0.85;
 // How fast the locomotive catches up with the progress (exponential, per s).
 const CATCH_UP = 5;
 // Meanwhile it keeps creeping towards CREEP_TO (exponential, per s), so a
-// long wait (shader builds on a slow GPU) never looks stuck.
+// long wait (the scene's code downloading, shaders building on a slow GPU)
+// never looks stuck.
 const CREEP = 0.1;
 const CREEP_TO = 92;
 // Once it's in, the full track shows for HOLD_MS, then the screen fades out
@@ -20,30 +21,27 @@ const FADE_MS = 700;
 // Chimney puffs, one after the other.
 const PUFFS = [0, 500, 1000];
 
-// Shown over the scene while it loads, printed on the tickets' card stock
-// (.theme-ticket) like the rest of the overlay: the site's name (flapping
-// into place), a locomotive riding the track as the progress bar, the
-// track inked in the stamp's red behind it, then a fade onto the scene.
-// Rendered on the server, so it's up before the scripts are. `onBoarded`
-// fires as it starts fading out.
+// Shown over the scene while it loads, on the tickets' card stock: the
+// site's name flapping into place, and a locomotive riding the track as the
+// progress bar. Rendered on the server, so it's up before the scripts are.
+// `progress` is the downloads' (0 to 100, starting over with each batch:
+// the locomotive only ever moves forward). `onBoarded` fires as it starts
+// fading out.
 export default function LoadingScreen({
+  progress,
   onBoarded,
 }: {
+  progress: number;
   onBoarded: () => void;
 }) {
   const { ready } = useTrainContext();
-  // drei's progress restarts at 0 for each new batch of downloads: the
-  // locomotive only ever moves forward.
-  const { progress } = useProgress();
+  const reducedMotion = useReducedMotion();
   const target = ready
     ? 100
     : (Number.isFinite(progress) ? progress : 0) * ASSETS_SHARE;
   const [shown, setShown] = useState(0);
   const shownRef = useRef(0);
   useEffect(() => {
-    const instant = window.matchMedia(
-      "(prefers-reduced-motion: reduce)",
-    ).matches;
     let last = performance.now();
     let frame = requestAnimationFrame(function tick(now) {
       const value = shownRef.current;
@@ -52,7 +50,7 @@ export default function LoadingScreen({
       last = now;
       const gap = Math.max(target - value, 0);
       let next =
-        instant || gap < 0.5
+        reducedMotion || gap < 0.5
           ? value + gap
           : value + gap * (1 - Math.exp(-CATCH_UP * dt));
       if (!ready) {
@@ -63,7 +61,7 @@ export default function LoadingScreen({
       frame = requestAnimationFrame(tick);
     });
     return () => cancelAnimationFrame(frame);
-  }, [target, ready]);
+  }, [target, ready, reducedMotion]);
 
   const arrived = ready && shown >= 100;
   const [leaving, setLeaving] = useState(false);
@@ -82,10 +80,9 @@ export default function LoadingScreen({
     };
   }, [arrived]);
 
-  // The site's cursor (components/Cursor) stands aside for the system's
-  // until the screen fades out: drawn by the page, it would stutter while
-  // the scene's setup holds the page up (shader builds); the system's never
-  // does.
+  // The site's cursor (components/Cursor) gives way to the system's until
+  // the screen fades out: drawn by the page, it would stutter while the
+  // shader builds hold the page up.
   useEffect(() => {
     if (leaving) return;
     const root = document.documentElement;
@@ -100,7 +97,7 @@ export default function LoadingScreen({
   return (
     <div
       style={{ transitionDuration: `${FADE_MS}ms` }}
-      className={`absolute inset-0 grid place-items-center theme-ticket bg-background px-6 text-foreground transition-opacity ease-out ${leaving ? "pointer-events-none opacity-0" : ""}`}
+      className={`theme-ticket absolute inset-0 grid place-items-center bg-background px-6 text-foreground transition-opacity ease-out ${leaving ? "pointer-events-none opacity-0" : ""}`}
     >
       <div className="w-full max-w-sm font-mono">
         <p className="text-2xl font-bold tracking-widest uppercase">
@@ -155,9 +152,8 @@ export default function LoadingScreen({
   );
 }
 
-// Side view of a steam locomotive heading right, in the current ink; the
-// cab's window and the wheels' hubs in the card's colour. Its chimney
-// tops out at (29, 2), drawn at 1.5 px per unit.
+// Side view of a steam locomotive heading right, in the current ink. Its
+// chimney tops out at (29, 2), drawn at 1.5 px per unit (see the puffs).
 function Locomotive() {
   return (
     <svg
@@ -166,7 +162,14 @@ function Locomotive() {
       className="block h-9 w-15 fill-current"
     >
       <path d="M2 2h15v3h-2v12H4V5H2z" />
-      <rect x="7" y="7" width="5" height="4" rx="0.5" className="fill-background" />
+      <rect
+        x="7"
+        y="7"
+        width="5"
+        height="4"
+        rx="0.5"
+        className="fill-background"
+      />
       <rect x="14" y="8" width="20" height="9" rx="2" />
       <rect x="19" y="5.5" width="4" height="3" rx="1" />
       <path d="M27 9V4h-1V2h6v2h-1v5z" />

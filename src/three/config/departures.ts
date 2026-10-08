@@ -1,6 +1,6 @@
-// Projects are listed as departures, in content order, FIRST_DEPARTURE and
-// then every DEPARTURE_INTERVAL minutes. Shared by the 3D station board and
-// its HTML twin so both always show the same timetable.
+// Projects are listed as departures, in content order: FIRST_DEPARTURE,
+// then every DEPARTURE_INTERVAL minutes. Shared by the 3D board and its
+// HTML twin.
 const FIRST_DEPARTURE = 8 * 60;
 const DEPARTURE_INTERVAL = 20;
 

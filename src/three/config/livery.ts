@@ -1,14 +1,12 @@
-// What the workshop ("custom" mode, see ui/Workshop) can repaint: the
-// locomotive's livery and the driver's outfit, each picked from a short
-// list of swatches in the scene's palette, so any mix stays in the art
-// direction (the station's palette, see StationPrimitives). Only a look:
-// nothing else depends on them.
+// What the workshop (ui/Workshop) can repaint: the locomotive's livery and
+// the driver's outfit, picked from short lists of swatches in the scene's
+// palette, so that any mix stays in the art direction.
 
 export type Swatch = { name: string; color: string };
 
-// Locomotive (models/Locomotive): `body` for the boiler, cab, wheels and
-// buffer beams (a darker shade of it for the cab floor and spokes), `roof`
-// for the cab roof, `trim` for the bands, dome, handrails and fittings.
+// Locomotive: `body` for the boiler, cab, wheels and buffer beams (a darker
+// shade of it for the cab floor and spokes), `roof` for the cab roof,
+// `trim` for the bands, dome, handrails and fittings.
 export type Livery = { body: string; roof: string; trim: string };
 
 export const BODY_SWATCHES: Swatch[] = [
@@ -49,11 +47,9 @@ export const LIVERIES: (Livery & { name: string })[] = [
   { name: "Lagune", body: "#2f7f82", roof: "#efdfbf", trim: "#c7794a" },
 ];
 
-// Driver (models/Driver): the conductor's uniform and cap, an engine
-// driver's overalls over a shirt, a neckerchief and a round cap, or
-// the developer's hoodie, bareheaded. `top` for the jacket, shirt or
-// hoodie and the sleeves; `bottom` for the trousers (the overalls' bib
-// and straps too, and the caps).
+// Driver: the conductor's uniform and cap, an engine driver's overalls and
+// round cap, or the developer's hoodie. `top` for the jacket, shirt or
+// hoodie; `bottom` for the trousers (the overalls' bib and the caps too).
 export const OUTFIT_STYLES = ["uniform", "overalls", "hoodie"] as const;
 export type OutfitStyle = (typeof OUTFIT_STYLES)[number];
 export type Outfit = { style: OutfitStyle; top: string; bottom: string };
@@ -91,8 +87,7 @@ export const BOTTOM_SWATCHES: Swatch[] = [
   { name: "Brique", color: "#8a2f28" },
 ];
 
-// A darker (factor < 1) shade of a "#rrggbb" colour, channel by channel as
-// written (sRGB), for the parts in shadow of a picked colour.
+// A darker (factor < 1) shade of a "#rrggbb" colour, channel by channel.
 export function shade(color: string, factor: number) {
   const channels = [1, 3, 5].map((i) =>
     Math.round(parseInt(color.slice(i, i + 2), 16) * factor),

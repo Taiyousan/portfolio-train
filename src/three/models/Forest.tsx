@@ -8,10 +8,10 @@ import {
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import type { ThreeElements } from "@react-three/fiber";
-import { useControls } from "leva";
-import { RAIL_TILE_LENGTH } from "../config/worldScale";
+import { useTweaks } from "../debug/tweaks";
 import {
   CAMERA_POSITION,
+  RAIL_TILE_LENGTH,
   STATION_CAMERA,
   STOP_CLEAR_X,
   STOP_HALF_LENGTH,
@@ -27,23 +27,18 @@ import {
 import { FOREST_SHAPES, type ForestShape } from "./forestShapes";
 import Pond, { BANK, POND_RADIUS, SHORE, type PondLayout } from "./Pond";
 
-// Matches the rails' rendered tile length so the forest scrolls in the same
-// world-space units as the track, and tree distances stay relative to the
-// train's actual size.
 const TILE_SPACING = RAIL_TILE_LENGTH;
-// The camera looks at the train from one side of the track, with forest on
-// both sides of it — between the camera and the train, and behind the
-// camera — for an immersive feel. Only a thin band right at the camera's
-// own distance stays clear (± `clearing`), so a trunk can't spawn inside
-// the camera and clip it.
-// The station shot gets no such band: props near it are shrunk away while
-// the train pulls in instead (see useCull).
+// The forest grows on both sides of the camera too, but for a band at its
+// own distance from the track (± `clearing`), so no trunk spawns inside it.
+// The stops' shots get no such band: props in front of them are shrunk away
+// instead (see useCull).
 const CAMERA_SIDE = Math.sign(CAMERA_POSITION[0]);
 const CAMERA_DISTANCE = Math.abs(CAMERA_POSITION[0]);
 
-// Each kind of prop is counted in a layer (one Leva density and spread for
-// all of the layer's kinds), and takes `share` of its count: an average
-// per side of the track, so rare kinds can come less than once a tile.
+// Each kind of prop is counted in a layer (one density and spread setting
+// for all of the layer's kinds), and takes `share` of its count: an
+// average per side of the track, so rare kinds can come less than once a
+// tile.
 type Layer = "trees" | "bushes" | "rocks" | "details";
 
 type Kind = {
@@ -73,8 +68,8 @@ const GREENS = ["#4f8a3c", "#5d9a45", "#457f3a", "#6aa04a"];
 const FIR_GREENS = ["#2f6b45", "#3a7a4c", "#2b5f40", "#357048"];
 const ROCK_GREYS = ["#7d786f", "#6f6c66", "#867e71", "#6c7075"];
 
-// Stumps and logs stay past the strip between the track and the camera,
-// where they'd fill the foreground: only on the stops' side, in practice.
+// Stumps and logs stay out of the strip between the track and the camera,
+// where they'd fill the foreground.
 const NEAR_CAMERA = CAMERA_DISTANCE - 2;
 
 // One in six round trees and one in five birches already turning.
@@ -340,8 +335,7 @@ function randomPond(): PondLayout {
     POND_RADIUS[0] + Math.random() * (POND_RADIUS[1] - POND_RADIUS[0]);
   const reach = pondReach(radius);
   const minX = POND_GAP + reach;
-  const x =
-    STOP_SIDE * (minX + Math.random() * Math.max(POND_MAX_X - minX, 0));
+  const x = STOP_SIDE * (minX + Math.random() * Math.max(POND_MAX_X - minX, 0));
   const z = (Math.random() - 0.5) * (TILE_SPACING - 2 * reach);
   return { x, z, radius, seed: Math.floor(Math.random() * 1e6) };
 }
@@ -371,9 +365,9 @@ function layoutTile(
   return { pond, placements };
 }
 
-// Zone in front of the station camera (x = distance from the track on the
-// camera side, z = world z) where props are shrunk away while the train
-// pulls in, so no trunk ends up right in front of the lens.
+// Zone in front of the stops' camera (x = distance from the track on the
+// camera side, z = world z) where props are shrunk away at a stop, so no
+// trunk ends up right in front of the lens.
 const CULL_MAX_X = Math.abs(STATION_CAMERA.position[0]) + 2;
 const CULL_MIN_Z = -2;
 const CULL_MAX_Z = 5;
@@ -418,10 +412,10 @@ function setInstance(
   mesh.setMatrixAt(index, dummy.matrix);
 }
 
-// Shrinks away, smoothly, every prop in the station camera's zone while
-// arriving at or waiting at a stop, and every prop by the track under a
-// stop in sight (only nearStops kinds go there). Only rewrites the
-// instances whose size is changing; idle otherwise.
+// Shrinks away, smoothly, every prop in the stops' camera zone while
+// arriving or waiting at a stop, and every prop by the track under a stop
+// in sight (only nearStops kinds grow there). Only rewrites the instances
+// whose size is changing.
 function useCull(
   meshRefs: RefObject<THREE.InstancedMesh | null>[],
   kind: Kind,
@@ -601,7 +595,7 @@ function ForestTile({
   pondChance: number;
   cull: CullRefs;
 }) {
-  // Laid out again only when a setting changes, not on every render.
+  // Laid out again only when a setting changes.
   const { trees, bushes, rocks, details } = density;
   const { trees: treeSpread, rocks: rockSpread } = spread;
   const { bushes: bushSpread, details: detailSpread } = spread;
@@ -656,8 +650,8 @@ function ForestTile({
   );
 }
 
-// Tiles of procedural trees, bushes, rocks, small details and the odd pond
-// scroll along z, looping like the rails.
+// Tiles of procedural trees, bushes, rocks, small details and the odd
+// pond, scrolling along z and looping like the rails.
 export default function Forest({
   stops,
   ...props
@@ -672,12 +666,10 @@ export default function Forest({
     [],
   );
   const materials = useMemo(() => createForestMaterials(), []);
-  // Flat cartoon water, plain blue with no reflection at all: the sunset
-  // environment, mirrored at grazing angles, would set it ablaze under the
-  // bloom.
+  // Flat cartoon water, with no reflection: the sunset environment,
+  // mirrored at grazing angles, would set it ablaze under the bloom.
   const water = useMemo(
-    () =>
-      new THREE.MeshStandardMaterial({ roughness: 1, envMapIntensity: 0 }),
+    () => new THREE.MeshStandardMaterial({ roughness: 1, envMapIntensity: 0 }),
     [],
   );
   useEffect(
@@ -689,7 +681,7 @@ export default function Forest({
     [geometries, materials, water],
   );
 
-  // Season: a tint over it all, ice for water (the snow is the scene's, see
+  // Season: a tint over it all, ice for water (the snow itself comes from
   // shaders/snow).
   const { seasonWeightsRef } = useTrainContext();
   const tint = useMemo(() => new THREE.Color(), []);
@@ -712,7 +704,7 @@ export default function Forest({
     detailSpread,
     pondChance,
     clearing,
-  } = useControls("Forest", {
+  } = useTweaks("Forest", {
     tileCount: { value: 6, min: 2, max: 14, step: 1 },
     treesPerTile: { value: 32, min: 0, max: 60, step: 1 },
     treeSpread: { value: 40, min: 5, max: 80, step: 1 },

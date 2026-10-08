@@ -15,9 +15,8 @@ import {
   type Outfit,
 } from "../config/livery";
 
-// The workshop's picks (see config/livery and ui/Workshop): the
-// locomotive's livery and the driver's outfit, read by the models. Kept
-// apart from TrainContext, so a new colour only re-renders what wears it.
+// The workshop's picks: the locomotive's livery and the driver's outfit.
+// Apart from TrainContext, so a new colour only re-renders what wears it.
 
 type LiveryContextValue = {
   livery: Livery;
@@ -46,10 +45,8 @@ type Saved = { livery: Livery; outfit: Outfit };
 const isColor = (value: unknown): value is string =>
   typeof value === "string" && /^#[0-9a-f]{6}$/i.test(value);
 
-// Read once, while the provider mounts. On the server (no window) it
-// gives the defaults; the difference can't show at hydration since
-// nothing rendered there depends on it (the workshop panel only opens
-// later, the scene is client-only).
+// Read once, as the provider mounts. The defaults on the server: nothing
+// rendered there depends on them.
 function load(): Saved {
   const saved: Saved = { livery: DEFAULT_LIVERY, outfit: DEFAULT_OUTFIT };
   if (typeof window === "undefined") return saved;

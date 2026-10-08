@@ -48,12 +48,9 @@ const sameOutfit = (a: Outfit, b: Outfit) =>
   a.style === b.style && a.top === b.top && a.bottom === b.bottom;
 
 // The workshop ("custom" mode): repaint the locomotive and dress the
-// driver, the scene following each pick live (see config/livery). Dressed
-// as a work order: a split-flap strip in the card's ink on top, card
-// stock below a perforation, like the project dialog (.theme-ticket). A
-// side card on larger screens, the train framed beside it (see
-// TrainScene), a bottom sheet on phones, with the return ticket riding on
-// top of it (Overlay's is left out there).
+// driver, the scene following each pick live. Dressed as a work order like
+// the about card: a side card on larger screens, a bottom sheet with its
+// own return ticket on phones.
 export default function Workshop({ onLeave }: { onLeave: () => void }) {
   const { workshopView: tab, setWorkshopView: setTab } = useTrainContext();
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -73,10 +70,10 @@ export default function Workshop({ onLeave }: { onLeave: () => void }) {
   return (
     <section
       aria-labelledby={`${id}-title`}
-      className="theme-ticket pointer-events-auto absolute inset-x-0 bottom-0 flex max-h-[50dvh] flex-col text-foreground drop-shadow-2xl transition delay-500 duration-500 starting:translate-y-6 starting:opacity-0 sm:inset-x-auto sm:top-20 sm:right-5 sm:bottom-auto sm:max-h-[calc(100dvh-7rem)] sm:short:top-16 sm:short:max-h-[calc(100dvh-5rem)] sm:w-96"
+      className="theme-ticket pointer-events-auto absolute inset-x-0 bottom-0 flex max-h-[50dvh] flex-col text-foreground drop-shadow-2xl transition delay-500 duration-500 sm:inset-x-auto sm:top-20 sm:right-5 sm:bottom-auto sm:max-h-[calc(100dvh-7rem)] sm:w-96 starting:translate-y-6 starting:opacity-0 sm:short:top-16 sm:short:max-h-[calc(100dvh-5rem)]"
     >
       {/* Split-flap header, in the card's ink, with the tabs. */}
-      <header className="notch-bottom shrink-0 rounded-t-xl bg-foreground px-5 pt-4 pb-3 text-background">
+      <header className="shrink-0 rounded-t-xl bg-foreground px-5 pt-4 pb-3 text-background notch-bottom">
         <p className="font-mono text-[0.625rem] tracking-[0.2em] uppercase opacity-80">
           Dépôt · Bon d&apos;atelier
         </p>
@@ -122,7 +119,7 @@ export default function Workshop({ onLeave }: { onLeave: () => void }) {
                 aria-controls={`${id}-panel`}
                 tabIndex={active ? 0 : -1}
                 onClick={() => setTab(option.id)}
-                className={`min-h-9 flex-1 rounded-lg px-3 font-mono text-[0.6875rem] tracking-wider uppercase transition outline-offset-2 outline-background focus-visible:outline-2 ${active ? "bg-background text-foreground" : "text-background/70 hover:bg-board-flap hover:text-background"}`}
+                className={`min-h-9 flex-1 rounded-lg px-3 font-mono text-[0.6875rem] tracking-wider uppercase outline-offset-2 outline-background transition focus-visible:outline-2 ${active ? "bg-background text-foreground" : "text-background/70 hover:bg-board-flap hover:text-background"}`}
               >
                 {option.label}
               </button>
@@ -131,8 +128,7 @@ export default function Workshop({ onLeave }: { onLeave: () => void }) {
         </div>
       </header>
 
-      {/* Card stock, past the perforation. Only it scrolls, with a thin
-          scrollbar in its ink so that shows on phones too. */}
+      {/* Card stock, past the perforation. Only it scrolls. */}
       <div
         ref={panelRef}
         role="tabpanel"
@@ -141,7 +137,7 @@ export default function Workshop({ onLeave }: { onLeave: () => void }) {
         onScroll={(e) => {
           scrollTops.current[tab] = e.currentTarget.scrollTop;
         }}
-        className="notch-top scrollbar-ink min-h-0 overflow-y-auto border-t-2 border-dashed border-ticket-ink/30 bg-background px-5 pt-4 pb-6 sm:rounded-b-xl"
+        className="min-h-0 scrollbar-ink overflow-y-auto border-t-2 border-dashed border-ticket-ink/30 bg-background px-5 pt-4 pb-6 notch-top sm:rounded-b-xl"
       >
         {tab === "train" ? <TrainTab /> : <DriverTab />}
       </div>

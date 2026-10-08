@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { RoundedBox, Text } from "@react-three/drei";
+import { Text } from "@react-three/drei";
 import { useFrame, type ThreeElements } from "@react-three/fiber";
 import * as THREE from "three";
 import { useTrainContext } from "../state/TrainContext";
@@ -9,15 +9,12 @@ import useHintReveal from "../hooks/useHintReveal";
 import { departureTime, ROW_FLAP_DELAY_MS } from "../config/departures";
 import type { StationProject } from "../ui/types";
 import { snowy } from "../shaders/snow";
-import { STATION_COLORS } from "./StationPrimitives";
+import { SCENE_FONT } from "../config/scene";
+import { RoundedBox, STATION_COLORS } from "./StationPrimitives";
+import useReducedMotion from "../hooks/useReducedMotion";
 
-// Troika (drei <Text>) reads woff/ttf/otf, not woff2. Same face as the HTML
-// board's font-mono.
-const FONT = "/fonts/geist-mono-600.woff";
-
-// The face: same palette as the --board* tokens in globals.css, so the 3D
-// board and its HTML twin look alike. The woodwork around it takes the
-// station's (STATION_COLORS).
+// The face, in the --board* tokens' palette (globals.css), like its HTML
+// twin. The woodwork around it takes the station's colours.
 const COLORS = {
   board: "#16140f",
   flap: "#26231c",
@@ -28,22 +25,21 @@ const COLORS = {
   glow: "#ffb56b",
 };
 
-// Its claims on the pointer cursor (see pointerCursor), its rows' aside.
+// Its claims on the pointer cursor (see pointerCursor).
 const BOARD = "board";
 const CLOSE_BUTTON = "board-close";
 
 // Frame glow inviting a click while the board isn't open: a beat between
-// these intensities, quick to flare and slow to fade (steady halfway with
-// reduced motion), brighter on hover. Bright enough for the scene's bloom:
-// the board is the thing to look at at the station.
+// these intensities, quick to flare and slow to fade (steady with reduced
+// motion), brighter on hover, bright enough for the bloom.
 const GLOW_MIN = 0.25;
 const GLOW_MAX = 2.4;
 const GLOW_HOVER = 3;
 const GLOW_SPEED = 3.2;
-// A glowing arrow floats over the roof meanwhile, pointing down at the
-// board, bobbing in time with the glow and swaying a little (still with
-// reduced motion); one of the hints at the click, it pops in in turn with
-// the others (see useHintReveal). In board units, radians and per second.
+// Meanwhile a glowing arrow floats over the roof, pointing down at the
+// board, bobbing in time with the glow (still with reduced motion). One of
+// the glowing hints (see useHintReveal). In board units, radians and per
+// second.
 const ARROW = {
   lift: 0.42,
   bob: 0.07,
@@ -55,15 +51,14 @@ const ARROW = {
 const CLOSE_WIDTH = 0.44;
 const CLOSE_HEIGHT = 0.17;
 
-// Board layout, in board units (the whole board is scaled in Station). The
-// board faces +z in its own frame; Station turns it toward the track.
+// Layout, in board units (scaled in Station). It faces +z in its own frame.
 const WIDTH = 2.8;
 const PADDING = 0.1;
 const HEADER_HEIGHT = 0.3;
 const ROW_HEIGHT = 0.2;
 const ROW_GAP = 0.025;
-// The board's woodwork, dressed like the station (StationDecor): a rounded
-// wooden frame, round posts, and a little pitched roof.
+// The woodwork: a rounded wooden frame, round posts and a little pitched
+// roof.
 const FRAME = 0.09;
 const DEPTH = 0.12;
 const RIM_DEPTH = 0.04;
@@ -75,19 +70,18 @@ const LINE_WIDTH = 0.52;
 const TITLE_SIZE = 0.075;
 const SMALL_SIZE = 0.04;
 const INSET = 0.04;
-// Depth offsets between the stacked flat layers, in board units: each one
-// sits clearly in front of the one below so they never z-fight, even from
-// the ride camera far away. Rows are offset from the face, their text and
-// hinge from the row.
+// Depth offsets between the stacked flat layers, so they never z-fight,
+// even from the ride camera far away. Rows are offset from the face, their
+// text and hinge from the row.
 const LAYER = { frame: 0.01, flap: 0.012, text: 0.008, hinge: 0.014 };
 // Height, within a row, of the time + destination line; the flap's hinge
 // runs through it.
 const MAIN_Y = 0.025;
 // Once the board is open, titles start settling as the camera arrives.
 const FLAP_START_MS = 350;
-// Then each row's technos light up, once its title has
-// roughly settled, with a short neon-tube flicker: [ms from start, opacity]
-// steps, the last one held. Off at once when the board closes.
+// Then each row's technos light up once its title has roughly settled,
+// with a neon-tube flicker: [ms from start, opacity] steps, the last one
+// held. Off at once when the board closes.
 const LIGHT_DELAY_MS = 450;
 const LIGHT_FLICKER: [number, number][] = [
   [0, 1],
@@ -107,9 +101,8 @@ const RIGHT = FLAP_WIDTH / 2 - INSET;
 const TITLE_X = LEFT + TIME_WIDTH;
 const TITLE_MAX_WIDTH = RIGHT - LINE_WIDTH - TITLE_X - INSET;
 
-// The board's side edges, in board units: the rim's outer front corners,
-// this far out from the centre and in front of the face. Something leaning
-// on a side (the driver, see Station) rests against them.
+// The rim's outer front corners, in board units, for the driver to lean
+// against (see Station).
 export const STATION_BOARD_SIDE = {
   x: WIDTH / 2 + FRAME + RIM_BEVEL,
   front: RIM_DEPTH + RIM_BEVEL,
@@ -201,9 +194,8 @@ type RowProps = {
   onSelect: () => void;
 };
 
-// One departure. The flap's dark hinge line runs through the time and
-// destination, as on a real split-flap board. Its title keeps flipping
-// until the board is open, then settles.
+// One departure, the flap's hinge line through it as on a real split-flap
+// board. Its title keeps flipping until the board is open, then settles.
 function Row({ project, index, y, active, onSelect }: RowProps) {
   const [hovered, setHovered] = useState(false);
   const title = useFlapText(
@@ -211,9 +203,8 @@ function Row({ project, index, y, active, onSelect }: RowProps) {
     FLAP_START_MS + index * ROW_FLAP_DELAY_MS,
     active,
   );
-  // Hover only shows while the rows are pickable (board open), with a
-  // pointer cursor as on the page's buttons; till then the board's own
-  // takes the pointer over them.
+  // Hover only shows while the rows can be picked (board open); till then
+  // the board's own hover takes over.
   const lit = hovered && active;
   useEffect(() => {
     if (!lit) return;
@@ -225,9 +216,7 @@ function Row({ project, index, y, active, onSelect }: RowProps) {
   // Technos, lit only while the board is open.
   const lightRefs = useRef<(FadeText | null)[]>([]);
   const lightStart = useRef<number | null>(null);
-  const [reducedMotion] = useState(
-    () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
-  );
+  const reducedMotion = useReducedMotion();
   useFrame(({ clock }) => {
     const now = clock.elapsedTime * 1000;
     if (!active) lightStart.current = null;
@@ -271,7 +260,7 @@ function Row({ project, index, y, active, onSelect }: RowProps) {
       </mesh>
 
       <Text
-        font={FONT}
+        font={SCENE_FONT}
         position={[LEFT, MAIN_Y, LAYER.text]}
         fontSize={TITLE_SIZE}
         anchorX="left"
@@ -281,7 +270,7 @@ function Row({ project, index, y, active, onSelect }: RowProps) {
         {departureTime(index)}
       </Text>
       <Text
-        font={FONT}
+        font={SCENE_FONT}
         position={[TITLE_X, MAIN_Y, LAYER.text]}
         fontSize={TITLE_SIZE}
         anchorX="left"
@@ -293,7 +282,7 @@ function Row({ project, index, y, active, onSelect }: RowProps) {
         {title}
       </Text>
       <Text
-        font={FONT}
+        font={SCENE_FONT}
         position={[TITLE_X, -0.055, LAYER.text]}
         fontSize={SMALL_SIZE}
         anchorX="left"
@@ -309,7 +298,7 @@ function Row({ project, index, y, active, onSelect }: RowProps) {
         {project.technos.join(" · ").toUpperCase()}
       </Text>
       <Text
-        font={FONT}
+        font={SCENE_FONT}
         position={[RIGHT, MAIN_Y, LAYER.text]}
         fontSize={SMALL_SIZE}
         anchorX="right"
@@ -361,7 +350,7 @@ function CloseButton({
         />
       </mesh>
       <Text
-        font={FONT}
+        font={SCENE_FONT}
         position={[0, 0, LAYER.text]}
         fontSize={0.06}
         anchorX="center"
@@ -380,12 +369,11 @@ type Props = ThreeElements["group"] & {
   legHeight: number;
 };
 
-// Split-flap departures board on the station platform, one row per
-// project. At the station its frame glows to invite a click, which zooms
-// the camera onto it (BOARD_CAMERA, see TrainScene); there, rows open their
-// project's detail (the HTML dialog), and "× Fermer" or Escape zoom back
-// out. The HTML board in ui/DeparturesBoard lists the same rows for
-// keyboard, screen readers and phones.
+// Split-flap departures board on the platform, one row per project. At the
+// station its frame glows to invite a click, which zooms the camera onto
+// it; there, rows open their project's dialog, and "× Fermer" or Escape
+// zoom back out. Its HTML twin (ui/DeparturesBoard) lists the same rows for
+// the keyboard and screen readers.
 export default function StationBoard({ projects, legHeight, ...props }: Props) {
   const {
     mode,
@@ -406,9 +394,7 @@ export default function StationBoard({ projects, legHeight, ...props }: Props) {
   const ridgeY = top + FRAME + ROOF.half * Math.sin(ROOF.pitch) + 0.02;
 
   const [hovered, setHovered] = useState(false);
-  const [reducedMotion] = useState(
-    () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
-  );
+  const reducedMotion = useReducedMotion();
   const frameMaterialRef = useRef<THREE.MeshStandardMaterial>(null);
   const hintRef = useRef<FadeText>(null);
   const arrow = useArrowGeometry();
@@ -465,8 +451,7 @@ export default function StationBoard({ projects, legHeight, ...props }: Props) {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [open, selectedSlug, setBoardFocused]);
 
-  // A pointer cursor over all of it (rows and their text too) while it
-  // invites a click.
+  // A pointer cursor over all of it while it invites a click.
   const pointing = inviting && hovered;
   useEffect(() => {
     if (!pointing) return;
@@ -485,12 +470,11 @@ export default function StationBoard({ projects, legHeight, ...props }: Props) {
       onPointerOver={() => setHovered(true)}
       onPointerOut={() => setHovered(false)}
     >
-      {/* Wooden back, the board face just in front of it, and the rounded
-          rim around the face, which glows to invite a click. */}
+      {/* Wooden back, the face, and the rim around it, which glows. */}
       <RoundedBox
         args={[WIDTH + 2 * FRAME, height + 2 * FRAME, DEPTH]}
         radius={0.04}
-        smoothness={3}
+
         position={[0, 0, -DEPTH / 2 - LAYER.frame]}
         castShadow
         receiveShadow
@@ -516,8 +500,7 @@ export default function StationBoard({ projects, legHeight, ...props }: Props) {
         />
       </mesh>
 
-      {/* The arrow over the roof, pointing at the board while it invites
-          a click (part of it: clicking or hovering it is the board's). */}
+      {/* The arrow over the roof: part of the board, for clicks and hover. */}
       <mesh
         ref={arrowRef}
         geometry={arrow}
@@ -533,7 +516,7 @@ export default function StationBoard({ projects, legHeight, ...props }: Props) {
         />
       </mesh>
 
-      {/* Little pitched roof over the board, like the station's. */}
+      {/* Little pitched roof. */}
       {[-1, 1].map((side) => (
         <group
           key={side}
@@ -547,7 +530,7 @@ export default function StationBoard({ projects, legHeight, ...props }: Props) {
           <RoundedBox
             args={[roofWidth, ROOF.thickness, ROOF.half + 0.04]}
             radius={0.02}
-            smoothness={3}
+
             castShadow
             receiveShadow
           >
@@ -575,7 +558,7 @@ export default function StationBoard({ projects, legHeight, ...props }: Props) {
       <RoundedBox
         args={[WIDTH + 2 * FRAME, ridgeY - top - FRAME, DEPTH]}
         radius={0.02}
-        smoothness={3}
+
         position={[
           0,
           (ridgeY + top + FRAME) / 2 - 0.01,
@@ -620,7 +603,7 @@ export default function StationBoard({ projects, legHeight, ...props }: Props) {
       })}
 
       <Text
-        font={FONT}
+        font={SCENE_FONT}
         position={[LEFT - INSET + 0.01, headerY, LAYER.flap + LAYER.text]}
         fontSize={0.12}
         letterSpacing={0.15}
@@ -641,7 +624,7 @@ export default function StationBoard({ projects, legHeight, ...props }: Props) {
         />
       ) : (
         <Text
-          font={FONT}
+          font={SCENE_FONT}
           position={[RIGHT + INSET - 0.01, headerY, LAYER.flap + LAYER.text]}
           fontSize={HINT_SIZE}
           anchorX="right"
