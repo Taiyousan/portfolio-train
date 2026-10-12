@@ -24,28 +24,37 @@ export type SceneProps = {
 // The canvas and everything three.js, in a chunk of its own (see
 // Experience).
 function Scene({ projects, onProgress }: SceneProps) {
-  const { progress } = useProgress();
-  useEffect(() => onProgress(progress), [progress, onProgress]);
   const [dpr, setDpr] = useState(() => Math.min(window.devicePixelRatio, 2));
 
   return (
-    <Canvas
-      shadows="percentage"
-      dpr={dpr}
-      // The effect composer renders multisampled: the canvas itself needn't.
-      gl={{ antialias: false, powerPreference: "high-performance" }}
-      camera={{
-        fov: CAMERA_FOV,
-        near: 0.3,
-        far: 150,
-        position: CAMERA_POSITION,
-      }}
-    >
-      <color args={["#3a2a1f"]} attach="background" />
-      <TrainScene projects={projects} />
-      <AdaptiveResolution setDpr={setDpr} />
-    </Canvas>
+    <>
+      <Progress onProgress={onProgress} />
+      <Canvas
+        shadows="percentage"
+        dpr={dpr}
+        // The effect composer renders multisampled: the canvas itself needn't.
+        gl={{ antialias: false, powerPreference: "high-performance" }}
+        camera={{
+          fov: CAMERA_FOV,
+          near: 0.3,
+          far: 150,
+          position: CAMERA_POSITION,
+        }}
+      >
+        <color args={["#3a2a1f"]} attach="background" />
+        <TrainScene projects={projects} />
+        <AdaptiveResolution setDpr={setDpr} />
+      </Canvas>
+    </>
   );
+}
+
+// Reports the downloads' progress, apart from the canvas, which needn't
+// re-render with every file loaded.
+function Progress({ onProgress }: Pick<SceneProps, "onProgress">) {
+  const progress = useProgress((state) => state.progress);
+  useEffect(() => onProgress(progress), [progress, onProgress]);
+  return null;
 }
 
 // Steps the resolution down, to 1 at most, on a device that can't keep up.

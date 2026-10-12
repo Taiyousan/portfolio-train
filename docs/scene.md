@@ -24,6 +24,7 @@ Le train qui roule en forêt est le fil conducteur. Chaque section du portfolio 
 2. `Experience` affiche cette version HTML (cachée, mais lue par les lecteurs d'écran et les moteurs de recherche, et visible dès qu'elle reçoit le focus clavier), l'écran de chargement, la surcouche HTML (`ui/Overlay`), et `Scene`.
 3. `Scene` (le `<Canvas>`) est chargé à part (`import()` dans un effet ; pas `next/dynamic`, dont le `Suspense` remonte le canvas en dev et lui fait perdre son contexte WebGL) : three.js et tous les modèles sont dans un chunk séparé, téléchargé une fois la page affichée. L'écran de chargement et la version HTML fonctionnent pendant ce temps.
 4. Sans WebGL 2 (`useWebGLSupport`), ou si la scène plante (`SceneBoundary`), seule la version HTML s'affiche.
+5. Tout ce qui se charge dans la scène (`useGLTF`, `Environment`, `<Text>`...) doit rester dans le `<Suspense>` de `TrainScene` : laissé au `<Canvas>`, un chargement en cours suspend la page autour de lui, ce qui provoque en dev une boucle de rendus qui bloque l'écran de chargement.
 
 L'écran de chargement (`ui/LoadingScreen`) : les téléchargements remplissent 85 % de la voie, le reste attend que la scène ait dessiné ses premières images (`ready`, posé par `SceneReady` après le préchauffage des shaders). Puis fondu, et les billets du trajet sont distribués (`boarded`).
 
@@ -48,6 +49,7 @@ Le train reste en z = 0 et le monde défile : rails et forêt par tuiles qui bou
 Ajouter `#debug` à l'URL : panneau Leva et caméra libre.
 
 - Les réglages ajustables à chaud sont déclarés avec `useTweaks(dossier, schéma)` (`debug/tweaks.ts`), même schéma que `useControls` de Leva. Sans `#debug`, ce sont les valeurs par défaut, et Leva n'est pas téléchargé : ne pas importer `leva` ailleurs que dans `debug/`.
+- **Diagnostic** : un bandeau en bas de l'écran (`debug/ErrorReadout`) affiche l'étape du chargement, les erreurs, les pertes de contexte WebGL et l'appareil. Utile sur téléphone, sans console sous la main.
 - **Cadrer un plan** : tourner la caméra à la main, puis recopier position et cible du moniteur « Camera » dans `config/scene.ts`.
 
 ## Les arrêts

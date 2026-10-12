@@ -55,7 +55,7 @@ src/three/
   state/            état partagé de la scène (contexte React)
   config/           réglages 3D (positions de caméra et de soleil, échelles)
   ui/               surcouche HTML pilotée par l'état de la scène (panneaux, tableau des départs)
-  debug/            panneau Leva et réglages à chaud (useTweaks), chargés seulement avec #debug
+  debug/            panneau Leva, réglages à chaud (useTweaks) et diagnostic à l'écran, seulement avec #debug
 ```
 
 Fonctionnement détaillé (états, caméra, arrêts, mode debug) et pistes : [docs/scene.md](docs/scene.md).

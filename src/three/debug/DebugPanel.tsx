@@ -12,16 +12,23 @@ import {
 // The Leva panel, loaded with #debug in the URL only: every folder of
 // settings the scene has registered (see tweaks), and the camera's
 // position and target, to copy into a CameraShot (config/scene) once
-// framed by hand.
+// framed by hand. The folders mount together once the scene is up, every
+// one registered by then: mounted one by one as they come, each sets all
+// the others re-rendering, which slows the loading down.
 export default function DebugPanel() {
   const names = useTweakFolders();
+  const { ready } = useTrainContext();
   return (
     <>
       <Leva collapsed />
-      {names.map((name) => (
-        <TweakFolder key={name} name={name} />
-      ))}
-      <CameraMonitor />
+      {ready && (
+        <>
+          {names.map((name) => (
+            <TweakFolder key={name} name={name} />
+          ))}
+          <CameraMonitor />
+        </>
+      )}
     </>
   );
 }

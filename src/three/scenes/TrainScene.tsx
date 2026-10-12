@@ -310,7 +310,6 @@ export default function TrainScene({
         shadow-camera-near={1}
         shadow-camera-far={150}
       />
-      <Environment files={ENVIRONMENT_MAP} />
       <Sky ref={skyRef} sunPosition={SUN_POSITION} mieDirectionalG={0.9} />
 
       {/* Moves the camera between shots; turned by hand in debug mode only,
@@ -329,7 +328,10 @@ export default function TrainScene({
         <Noise opacity={0.02} />
       </EffectComposer>
 
+      {/* Everything that loads, in here: left to the canvas, a pending
+          load suspends the page around it. */}
       <Suspense fallback={null}>
+        <Environment files={ENVIRONMENT_MAP} />
         <Train />
         <ForestFloor position={[0, -0.6, 0]} />
         <Rails position={[0, -0.57, 0]} />
