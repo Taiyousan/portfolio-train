@@ -3,7 +3,7 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import type { ThreeElements } from "@react-three/fiber";
 import { useTrainContext } from "../state/TrainContext";
-import { STOP_SIDE } from "../config/scene";
+import { STOP_SIDE, STOP_SIDE_VERGE } from "../config/scene";
 import { STATION_COLORS } from "./StationPrimitives";
 import useReducedMotion from "../hooks/useReducedMotion";
 
@@ -23,10 +23,10 @@ const FIRST_WAIT: [number, number] = [6, 15];
 const HOP_TIME = 0.34;
 const HOP_HEIGHT = 0.14;
 const HOP_LENGTH: [number, number] = [0.28, 0.48];
-// Distance from the track a bunny keeps to: mostly in the clear strip
-// behind the train, sometimes between the train and the camera.
+// Distance from the track a bunny keeps to: mostly in the verge behind the
+// train, sometimes between the train and the camera.
 const BANDS: { side: number; band: [number, number]; share: number }[] = [
-  { side: STOP_SIDE, band: [1.4, 4.4], share: 0.75 },
+  { side: STOP_SIDE, band: [1.4, STOP_SIDE_VERGE], share: 0.75 },
   { side: -STOP_SIDE, band: [1.2, 2.4], share: 0.25 },
 ];
 // Starts just out of frame ahead of the train (+z); gone once this far

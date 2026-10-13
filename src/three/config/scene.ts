@@ -187,13 +187,16 @@ export const DRIVER_SPRING = {
 };
 
 // Both stops stand on the side of the track opposite the camera, out to
-// STOP_CLEAR_X (the station's roof is the furthest): Forest keeps that side
-// clear out to there. STOP_HALF_LENGTH is half a stop's length along the
-// track, stairs included: small details may grow by the track, and shrink
-// away within it of a stop in sight.
+// STOP_CLEAR_X (the station's roof is the furthest). STOP_HALF_LENGTH is
+// half a stop's length along the track, stairs included: Forest shrinks
+// away whatever stands within these of a stop in sight.
 export const STOP_SIDE = -Math.sign(CAMERA_POSITION[0]);
 export const STOP_CLEAR_X = 5.6;
 export const STOP_HALF_LENGTH = 2.8;
+
+// On the stops' side, trees, bushes and rocks keep their edge this far from
+// the track: a verge where the bunny runs (see Bunny).
+export const STOP_SIDE_VERGE = 2.4;
 
 // Station (models/StationDecor) in its ground frame (origin at the platform
 // centre, at track level; x across the track, + away from it; z along it):

@@ -70,7 +70,7 @@ Ajouter `#debug` à l'URL : panneau Leva et caméra libre.
 
 ## Décor
 
-- Forêt (`Forest`, formes dans `forestShapes`) : chaque type est une seule géométrie (parties fusionnées, couleurs dans les sommets), instanciée une fois par tuile. Elle laisse libres les abords des arrêts et un couloir devant la caméra.
+- Forêt (`Forest`, formes dans `forestShapes`) : chaque type est une seule géométrie (parties fusionnées, couleurs dans les sommets), instanciée une fois par tuile. Les éléments gardent leurs distances entre eux (pas de couronnes fusionnées). Côté arrêts, seul un accotement de `STOP_SIDE_VERGE` reste dégagé (le couloir du lapin) : ce qui se trouve sous un arrêt en vue, ou autour de la caméra de l'atelier, rétrécit jusqu'à disparaître. Côté caméra, un couloir reste libre devant elle.
 - Mares (`Pond`), nuages, lapin, oiseau, fumée (`shaders/smoke.ts`, toutes les bouffées en un seul appel de dessin), flocons.
 
 ## Performances et accessibilité

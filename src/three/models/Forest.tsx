@@ -11,11 +11,13 @@ import type { ThreeElements } from "@react-three/fiber";
 import { useTweaks } from "../debug/tweaks";
 import {
   CAMERA_POSITION,
+  CUSTOM_CAMERAS,
   RAIL_TILE_LENGTH,
   STATION_CAMERA,
   STOP_CLEAR_X,
   STOP_HALF_LENGTH,
   STOP_SIDE,
+  STOP_SIDE_VERGE,
 } from "../config/scene";
 import useScrollingLoop from "../hooks/useScrollingLoop";
 import { useTrainContext } from "../state/TrainContext";
@@ -30,8 +32,8 @@ import Pond, { BANK, POND_RADIUS, SHORE, type PondLayout } from "./Pond";
 const TILE_SPACING = RAIL_TILE_LENGTH;
 // The forest grows on both sides of the camera too, but for a band at its
 // own distance from the track (± `clearing`), so no trunk spawns inside it.
-// The stops' shots get no such band: props in front of them are shrunk away
-// instead (see useCull).
+// The stops, their shots and the workshop's get no such band: props in the
+// way are shrunk away instead (see useCull).
 const CAMERA_SIDE = Math.sign(CAMERA_POSITION[0]);
 const CAMERA_DISTANCE = Math.abs(CAMERA_POSITION[0]);
 
@@ -58,10 +60,9 @@ type Kind = {
   // Flattens away under the snow (see shaders/forestMaterial).
   wither?: boolean;
   shadow?: boolean;
-  // Allowed by the track on the stops' side too, where it's shrunk away
-  // whenever a stop is there. Every other kind keeps clear of the stops'
-  // side out to STOP_CLEAR_X.
-  nearStops?: boolean;
+  // Grows in the verge on the stops' side too (see STOP_SIDE_VERGE), low
+  // enough to leave the bunny in sight.
+  inVerge?: boolean;
 };
 
 const GREENS = ["#4f8a3c", "#5d9a45", "#457f3a", "#6aa04a"];
@@ -174,7 +175,7 @@ const KINDS: Kind[] = [
     scale: [0.7, 1.2],
     tints: ["#6aa04a", "#78a857", "#5d9a45", "#86b05a"],
     wither: true,
-    nearStops: true,
+    inVerge: true,
   },
   {
     shape: "flowers",
@@ -185,7 +186,7 @@ const KINDS: Kind[] = [
     scale: [0.7, 1.1],
     tints: ["#ffffff"],
     wither: true,
-    nearStops: true,
+    inVerge: true,
   },
   {
     shape: "mushrooms",
@@ -196,7 +197,7 @@ const KINDS: Kind[] = [
     scale: [0.6, 1.1],
     tints: ["#ffffff"],
     wither: true,
-    nearStops: true,
+    inVerge: true,
   },
   {
     shape: "stump",
@@ -207,7 +208,7 @@ const KINDS: Kind[] = [
     scale: [0.7, 1.3],
     tints: ["#ffffff"],
     shadow: true,
-    nearStops: true,
+    inVerge: true,
   },
   {
     shape: "log",
@@ -218,7 +219,7 @@ const KINDS: Kind[] = [
     scale: [0.8, 1.2],
     tints: ["#ffffff"],
     shadow: true,
-    nearStops: true,
+    inVerge: true,
   },
 ];
 
@@ -255,12 +256,12 @@ function sideSegments(
   kind: Kind,
   maxX: number,
   clearing: number,
+  verge: number,
 ): [number, number][] {
   const minX = kind.minX;
-  // Keep the stops' side of the track free of props, their full width.
   if (side === STOP_SIDE) {
-    if (kind.nearStops) return [[minX, maxX]];
-    const start = Math.max(minX, STOP_CLEAR_X + kind.reach * kind.scale[1]);
+    if (kind.inVerge) return [[minX, maxX]];
+    const start = Math.max(minX, verge + kind.reach * kind.scale[1]);
     return start < maxX ? [[start, maxX]] : [];
   }
   if (side !== CAMERA_SIDE) return [[minX, maxX]];
@@ -273,36 +274,47 @@ function sideSegments(
   return segments;
 }
 
-// Ponds' banks, which every prop keeps off.
+// A pond's bank or a prop already placed, which the next props keep off:
+// their centre stays further than `radius` plus SPACING of their reach.
 type Obstacle = { x: number; z: number; radius: number };
 
-// Tries a few spots for each prop, dropping it if they all land on a pond.
-const PLACE_TRIES = 6;
+// Share of their reaches two props keep apart, so neighbouring crowns only
+// brush instead of merging into one.
+const SPACING = 0.85;
 
+// Tries a few spots for each prop, dropping it if they're all taken.
+const PLACE_TRIES = 10;
+
+// Adds each prop placed to `obstacles`.
 function randomPlacements(
   kind: Kind,
   count: number,
   maxX: number,
   clearing: number,
+  verge: number,
   obstacles: Obstacle[],
 ): Placement[] {
   const items: Placement[] = [];
   const [minScale, maxScale] = kind.scale;
   for (let side = -1; side <= 1; side += 2) {
-    const segments = sideSegments(side, kind, maxX, clearing);
+    const segments = sideSegments(side, kind, maxX, clearing, verge);
     if (segments.length === 0) continue;
     // The fraction left over is a chance of one more.
     const total = Math.floor(count + Math.random());
     for (let i = 0; i < total; i++) {
       const scale = minScale + Math.random() * (maxScale - minScale);
+      const keep = kind.reach * scale * SPACING;
+      // As far from the tile's ends, so props of neighbouring tiles keep
+      // apart too.
+      const halfLength = Math.max(TILE_SPACING / 2 - keep, 0);
       for (let attempt = 0; attempt < PLACE_TRIES; attempt++) {
         const x = side * pickInSegments(segments);
-        const z = (Math.random() - 0.5) * TILE_SPACING;
+        const z = (Math.random() * 2 - 1) * halfLength;
         const blocked = obstacles.some(
-          (o) =>
-            Math.hypot(x - o.x, z - o.z) < o.radius + kind.reach * scale * 0.6,
+          (o) => Math.hypot(x - o.x, z - o.z) < o.radius + keep,
         );
         if (blocked) continue;
+        obstacles.push({ x, z, radius: keep });
         const tint = new THREE.Color(
           kind.tints[Math.floor(Math.random() * kind.tints.length)],
         ).multiplyScalar(1 + (Math.random() * 2 - 1) * TINT_JITTER);
@@ -347,18 +359,21 @@ function layoutTile(
   counts: Counts,
   spreads: Counts,
   clearing: number,
+  verge: number,
   pondChance: number,
 ) {
   const pond = Math.random() < pondChance ? randomPond() : null;
-  const obstacles = pond
+  const obstacles: Obstacle[] = pond
     ? [{ x: pond.x, z: pond.z, radius: pondReach(pond.radius) }]
     : [];
+  // Trees first (KINDS' order), so the smaller props fill in around them.
   const placements = KINDS.map((kind) =>
     randomPlacements(
       kind,
       counts[kind.layer] * kind.share,
       spreads[kind.layer],
       clearing,
+      verge,
       obstacles,
     ),
   );
@@ -372,6 +387,26 @@ const CULL_MAX_X = Math.abs(STATION_CAMERA.position[0]) + 2;
 const CULL_MIN_Z = -2;
 const CULL_MAX_Z = 5;
 const CULL_RATE = 6;
+
+// Zone around the workshop's camera, on the stops' side (x = distance from
+// the track, z = world z), where props are shrunk away in the workshop:
+// long enough that, with the forest scrolling by, they shrink and grow back
+// beside the camera, out of frame.
+const WORKSHOP_CLEAR_X =
+  Math.max(
+    ...Object.values(CUSTOM_CAMERAS).map(
+      ({ position }) => STOP_SIDE * position[0],
+    ),
+  ) + 1;
+const WORKSHOP_HALF_LENGTH = 5;
+
+function inWorkshopShot(x: number, z: number, reach: number) {
+  return (
+    Math.sign(x) === STOP_SIDE &&
+    Math.abs(x) < WORKSHOP_CLEAR_X + reach &&
+    Math.abs(z) < WORKSHOP_HALF_LENGTH + reach
+  );
+}
 
 type CullRefs = {
   tileRef: RefObject<THREE.Group | null>;
@@ -413,9 +448,9 @@ function setInstance(
 }
 
 // Shrinks away, smoothly, every prop in the stops' camera zone while
-// arriving or waiting at a stop, and every prop by the track under a stop
-// in sight (only nearStops kinds grow there). Only rewrites the instances
-// whose size is changing.
+// arriving or waiting at a stop, in the workshop's camera zone in the
+// workshop, and under a stop in sight. Only rewrites the instances whose
+// size is changing.
 function useCull(
   meshRefs: RefObject<THREE.InstancedMesh | null>[],
   kind: Kind,
@@ -424,6 +459,7 @@ function useCull(
 ) {
   const { mode } = useTrainContext();
   const stationShot = mode === "arriving" || mode === "stopped";
+  const workshop = mode === "custom";
   const sizesRef = useRef<{ for: Placement[]; sizes: Float32Array } | null>(
     null,
   );
@@ -454,7 +490,9 @@ function useCull(
         z > CULL_MIN_Z &&
         z < CULL_MAX_Z;
       const hidden =
-        inShot || (kind.nearStops && underStop(p.x, z, reach, stopZs));
+        inShot ||
+        (workshop && inWorkshopShot(p.x, z, reach)) ||
+        underStop(p.x, z, reach, stopZs);
       const target = hidden ? 0 : 1;
       if (sizes[i] === target) return;
       const next = THREE.MathUtils.damp(sizes[i], target, CULL_RATE, delta);
@@ -583,6 +621,7 @@ function ForestTile({
   density,
   spread,
   clearing,
+  verge,
   pondChance,
   cull,
 }: {
@@ -592,6 +631,7 @@ function ForestTile({
   density: Counts;
   spread: Counts;
   clearing: number;
+  verge: number;
   pondChance: number;
   cull: CullRefs;
 }) {
@@ -610,6 +650,7 @@ function ForestTile({
           details: detailSpread,
         },
         clearing,
+        verge,
         pondChance,
       ),
     [
@@ -622,6 +663,7 @@ function ForestTile({
       rockSpread,
       detailSpread,
       clearing,
+      verge,
       pondChance,
     ],
   );
@@ -704,6 +746,7 @@ export default function Forest({
     detailSpread,
     pondChance,
     clearing,
+    verge,
   } = useTweaks("Forest", {
     tileCount: { value: 6, min: 2, max: 14, step: 1 },
     treesPerTile: { value: 32, min: 0, max: 60, step: 1 },
@@ -716,6 +759,7 @@ export default function Forest({
     detailSpread: { value: 9, min: 2, max: 30, step: 0.5 },
     pondChance: { value: 0.08, min: 0, max: 1, step: 0.01 },
     clearing: { value: 2, min: 0, max: 10, step: 0.5 },
+    verge: { value: STOP_SIDE_VERGE, min: 0, max: 8, step: 0.1 },
   });
 
   const density: Counts = {
@@ -744,6 +788,7 @@ export default function Forest({
             density={density}
             spread={spread}
             clearing={clearing}
+            verge={verge}
             pondChance={pondChance}
             cull={{ tileRef: ref, stops }}
           />
