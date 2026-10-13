@@ -44,14 +44,16 @@ export function seededRandom(seed: number) {
 }
 
 // A part of a shape: its geometry, its colour (a grey level for tinted
-// parts), and whether it takes its instance's tint.
+// parts), whether it takes its instance's tint, and whether that turns in
+// autumn (leaves, grass).
 type Part = {
   geometry: THREE.BufferGeometry;
   color: THREE.ColorRepresentation | number;
   tint?: boolean;
+  turns?: boolean;
 };
 
-function paint({ geometry, color, tint = false }: Part) {
+function paint({ geometry, color, tint = false, turns = false }: Part) {
   const flat = geometry.index ? geometry.toNonIndexed() : geometry;
   flat.deleteAttribute("uv");
   const count = flat.attributes.position.count;
@@ -64,7 +66,10 @@ function paint({ geometry, color, tint = false }: Part) {
   flat.setAttribute("color", new THREE.BufferAttribute(colors, 3));
   flat.setAttribute(
     "aTint",
-    new THREE.BufferAttribute(new Float32Array(count).fill(tint ? 1 : 0), 1),
+    new THREE.BufferAttribute(
+      new Float32Array(count).fill(tint ? (turns ? 2 : 1) : 0),
+      1,
+    ),
   );
   return flat;
 }
@@ -145,12 +150,13 @@ export function rock(radius: number, seed: number, squash = 0.7) {
   return geometry;
 }
 
-// Crown balls: [x, y, z, radius, shade].
+// Crown balls: [x, y, z, radius, shade]. Leaves, turning in autumn.
 function crown(balls: [number, number, number, number, number][]): Part[] {
   return balls.map(([x, y, z, radius, shade]) => ({
     geometry: ball(radius, [x, y, z]),
     color: shade,
     tint: true,
+    turns: true,
   }));
 }
 
@@ -215,7 +221,7 @@ function poplar() {
   ]);
   return assemble([
     { geometry: post(0.13, 0.08, 1.0), color: FOREST_COLORS.bark },
-    { geometry: leaves, color: 0.95, tint: true },
+    { geometry: leaves, color: 0.95, tint: true, turns: true },
   ]);
 }
 
@@ -336,7 +342,12 @@ function grass() {
       const angle = (i / 9) * Math.PI * 2 + random() * 0.4;
       blade.rotateY(angle);
       blade.translate(Math.cos(angle) * 0.05, 0, -Math.sin(angle) * 0.05);
-      return { geometry: blade, color: 0.85 + random() * 0.15, tint: true };
+      return {
+        geometry: blade,
+        color: 0.85 + random() * 0.15,
+        tint: true,
+        turns: true,
+      };
     }),
   );
 }

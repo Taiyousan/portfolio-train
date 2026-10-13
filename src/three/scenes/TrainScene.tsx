@@ -32,7 +32,7 @@ import Rails from "../models/Rails";
 import Smoke from "../models/Smoke";
 import Forest from "../models/Forest";
 import ForestFloor from "../models/ForestFloor";
-import Snowfall from "../models/Snowfall";
+import Fall from "../models/Fall";
 import Clouds from "../models/Clouds";
 import Bunny from "../models/Bunny";
 import Bird from "../models/Bird";
@@ -344,7 +344,8 @@ export default function TrainScene({
         <Bird />
         <Clouds />
         <Smoke />
-        <Snowfall />
+        <Fall look="snow" />
+        <Fall look="leaves" />
         <Station ref={stationRef} projects={projects} />
         <Home ref={homeRef} />
         {/* Last, so the stops are in the scene when they run. */}

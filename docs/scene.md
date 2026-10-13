@@ -71,22 +71,22 @@ Un petit lien en bas à droite (et un autre dans le panneau « À propos ») les
 
 ## Saisons
 
-`config/seasons.ts` : couleurs, lumière, ciel et neige par saison, en fondu de l'une à l'autre (`hooks/useSeason`). La neige (`shaders/snow.ts`) se pose sur tout ce qui regarde vers le haut ; `NoSnow` l'exclut (ce qui sert ou chauffe), `PinnedSnow` la fixe à ce qui bouge (couvercle, porte).
+Été (par défaut, quelle que soit la date), automne et hiver. `config/seasons.ts` : couleurs, lumière, ciel, feuilles et neige par saison, en fondu de l'une à l'autre (`hooks/useSeason`). En automne, les feuillages qui roussissent (`aTint` à 2 dans `forestShapes` : feuillus, buissons, herbes) prennent chacun une couleur de `AUTUMN_LEAVES`, tirée de leur numéro d'instance (`shaders/forestMaterial`) ; les sapins et les rochers ne changent pas. La neige (`shaders/snow.ts`) se pose sur tout ce qui regarde vers le haut ; `NoSnow` l'exclut (ce qui sert ou chauffe), `PinnedSnow` la fixe à ce qui bouge (couvercle, porte).
 
 ## Décor
 
 - Forêt (`Forest`, formes dans `forestShapes`) : chaque type est une seule géométrie (parties fusionnées, couleurs dans les sommets), instanciée une fois par tuile. Les éléments gardent leurs distances entre eux (pas de couronnes fusionnées). Côté arrêts, seul un accotement de `STOP_SIDE_VERGE` reste dégagé (le couloir du lapin) : ce qui se trouve sous un arrêt en vue, ou autour de la caméra de l'atelier, rétrécit jusqu'à disparaître. Côté caméra, un couloir reste libre devant elle.
-- Mares (`Pond`), nuages, lapin, oiseau, fumée (`shaders/smoke.ts`, toutes les bouffées en un seul appel de dessin), flocons.
+- Mares (`Pond`), nuages, lapin, oiseau, fumée (`shaders/smoke.ts`, toutes les bouffées en un seul appel de dessin), flocons et feuilles qui tombent (`Fall`, un même shader pour les deux).
 
 ## Performances et accessibilité
 
 - three.js chargé après la page ; Leva seulement en debug.
-- Formes fusionnées et instanciées ; fumée et flocons en un appel de dessin chacun.
+- Formes fusionnées et instanciées ; fumée, flocons et feuilles en un appel de dessin chacun.
 - Shaders préchauffés pendant le chargement (`useShaderWarmup`) : pas de saccade à la première arrivée. Tous sont compilés avant d'être dessinés, pour que le navigateur les construise en parallèle : la compilation, une à une, était l'essentiel du temps de chargement.
 - Blocs et cylindres (`StationPrimitives`) partagent géométries et matériaux entre éléments identiques : des centaines de pièces, peu de formes et de couleurs différentes. Utiliser `Block`, `Cylinder` et `RoundedBox` de `StationPrimitives`, pas le `RoundedBox` de drei.
 - Éclairage d'environnement servi par le site et réduit (`public/hdri/sunset.hdr`, 512 × 256).
 - Résolution adaptative : sous 40 images par seconde pendant quelques secondes, elle baisse d'un cran (`Scene`).
-- `prefers-reduced-motion` (`hooks/useReducedMotion`) : animations figées, lapin, oiseau et flocons retirés.
+- `prefers-reduced-motion` (`hooks/useReducedMotion`) : animations figées, lapin, oiseau, flocons et feuilles qui tombent retirés.
 - Le trajet est annoncé aux lecteurs d'écran (`aria-live`), chaque panneau prend le focus, Échap ramène en arrière, zones tactiles d'au moins 44 px.
 
 ## Pistes
@@ -94,7 +94,7 @@ Un petit lien en bas à droite (et un autre dans le panneau « À propos ») les
 - Une URL par section (`/projets`, `/a-propos`), reliée à `mode`, avec le `<Canvas>` dans le layout pour qu'il persiste entre les routes.
 - Un bouton visible pour passer à la version HTML de l'accueil (aujourd'hui, seul le clavier la fait apparaître).
 - Faire descendre le conducteur de la cabine plutôt que le faire disparaître et réapparaître.
-- Printemps et automne ; saison par défaut selon la date.
+- Printemps.
 - Contact par télégramme (la locomotive siffle), wagon de marchandises pour les compétences, CV en billet de train, jour et nuit, levier de vitesse, son d'ambiance (coupé par défaut).
 - Afficher les crédits des modèles 3D sous licence CC-BY (`assets-src/CREDITS.md`).
 

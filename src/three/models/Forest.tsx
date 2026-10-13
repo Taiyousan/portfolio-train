@@ -21,7 +21,7 @@ import {
 } from "../config/scene";
 import useScrollingLoop from "../hooks/useScrollingLoop";
 import { useTrainContext } from "../state/TrainContext";
-import { mixColor, useSeasonColor } from "../hooks/useSeason";
+import { mixColor, mixValue, useSeasonColor } from "../hooks/useSeason";
 import {
   createForestMaterials,
   type ForestMaterials,
@@ -723,13 +723,14 @@ export default function Forest({
     [geometries, materials, water],
   );
 
-  // Season: a tint over it all, ice for water (the snow itself comes from
-  // shaders/snow).
+  // Season: a tint over it all, the leaves turning in autumn, ice for water
+  // (the snow itself comes from shaders/snow).
   const { seasonWeightsRef } = useTrainContext();
   const tint = useMemo(() => new THREE.Color(), []);
   useFrame(() => {
     const weights = seasonWeightsRef.current;
     materials.setTint(mixColor(weights, "forest", tint));
+    materials.setAutumn(mixValue(weights, "autumn"));
   });
   const waterRef = useMemo(() => ({ current: water }), [water]);
   useSeasonColor(waterRef, "water");

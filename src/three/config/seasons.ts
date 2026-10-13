@@ -1,16 +1,22 @@
 // Seasons the scene can be switched to (see ui/SeasonSwitch): only a look,
-// colours, light, sky and snow. Switching blends every value below from
-// one season to the next (see hooks/useSeason).
-export const SEASONS = ["summer", "winter"] as const;
+// colours, light, sky, leaves and snow. Switching blends every value below
+// from one season to the next (see hooks/useSeason). The scene opens in
+// summer (see TrainContext).
+export const SEASONS = ["summer", "autumn", "winter"] as const;
 export type Season = (typeof SEASONS)[number];
 
 export const SEASON_LABELS: Record<Season, string> = {
   summer: "Été",
+  autumn: "Automne",
   winter: "Hiver",
 };
 
 // Snow on whatever faces up (see shaders/snow), and falling flakes.
 export const SNOW_COLOR = "#eef2f6";
+
+// Autumn leaves: what the forest's leafy crowns, bushes and grass turn to
+// (see shaders/forestMaterial), one per prop, and the falling leaves.
+export const AUTUMN_LEAVES = ["#d9822b", "#b8432d", "#e0ad3a", "#9c5a2a"];
 
 type SeasonLook = {
   colors: {
@@ -39,6 +45,9 @@ type SeasonLook = {
     // 0 → 1: snow on whatever faces up, then falling flakes.
     snow: number;
     snowfall: number;
+    // 0 → 1: the forest's leaves turned, then falling leaves.
+    autumn: number;
+    leaffall: number;
   };
 };
 
@@ -66,6 +75,33 @@ export const SEASON_LOOKS: Record<Season, SeasonLook> = {
       mieCoefficient: 0.05,
       snow: 0,
       snowfall: 0,
+      autumn: 0,
+      leaffall: 0,
+    },
+  },
+  // Golden dusk: a warmer, hazier light, the leaves turned and falling.
+  autumn: {
+    colors: {
+      haze: "#4a3222",
+      ambient: "#6a5a70",
+      sun: "#ffa04f",
+      ground: "#36361f",
+      forest: "#fff1e0",
+      water: "#4b80aa",
+      clouds: "#ffc29a",
+    },
+    values: {
+      ambientIntensity: 0.28,
+      sunScale: 0.95,
+      fogScale: 1.15,
+      bloomThreshold: 0.3,
+      turbidity: 12,
+      rayleigh: 1.5,
+      mieCoefficient: 0.06,
+      snow: 0,
+      snowfall: 0,
+      autumn: 1,
+      leaffall: 1,
     },
   },
   // Cold dusk: blue-grey haze, a paler sun, snow everywhere.
@@ -89,6 +125,8 @@ export const SEASON_LOOKS: Record<Season, SeasonLook> = {
       mieCoefficient: 0.02,
       snow: 1,
       snowfall: 1,
+      autumn: 0,
+      leaffall: 0,
     },
   },
 };
