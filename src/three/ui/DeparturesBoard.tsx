@@ -42,7 +42,7 @@ export default function DeparturesBoard({
           Mes projets
         </h2>
         <p className="font-mono text-xs text-board-ink/70 uppercase">
-          Choisissez une destination
+          Choisissez un projet
         </p>
       </header>
 
@@ -52,7 +52,7 @@ export default function DeparturesBoard({
             <button
               type="button"
               onClick={() => onSelect(project.slug)}
-              className="grid min-h-11 w-full grid-cols-[auto_1fr] items-baseline gap-x-4 rounded-lg px-2 py-2 text-left hover:bg-board-flap focus-visible:bg-board-flap focus-visible:outline-2 focus-visible:outline-board-ink sm:grid-cols-[auto_1fr_auto]"
+              className="grid min-h-11 w-full grid-cols-[auto_1fr] items-baseline gap-x-4 rounded-lg px-2 py-2 text-left hover:bg-board-flap focus-visible:bg-board-flap focus-visible:outline-2 focus-visible:outline-board-ink"
             >
               <span className="font-mono text-lg tabular-nums">
                 {departureTime(i)}
@@ -65,11 +65,8 @@ export default function DeparturesBoard({
                   />
                 </span>
                 <span className="block truncate text-xs text-board-ink/70">
-                  Dessert : {project.technos.join(" · ")}
+                  {project.technos.join(" · ")}
                 </span>
-              </span>
-              <span className="hidden font-mono text-xs text-board-ink/70 uppercase sm:block">
-                Voie {i + 1}
               </span>
             </button>
           </li>

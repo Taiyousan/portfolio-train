@@ -66,7 +66,6 @@ const RIM_BEVEL = 0.02;
 const POST_RADIUS = 0.045;
 const ROOF = { pitch: 0.45, half: 0.26, thickness: 0.05, overhang: 0.12 };
 const TIME_WIDTH = 0.34;
-const LINE_WIDTH = 0.52;
 const TITLE_SIZE = 0.075;
 const SMALL_SIZE = 0.04;
 const INSET = 0.04;
@@ -99,7 +98,7 @@ const FLAP_WIDTH = WIDTH - 2 * PADDING;
 const LEFT = -FLAP_WIDTH / 2 + INSET;
 const RIGHT = FLAP_WIDTH / 2 - INSET;
 const TITLE_X = LEFT + TIME_WIDTH;
-const TITLE_MAX_WIDTH = RIGHT - LINE_WIDTH - TITLE_X - INSET;
+const TITLE_MAX_WIDTH = RIGHT - TITLE_X;
 
 // The rim's outer front corners, in board units, for the driver to lean
 // against (see Station).
@@ -296,16 +295,6 @@ function Row({ project, index, y, active, onSelect }: RowProps) {
         visible={false}
       >
         {project.technos.join(" · ").toUpperCase()}
-      </Text>
-      <Text
-        font={SCENE_FONT}
-        position={[RIGHT, MAIN_Y, LAYER.text]}
-        fontSize={SMALL_SIZE}
-        anchorX="right"
-        anchorY="middle"
-        color={COLORS.inkDim}
-      >
-        {`VOIE ${index + 1}`}
       </Text>
 
       <mesh position={[0, MAIN_Y, LAYER.hinge]}>

@@ -5,7 +5,7 @@ import {
   type Dispatch,
   type SetStateAction,
 } from "react";
-import { Canvas } from "@react-three/fiber";
+import { Canvas, useThree } from "@react-three/fiber";
 import { PerformanceMonitor, useProgress } from "@react-three/drei";
 import TrainScene from "./scenes/TrainScene";
 import { useTrainContext } from "./state/TrainContext";
@@ -19,11 +19,13 @@ export type SceneProps = {
   projects: StationProject[];
   // Gets the downloads' progress, 0 to 100.
   onProgress: (progress: number) => void;
+  // No frames drawn, while hidden behind the HTML version.
+  paused: boolean;
 };
 
 // The canvas and everything three.js, in a chunk of its own (see
 // Experience).
-function Scene({ projects, onProgress }: SceneProps) {
+function Scene({ projects, onProgress, paused }: SceneProps) {
   const [dpr, setDpr] = useState(() => Math.min(window.devicePixelRatio, 2));
 
   return (
@@ -42,11 +44,33 @@ function Scene({ projects, onProgress }: SceneProps) {
         }}
       >
         <color args={["#3a2a1f"]} attach="background" />
+        <Pause paused={paused} />
         <TrainScene projects={projects} />
         <AdaptiveResolution setDpr={setDpr} />
       </Canvas>
     </>
   );
+}
+
+// Stops the frames while `paused`, through the root's active flag rather
+// than the frame loop: switching that restarts the clock at 0, which the
+// scene's timers count on, and its last frames under "never" get a delta
+// in milliseconds. On resuming, the time paused is left out of the next
+// frame's delta.
+function Pause({ paused }: { paused: boolean }) {
+  const get = useThree((state) => state.get);
+  const invalidate = useThree((state) => state.invalidate);
+  useEffect(() => {
+    const state = get();
+    if (paused) {
+      state.internal.active = false;
+    } else if (!state.internal.active) {
+      state.clock.getDelta();
+      state.internal.active = true;
+      invalidate();
+    }
+  }, [paused, get, invalidate]);
+  return null;
 }
 
 // Reports the downloads' progress, apart from the canvas, which needn't

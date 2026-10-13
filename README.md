@@ -27,7 +27,7 @@ content/pages/         Les pages de texte seules (mentions légales et crédits)
 src/lib/site.ts        Textes globaux : intro, compétences, liens de contact
 src/app/page.tsx       Page d'accueil (la scène du train et sa version HTML)
 src/app/projets/[slug]/page.tsx   Page détail d'un projet
-src/app/globals.css    Couleurs (clair/sombre) et styles globaux
+src/app/globals.css    Couleurs (palettes) et styles globaux
 src/three/             La scène 3D (voir docs/scene.md)
 ```
 
@@ -43,7 +43,7 @@ On range par **nature de chose**, pas par page.
 | `public/` | Des fichiers bruts servis tels quels (images, vidéos, CV, `.glb`) |
 | `src/app/` | Des pages : un dossier = une URL |
 | `src/lib/` | De la logique sans affichage (lecture et validation du contenu) |
-| `src/components/` | Morceaux d'interface utilisés à plusieurs endroits (le curseur du site) |
+| `src/components/` | Morceaux d'interface utilisés à plusieurs endroits (le cadre des pages, le billet, le curseur) |
 | `src/three/` | Tout ce qui touche à React Three Fiber (la scène du train, sur l'accueil) |
 
 **« Je veux ajouter... »**

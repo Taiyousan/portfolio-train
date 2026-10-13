@@ -33,10 +33,8 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
-  ],
+  // The pages' card stock (--ticket); the scene's dusk on the home page.
+  themeColor: "#f4efe4",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

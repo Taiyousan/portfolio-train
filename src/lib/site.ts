@@ -24,3 +24,11 @@ export const site = {
     cv: "/doc/cv.pdf",
   },
 } as const;
+
+// The contact links as listed, the first one stressed.
+export const contacts = [
+  { label: "Email", href: `mailto:${site.links.email}` },
+  { label: "CV (PDF)", href: site.links.cv },
+  { label: "GitHub", href: site.links.github },
+  { label: "LinkedIn", href: site.links.linkedin },
+];

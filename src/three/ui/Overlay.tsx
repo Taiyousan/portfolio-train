@@ -1,6 +1,13 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type MouseEvent,
+  type ReactNode,
+} from "react";
 import Link from "next/link";
-import { site } from "@/lib/site";
+import NameCard from "@/components/NameCard";
+import Ticket from "@/components/Ticket";
 import {
   useTrainContext,
   type Stop,
@@ -8,11 +15,11 @@ import {
 } from "../state/TrainContext";
 import AboutPanel from "./AboutPanel";
 import DeparturesBoard from "./DeparturesBoard";
+import LegalDialog from "./LegalDialog";
 import ProjectDialog from "./ProjectDialog";
 import SeasonSwitch from "./SeasonSwitch";
-import Ticket from "./Ticket";
 import Workshop from "./Workshop";
-import type { StationProject } from "./types";
+import type { LegalNotice, StationProject } from "./types";
 
 // Swapping the ride's tickets for a screen's and back: the shown ones are
 // gathered away one after the other (GATHER_MS apart), the others dealt in
@@ -54,9 +61,11 @@ const STATUS: Record<Stop, Record<TrainMode, string>> = {
 // it fades out (`boarded`).
 export default function Overlay({
   projects,
+  legal,
   boarded,
 }: {
   projects: StationProject[];
+  legal: LegalNotice;
   boarded: boolean;
 }) {
   const {
@@ -92,6 +101,17 @@ export default function Overlay({
   if (!atStation && boardOpened) setBoardOpened(false);
   const seeProjectsRef = useRef<HTMLButtonElement>(null);
 
+  // The legal notice's links open it over the scene, unless it's wanted
+  // elsewhere (new tab or window): its page would reload the scene.
+  const [legalOpen, setLegalOpen] = useState(false);
+  const openLegal = (e: MouseEvent<HTMLAnchorElement>) => {
+    if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) {
+      return;
+    }
+    e.preventDefault();
+    setLegalOpen(true);
+  };
+
   // Escape leaves the workshop, as the return tickets do.
   useEffect(() => {
     if (mode !== "custom") return;
@@ -108,17 +128,7 @@ export default function Overlay({
       className="pointer-events-none absolute inset-0 text-sm text-white"
     >
       <header className="flex items-start justify-between gap-3 p-3 sm:p-5 short:p-3">
-        <Link
-          href="/"
-          className="theme-ticket pointer-events-auto flex h-12 flex-col justify-center rounded-md border border-line bg-background px-4 text-foreground shadow-lg hover:text-foreground"
-        >
-          <span className="block font-semibold tracking-tight">
-            {site.name}
-          </span>
-          <span className="block font-mono text-[0.625rem] tracking-wider text-muted uppercase">
-            {site.role}
-          </span>
-        </Link>
+        <NameCard />
         <SeasonSwitch />
         <p aria-live="polite" className="sr-only">
           {STATUS[stop][mode]}
@@ -131,6 +141,7 @@ export default function Overlay({
           (the about card has it too). */}
       <Link
         href="/mentions-legales"
+        onClick={openLegal}
         className="group pointer-events-auto absolute right-3 bottom-0 flex min-h-11 items-end pb-2 sm:right-5 short:hidden"
       >
         <span className="theme-ticket rounded-sm bg-background/85 px-2 py-1 font-mono text-[0.625rem] tracking-wider text-muted uppercase shadow transition group-hover:text-foreground">
@@ -140,7 +151,7 @@ export default function Overlay({
 
       {inWorkshop && <Workshop onLeave={() => setMode("ride")} />}
 
-      {atHome && <AboutPanel onDepart={depart} />}
+      {atHome && <AboutPanel onDepart={depart} onLegal={openLegal} />}
 
       {/* After the about card and the workshop (tab order), before the
           departures board's HTML twin (drawn over it). */}
@@ -296,6 +307,10 @@ export default function Overlay({
           onSelect={setSelectedSlug}
           onClose={() => setSelectedSlug(null)}
         />
+      )}
+
+      {legalOpen && (
+        <LegalDialog legal={legal} onClose={() => setLegalOpen(false)} />
       )}
     </div>
   );

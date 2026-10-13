@@ -21,7 +21,8 @@ src/app/page.tsx        Accueil : la scène du train (Experience) par-dessus sa 
 src/app/projets/[slug]/page.tsx   Page d'un projet (SSG via generateStaticParams)
 src/app/mentions-legales/page.tsx   Mentions légales et crédits (content/pages/mentions-legales.mdx)
 src/app/sitemap.ts, robots.ts, opengraph-image.tsx, icon.svg, apple-icon.tsx, not-found.tsx   SEO, icônes, 404
-src/app/globals.css     Tokens de thème (--background, --muted, --line, --accent) + mode sombre
+src/app/globals.css     Tokens de thème (--background, --muted, --line, --accent) + palettes (.theme-ticket, .theme-board)
+src/components/         Pièces HTML partagées : StationPage (cadre des pages HTML), Ticket, NameCard, LegalNotice, Cursor
 public/projets/<slug>/  thumb.png + captures (shot-1.jpg...) de chaque projet
 public/doc/cv.pdf       CV
 public/fonts/, hdri/   Ressources de la scène 3D (police du texte 3D, éclairage) ; public/models/ pour d'éventuels .glb
@@ -80,7 +81,8 @@ Un frontmatter invalide **fait échouer le build** avec le nom du fichier : c'es
 - **Nouveau projet ou modification de texte** : ne toucher qu'à `content/projets/` et `public/projets/`, jamais au code. Champs du frontmatter : voir le schéma zod dans `src/lib/projects.ts` (source de vérité, ne pas dupliquer la liste ici).
 - **Nouveau champ de contenu** : l'ajouter au schéma zod (optionnel ou avec `default` pour ne pas casser les fichiers existants), puis l'afficher dans les pages.
 - **Contenu global du site** (intro, compétences, liens) : `src/lib/site.ts`, pas en dur dans les composants.
-- **Couleurs** : utiliser les tokens Tailwind (`text-muted`, `border-line`, `bg-accent`), pas de couleurs en dur, pour que le mode sombre fonctionne.
+- **Couleurs** : utiliser les tokens Tailwind (`text-muted`, `border-line`, `bg-accent`), pas de couleurs en dur. Les pages HTML sont sur la palette des billets (`theme-ticket`, via `StationPage`).
+- **Textes** : clairs et directs. Le train est un décor, pas un vocabulaire : pas de formules de mise en scène (« destination inconnue » pour une 404, « composté »...).
 - **Composants serveur par défaut.** Ne mettre `"use client"` que là où c'est nécessaire (le futur canvas R3F en aura besoin ; le contenu, non).
 - **Accessibilité** : respecter `prefers-reduced-motion` (géré globalement dans `globals.css` pour le CSS, `useReducedMotion` pour la 3D), images décoratives avec `alt=""`, titres hiérarchisés.
 - **SEO** : une nouvelle page a ses `metadata` (titre, description, `alternates.canonical`) et une entrée dans `src/app/sitemap.ts`. Les images `next/image` affichées en largeur fluide ont un attribut `sizes`.

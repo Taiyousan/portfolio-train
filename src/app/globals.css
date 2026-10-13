@@ -15,6 +15,8 @@
   --ticket: #f4efe4;
   --ticket-ink: #26211b;
   --ticket-stamp: #a63d2a;
+  /* The scene's dusk, behind the canvas until it draws. */
+  --dusk: #3a2a1f;
 }
 
 @theme inline {
@@ -30,6 +32,7 @@
   --color-ticket: var(--ticket);
   --color-ticket-ink: var(--ticket-ink);
   --color-ticket-stamp: var(--ticket-stamp);
+  --color-dusk: var(--dusk);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -144,7 +147,7 @@
       bottom / 100% 51% no-repeat;
 }
 
-/* Train ticket shape (three/ui/Ticket): rounded corners, and two notches
+/* Train ticket shape (components/Ticket): rounded corners, and two notches
    at the stub's perforation. Each mask layer covers one half, so no mask
    compositing is needed. */
 .ticket {
@@ -249,8 +252,20 @@
   cursor: text !important;
 }
 
+/* What's marked for the system's cursor (the home page's HTML version):
+   the browser's own cursors there. */
+.custom-cursor [data-system-cursor],
+.custom-cursor [data-system-cursor] * {
+  cursor: auto !important;
+}
+
+.custom-cursor [data-system-cursor] :is(a[href], button) {
+  cursor: pointer !important;
+}
+
+/* The pages' card stock (StationPage), so no white shows past their ends. */
 body {
-  background: var(--background);
+  background: var(--ticket);
   color: var(--foreground);
   font-family: var(--font-sans), system-ui, sans-serif;
 }

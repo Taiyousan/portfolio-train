@@ -1,11 +1,17 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type MouseEvent,
+  type ReactNode,
+} from "react";
 import Link from "next/link";
-import { site } from "@/lib/site";
+import Ticket from "@/components/Ticket";
+import { contacts, site } from "@/lib/site";
 import { OUTFITS } from "../config/livery";
 import { useLivery } from "../state/LiveryContext";
 import FlapText from "./FlapText";
 import { DriverIcon } from "./LiveryIcons";
-import Ticket from "./Ticket";
 
 // Field labels and section titles, as on the project ticket.
 const LABEL = "font-mono text-[0.625rem] tracking-[0.2em] uppercase";
@@ -14,20 +20,20 @@ const LABEL = "font-mono text-[0.625rem] tracking-[0.2em] uppercase";
 // lowers it; any less is a tap, which toggles it.
 const SWIPE_PX = 24;
 
-const CONTACTS = [
-  { label: "Email", href: `mailto:${site.links.email}` },
-  { label: "CV (PDF)", href: site.links.cv },
-  { label: "GitHub", href: site.links.github },
-  { label: "LinkedIn", href: site.links.linkedin },
-];
-
 // "About" panel, shown while the train waits at home, dressed as a
 // railcard: a split-flap strip with the name, then card stock below a
 // perforation, the driver in a hoodie as the holder's photo. A side card on
 // larger screens. On phones, a bottom sheet with its own return ticket,
 // lowered to leave the scene in view: it rises once its text is scrolled,
 // or with a tap or a swipe on its header. Escape sets off again.
-export default function AboutPanel({ onDepart }: { onDepart: () => void }) {
+export default function AboutPanel({
+  onDepart,
+  onLegal,
+}: {
+  onDepart: () => void;
+  // The legal notice's link, opening it over the scene (see Overlay).
+  onLegal: (e: MouseEvent<HTMLAnchorElement>) => void;
+}) {
   const { outfit: picked } = useLivery();
   const outfit = picked.style === "hoodie" ? picked : OUTFITS.hoodie;
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -172,7 +178,7 @@ export default function AboutPanel({ onDepart }: { onDepart: () => void }) {
 
         <h3 className={`${LABEL} mt-6 font-normal text-muted`}>Contact</h3>
         <ul className="mt-3 grid grid-cols-2 gap-2">
-          {CONTACTS.map(({ label, href }, i) => (
+          {contacts.map(({ label, href }, i) => (
             <li key={label}>
               <a
                 href={href}
@@ -191,6 +197,7 @@ export default function AboutPanel({ onDepart }: { onDepart: () => void }) {
         />
         <Link
           href="/mentions-legales"
+          onClick={onLegal}
           className={`${LABEL} mt-1 flex min-h-11 w-max items-center text-muted underline decoration-foreground/30 underline-offset-4 hover:text-foreground`}
         >
           Mentions légales et crédits

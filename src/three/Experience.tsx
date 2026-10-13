@@ -15,10 +15,10 @@ import useWebGLSupport from "./hooks/useWebGLSupport";
 import Overlay from "./ui/Overlay";
 import LoadingScreen from "./ui/LoadingScreen";
 import ErrorReadout from "./debug/ErrorReadout";
-import type { StationProject } from "./ui/types";
+import type { LegalNotice, StationProject } from "./ui/types";
 import type { SceneProps } from "./Scene";
 
-export type { StationProject };
+export type { LegalNotice, StationProject };
 
 // Leva, only in debug mode.
 const DebugPanel = dynamic(() => import("./debug/DebugPanel"), { ssr: false });
@@ -27,12 +27,15 @@ const DebugPanel = dynamic(() => import("./debug/DebugPanel"), { ssr: false });
 // first in reading order (screen readers, crawlers) but out of sight until
 // it holds keyboard focus, then shown over the scene. Shown on its own
 // instead without WebGL 2, or if the scene fails to load or run. Append
-// #debug to the URL for the Leva panel and a free camera.
+// #debug to the URL for the Leva panel and a free camera. `legal` is the
+// legal notice, opened over the scene rather than on its own page.
 export default function Experience({
   projects,
+  legal,
   children,
 }: {
   projects: StationProject[];
+  legal: LegalNotice;
   children: ReactNode;
 }) {
   const webgl = useWebGLSupport();
@@ -57,6 +60,12 @@ export default function Experience({
         }),
     );
   }, [webgl]);
+  // While the HTML version holds focus, the scene hidden behind it waits:
+  // not mounted yet (its shaders' build would hold the page up), or paused.
+  // Once mounted, it stays.
+  const [reading, setReading] = useState(false);
+  const [sceneMounted, setSceneMounted] = useState(false);
+  if (Scene && !reading && !sceneMounted) setSceneMounted(true);
 
   const readout = debug && (
     <ErrorReadout
@@ -79,7 +88,15 @@ export default function Experience({
   return (
     <>
       <SceneBoundary fallback={children} onError={setFailure}>
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-background not-focus-within:sr-only">
+        {/* With the system's cursor (data-system-cursor, see Cursor). */}
+        <div
+          data-system-cursor
+          onFocus={() => setReading(true)}
+          onBlur={(e) => {
+            if (!e.currentTarget.contains(e.relatedTarget)) setReading(false);
+          }}
+          className="theme-ticket fixed inset-0 z-50 overflow-y-auto bg-background text-foreground not-focus-within:sr-only"
+        >
           <p className="border-b border-line px-5 py-3 font-mono text-sm text-muted">
             Version texte du portfolio ·{" "}
             <a href="#train" className="text-accent underline">
@@ -93,13 +110,19 @@ export default function Experience({
         <div
           id="train"
           tabIndex={-1}
-          className="fixed inset-0 bg-[#3a2a1f] outline-none"
+          className="fixed inset-0 bg-dusk outline-none"
         >
           <TrainProvider>
             <LiveryProvider>
               {debug && <DebugPanel />}
-              {Scene && <Scene projects={projects} onProgress={setProgress} />}
-              <Overlay projects={projects} boarded={boarded} />
+              {Scene && sceneMounted && (
+                <Scene
+                  projects={projects}
+                  onProgress={setProgress}
+                  paused={reading}
+                />
+              )}
+              <Overlay projects={projects} legal={legal} boarded={boarded} />
               <LoadingScreen
                 progress={progress}
                 onBoarded={() => setBoarded(true)}

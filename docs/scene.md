@@ -13,8 +13,8 @@ Le train qui roule en forêt est le fil conducteur. Chaque section du portfolio 
 
 | Donnée (`projects.ts` / `site.ts`) | Dans la scène |
 |---|---|
-| `title`, `order` | Destination et heure de départ sur le tableau |
-| `technos` | « Dessert : React · Three · R3F » |
+| `title`, `order` | Ligne du tableau des départs (titre, heure) |
+| `technos` | Sous le titre, sur le tableau |
 | `summary`, corps MDX, `tasks`, `images`... | Détail du projet, dans un billet HTML (`ProjectDialog`), captures dans le coupon |
 | `site.intro`, `site.skills`, `site.links` | Panneau « À propos » (`AboutPanel`) |
 
@@ -24,7 +24,8 @@ Le train qui roule en forêt est le fil conducteur. Chaque section du portfolio 
 2. `Experience` affiche cette version HTML (cachée, mais lue par les lecteurs d'écran et les moteurs de recherche, et visible dès qu'elle reçoit le focus clavier), l'écran de chargement, la surcouche HTML (`ui/Overlay`), et `Scene`.
 3. `Scene` (le `<Canvas>`) est chargé à part (`import()` dans un effet ; pas `next/dynamic`, dont le `Suspense` remonte le canvas en dev et lui fait perdre son contexte WebGL) : three.js et tous les modèles sont dans un chunk séparé, téléchargé une fois la page affichée. L'écran de chargement et la version HTML fonctionnent pendant ce temps.
 4. Sans WebGL 2 (`useWebGLSupport`), ou si la scène plante (`SceneBoundary`), seule la version HTML s'affiche.
-5. Tout ce qui se charge dans la scène (`useGLTF`, `Environment`, `<Text>`...) doit rester dans le `<Suspense>` de `TrainScene` : laissé au `<Canvas>`, un chargement en cours suspend la page autour de lui, ce qui provoque en dev une boucle de rendus qui bloque l'écran de chargement.
+5. Tant que la version HTML a le focus, la scène cachée derrière attend : pas encore montée (la compilation de ses shaders bloquerait la page), ou en pause (`Pause` dans `Scene`, par le drapeau `internal.active` de R3F plutôt que `frameloop`, qui remet l'horloge à zéro). Le curseur y est celui du système (`data-system-cursor`).
+6. Tout ce qui se charge dans la scène (`useGLTF`, `Environment`, `<Text>`...) doit rester dans le `<Suspense>` de `TrainScene` : laissé au `<Canvas>`, un chargement en cours suspend la page autour de lui, ce qui provoque en dev une boucle de rendus qui bloque l'écran de chargement.
 
 L'écran de chargement (`ui/LoadingScreen`) : les téléchargements remplissent 85 % de la voie, le reste attend que la scène ait dessiné ses premières images (`ready`, posé par `SceneReady` après le préchauffage des shaders). Puis fondu, et les billets du trajet sont distribués (`boarded`).
 
@@ -63,6 +64,10 @@ Ajouter `#debug` à l'URL : panneau Leva et caméra libre.
 ## Atelier
 
 `ui/Workshop` : deux onglets, Locomotive (livrées toutes faites, puis caisse, toit et garnitures) et Conducteur (trois tenues, puis couleurs). Palette volontairement fermée (`config/livery.ts`) pour que tout mélange reste joli. La scène suit en direct : la locomotive rebondit à chaque changement de peinture, le conducteur se tourne vers la caméra à chaque changement de tenue.
+
+## Mentions légales
+
+Un petit lien en bas à droite (et un autre dans le panneau « À propos ») les ouvre dans une fenêtre par-dessus la scène (`ui/LegalDialog`), pour retrouver le train tel quel en la fermant : la page `/mentions-legales` rechargerait la scène au retour. Elle reste pour un accès direct, ou un clic avec Ctrl.
 
 ## Saisons
 

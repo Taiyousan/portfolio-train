@@ -17,3 +17,6 @@ export type StationProject = Pick<
   | "href"
   | "images"
 > & { body: ReactNode };
+
+// The legal notice, its body rendered on the server likewise.
+export type LegalNotice = { title: string; body: ReactNode };

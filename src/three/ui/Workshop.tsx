@@ -5,6 +5,7 @@ import {
   useRef,
   type ReactNode,
 } from "react";
+import Ticket from "@/components/Ticket";
 import { useLivery } from "../state/LiveryContext";
 import { useTrainContext, type WorkshopView } from "../state/TrainContext";
 import {
@@ -26,7 +27,6 @@ import {
 } from "../config/livery";
 import FlapText from "./FlapText";
 import { DriverIcon, LocomotiveIcon } from "./LiveryIcons";
-import Ticket from "./Ticket";
 
 // One per view: picking a tab also moves the camera (see TrainScene).
 const TABS: { id: WorkshopView; label: string }[] = [
@@ -75,7 +75,7 @@ export default function Workshop({ onLeave }: { onLeave: () => void }) {
       {/* Split-flap header, in the card's ink, with the tabs. */}
       <header className="shrink-0 rounded-t-xl bg-foreground px-5 pt-4 pb-3 text-background notch-bottom">
         <p className="font-mono text-[0.625rem] tracking-[0.2em] uppercase opacity-80">
-          Dépôt · Bon d&apos;atelier
+          Personnalisation
         </p>
         <h2
           id={`${id}-title`}

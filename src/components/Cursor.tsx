@@ -6,14 +6,15 @@ import { useEffect, useRef } from "react";
 // on the body instead (see three/state/pointerCursor).
 const CLICKABLE =
   'a[href], button:not(:disabled), [role="button"], label, select, summary, input:is([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="button"], [type="submit"], [type="reset"])';
-// Where the text cursor stays (see .custom-cursor in globals.css).
-const TEXT_FIELD =
-  'input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="button"], [type="submit"], [type="reset"]), textarea, [contenteditable="true"]';
+// Where the system's cursor stays (see .custom-cursor in globals.css): text
+// fields, and what's marked for it, like the home page's HTML version.
+const SYSTEM_CURSOR =
+  'input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="button"], [type="submit"], [type="reset"]), textarea, [contenteditable="true"], [data-system-cursor]';
 
 // The site's cursor, with a mouse or a trackpad: a red dot ringed in
 // ivory, like the tickets. Over something clickable, a ring opens around
 // it like a ticket punch, tinted yellow over the scene's objects. Left to
-// the system on touch screens, over text fields, and while the scene loads
+// the system on touch screens, over SYSTEM_CURSOR, and while the scene loads
 // (data-loading on the root): drawn by the page, it would stutter while
 // the page is held up. A popover, so it's in the top layer, over modal
 // dialogs too: put back on top whenever one opens.
@@ -44,7 +45,7 @@ export default function Cursor() {
         "data-visible",
         mouse &&
           !root.hasAttribute("data-loading") &&
-          !target?.closest(TEXT_FIELD),
+          !target?.closest(SYSTEM_CURSOR),
       );
       // The scene's objects, unless marked as standing for the interface.
       const body = document.body;
