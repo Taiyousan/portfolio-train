@@ -303,10 +303,14 @@ export default function TrainScene({
         // themselves in stripes (shadow acne).
         shadow-bias={-0.0005}
         shadow-normalBias={0.03}
+        // Fitted to the forest (its tiles, 40 out on both sides, 6 high) as
+        // seen from SUN_POSITION: about -9 to 15 top to bottom, a span the
+        // low sun stretches about 6× over the ground. Any wider and shadow
+        // edges crawl as the world scrolls. Refit if the sun moves.
         shadow-camera-left={-50}
         shadow-camera-right={50}
-        shadow-camera-top={50}
-        shadow-camera-bottom={-50}
+        shadow-camera-top={16}
+        shadow-camera-bottom={-10}
         shadow-camera-near={1}
         shadow-camera-far={150}
       />
