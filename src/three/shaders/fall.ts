@@ -1,9 +1,10 @@
 import * as THREE from "three";
 
-// Falling snowflakes or leaves as points, moved by the shader from their
-// place in a box: falling at their own speed, swaying (leaves turning over
-// too), and carried back along -z as the world scrolls (uScroll), wrapping
-// round inside the box. One program for both, set apart by their uniforms.
+// Falling snowflakes, leaves or rain as points, moved by the shader from
+// their place in a box: falling at their own speed, swaying (leaves
+// turning over too), and carried back along -z as the world scrolls
+// (uScroll), wrapping round inside the box. One program for all, set apart
+// by their uniforms.
 
 const vertexShader = /* glsl */ `
   #include <fog_pars_vertex>
@@ -34,7 +35,8 @@ const vertexShader = /* glsl */ `
     p = mod(p + 0.5 * uBox, uBox) - 0.5 * uBox;
 
     vColor = aColor;
-    vAngle = aSeed * 6.2832 + uTime * uSpin * (0.5 + aSeed);
+    // Each its own way up and pace, if it turns at all (not rain).
+    vAngle = uSpin * (aSeed * 6.2832 + uTime * (0.5 + aSeed));
 
     vec4 mvPosition = modelViewMatrix * vec4(p, 1.0);
     gl_Position = projectionMatrix * mvPosition;
@@ -51,8 +53,10 @@ const fragmentShader = /* glsl */ `
   #include <fog_pars_fragment>
 
   uniform float uOpacity;
-  // 0: a soft round flake; 1: a leaf, a slim oval turning with vAngle.
-  uniform float uLeaf;
+  // The point's shape: a disc squeezed by uStretch (x, y), turning with
+  // vAngle, its edge softened from uEdge out (0.5: sharp).
+  uniform vec2 uStretch;
+  uniform float uEdge;
 
   varying vec3 vColor;
   varying float vAngle;
@@ -62,9 +66,8 @@ const fragmentShader = /* glsl */ `
     float s = sin(vAngle);
     float k = cos(vAngle);
     c = mat2(k, -s, s, k) * c;
-    c.y *= mix(1.0, 2.2, uLeaf);
-    float alpha =
-      smoothstep(0.5, mix(0.15, 0.42, uLeaf), length(c)) * uOpacity;
+    c *= uStretch;
+    float alpha = smoothstep(0.5, uEdge, length(c)) * uOpacity;
     if (alpha < 0.01) discard;
     gl_FragColor = vec4(vColor, alpha);
 
@@ -73,16 +76,17 @@ const fragmentShader = /* glsl */ `
 `;
 
 // How a fall looks and moves: its colours (one per point, at random), and
-// the size (at most maxSize CSS pixels), fall speed, sway and turning of
-// its points (none for 0).
+// its points' size (at most maxSize CSS pixels), shape (see uStretch and
+// uEdge), fall speed, sway and turning (none for 0).
 export type FallLook = {
   colors: string[];
   size: number;
   maxSize: number;
+  stretch: [number, number];
+  edge: number;
   fall: number;
   sway: number;
   spin: number;
-  leaf: boolean;
 };
 
 // Points scattered at random in a box of size `box` centred on the origin,
@@ -123,7 +127,8 @@ export function createFallMaterial(box: THREE.Vector3, look: FallLook) {
       uFall: { value: look.fall },
       uSway: { value: look.sway },
       uSpin: { value: look.spin },
-      uLeaf: { value: look.leaf ? 1 : 0 },
+      uStretch: { value: new THREE.Vector2(...look.stretch) },
+      uEdge: { value: look.edge },
       uOpacity: { value: 0 },
     },
     vertexShader,

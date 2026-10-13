@@ -346,6 +346,7 @@ export default function TrainScene({
         <Smoke />
         <Fall look="snow" />
         <Fall look="leaves" />
+        <Fall look="rain" />
         <Station ref={stationRef} projects={projects} />
         <Home ref={homeRef} />
         {/* Last, so the stops are in the scene when they run. */}

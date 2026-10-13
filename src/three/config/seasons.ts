@@ -1,18 +1,22 @@
-// Seasons the scene can be switched to (see ui/SeasonSwitch): only a look,
-// colours, light, sky, leaves and snow. Switching blends every value below
-// from one season to the next (see hooks/useSeason). The scene opens in
-// summer (see TrainContext).
-export const SEASONS = ["summer", "autumn", "winter"] as const;
+// Seasons the scene can be switched to (see ui/SeasonSwitch), and rain:
+// only a look, colours, light, sky, leaves, snow and rain. Switching
+// blends every value below from one to the next (see hooks/useSeason). The
+// scene opens in summer (see TrainContext).
+export const SEASONS = ["summer", "autumn", "winter", "rain"] as const;
 export type Season = (typeof SEASONS)[number];
 
 export const SEASON_LABELS: Record<Season, string> = {
   summer: "Été",
   autumn: "Automne",
   winter: "Hiver",
+  rain: "Pluie",
 };
 
 // Snow on whatever faces up (see shaders/snow), and falling flakes.
 export const SNOW_COLOR = "#eef2f6";
+
+// Falling rain's streaks.
+export const RAIN_COLOR = "#b8c4d2";
 
 // Autumn leaves: what the forest's leafy crowns, bushes and grass turn to
 // (see shaders/forestMaterial), one per prop, and the falling leaves.
@@ -48,6 +52,8 @@ type SeasonLook = {
     // 0 → 1: the forest's leaves turned, then falling leaves.
     autumn: number;
     leaffall: number;
+    // 0 → 1: falling rain.
+    rainfall: number;
   };
 };
 
@@ -77,6 +83,7 @@ export const SEASON_LOOKS: Record<Season, SeasonLook> = {
       snowfall: 0,
       autumn: 0,
       leaffall: 0,
+      rainfall: 0,
     },
   },
   // Golden dusk: a warmer, hazier light, the leaves turned and falling.
@@ -102,6 +109,7 @@ export const SEASON_LOOKS: Record<Season, SeasonLook> = {
       snowfall: 0,
       autumn: 1,
       leaffall: 1,
+      rainfall: 0,
     },
   },
   // Cold dusk: blue-grey haze, a paler sun, snow everywhere.
@@ -127,6 +135,33 @@ export const SEASON_LOOKS: Record<Season, SeasonLook> = {
       snowfall: 1,
       autumn: 0,
       leaffall: 0,
+      rainfall: 0,
+    },
+  },
+  // Overcast and wet: grey haze, a veiled sun, a darker ground, rain.
+  rain: {
+    colors: {
+      haze: "#454a52",
+      ambient: "#7c8698",
+      sun: "#c8c2b8",
+      ground: "#1c2619",
+      forest: "#c9d0cf",
+      water: "#4f6f86",
+      clouds: "#8d939d",
+    },
+    values: {
+      ambientIntensity: 0.5,
+      sunScale: 0.45,
+      fogScale: 1.6,
+      bloomThreshold: 0.5,
+      turbidity: 20,
+      rayleigh: 0.6,
+      mieCoefficient: 0.08,
+      snow: 0,
+      snowfall: 0,
+      autumn: 0,
+      leaffall: 0,
+      rainfall: 1,
     },
   },
 };

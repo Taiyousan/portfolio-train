@@ -127,7 +127,8 @@ export default function Overlay({
       inert={!boarded}
       className="pointer-events-none absolute inset-0 text-sm text-white"
     >
-      <header className="flex items-start justify-between gap-3 p-3 sm:p-5 short:p-3">
+      {/* Wrapping on the narrowest phones, the season switch kept right. */}
+      <header className="flex flex-wrap items-start justify-between gap-3 p-3 sm:p-5 short:p-3">
         <NameCard />
         <SeasonSwitch />
         <p aria-live="polite" className="sr-only">
