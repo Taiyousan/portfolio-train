@@ -35,7 +35,7 @@ L'écran de chargement (`ui/LoadingScreen`) : les téléchargements remplissent 
 
 ## Le monde défile
 
-Le train reste en z = 0 et le monde défile : rails et forêt par tuiles qui bouclent (`useScrollingLoop`). À l'arrivée, l'arrêt apparaît à `STOP_DISTANCE` et le train freine pour s'arrêter pile au quai (`useStopApproach`, décélération constante). Les éléments de l'arrêt apparaissent l'un après l'autre avec un rebond, et repartent dans l'ordre inverse au départ (`useStopPop`).
+Le train reste en z = 0 et le monde défile : traverses et forêt par tuiles qui bouclent (`useScrollingLoop`) ; les rails, identiques sur toute leur longueur, restent fixes (`Rails`). À l'arrivée, l'arrêt apparaît à `STOP_DISTANCE` et le train freine pour s'arrêter pile au quai (`useStopApproach`, décélération constante). Les éléments de l'arrêt apparaissent l'un après l'autre avec un rebond, et repartent dans l'ordre inverse au départ (`useStopPop`).
 
 ## Caméra
 

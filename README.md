@@ -72,7 +72,7 @@ src/three/
   config/           réglages 3D (positions, échelles, couleurs)
   ui/               surcouche HTML (billets, panneaux, tableau des départs)
   debug/            panneau Leva, chargé seulement avec #debug
-public/models/      les fichiers .glb
+public/models/      les fichiers .glb (aucun pour l'instant : tout est construit en code)
 ```
 
 Trois règles :

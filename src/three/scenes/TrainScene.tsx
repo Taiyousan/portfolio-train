@@ -338,7 +338,7 @@ export default function TrainScene({
         <Environment files={ENVIRONMENT_MAP} />
         <Train />
         <ForestFloor position={[0, -0.6, 0]} />
-        <Rails position={[0, -0.57, 0]} />
+        <Rails />
         <Forest position={[0, -0.58, 0]} stops={[stationRef, homeRef]} />
         <Bunny position={[0, -0.58, 0]} />
         <Bird />

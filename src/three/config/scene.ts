@@ -18,8 +18,8 @@ export const ENVIRONMENT_MAP = "/hdri/sunset.hdr";
 // woff2): the HTML board's font-mono.
 export const SCENE_FONT = "/fonts/geist-mono-600.woff";
 
-// Length of one rails.glb tile once resized (see ScrollingTiles): the forest
-// tiles scroll in the same units.
+// Length of one tile of the track's sleepers (see Rails): the forest tiles
+// scroll in the same units.
 export const RAIL_TILE_LENGTH = 12.5;
 
 // `offset`, if any, is camera-controls' focal offset (the camera moved

@@ -47,10 +47,10 @@ const SWAY_RATE = 12.5;
 const SWAY_ROTATION = 0.1;
 const SWAY_LIFT = 0.0035;
 
-// Top of rails.glb's rail heads (the rails are at y = -0.57), and their
-// distance from the centre line, the wheels' mid-plane.
+// Top of the rail heads, and their distance from the centre line, the
+// wheels' mid-plane. The track (see Rails) is laid to them.
 export const RAIL_TOP = -0.546;
-const GAUGE_X = 0.2755;
+export const GAUGE_X = 0.2755;
 const WHEEL_WIDTH = 0.05;
 // Also paces the chimney's puffs (see Smoke).
 export const DRIVING_RADIUS = 0.19;

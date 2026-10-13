@@ -24,7 +24,7 @@ src/app/sitemap.ts, robots.ts, opengraph-image.tsx, icon.svg, apple-icon.tsx, no
 src/app/globals.css     Tokens de thème (--background, --muted, --line, --accent) + mode sombre
 public/projets/<slug>/  thumb.png + captures (shot-1.jpg...) de chaque projet
 public/doc/cv.pdf       CV
-public/models/, fonts/, hdri/   Ressources de la scène 3D (.glb, police du texte 3D, éclairage)
+public/fonts/, hdri/   Ressources de la scène 3D (police du texte 3D, éclairage) ; public/models/ pour d'éventuels .glb
 ```
 
 ## Où créer un nouveau fichier
