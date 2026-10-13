@@ -5,6 +5,7 @@ import {
   type MouseEvent,
   type ReactNode,
 } from "react";
+import Image from "next/image";
 import type { StationProject } from "./types";
 
 type Props = {
@@ -18,8 +19,8 @@ type Props = {
 // Field labels and the header band.
 const LABEL = "font-mono text-[0.625rem] tracking-[0.2em] uppercase";
 
-// Empty frames in the stub, waiting for the project images.
-const IMAGE_SLOTS = 3;
+// Screenshots the stub has room for.
+const MAX_IMAGES = 3;
 
 // A project page's path, as written in the MDX bodies' links.
 const PROJECT_PATH = /^\/projets\/([^/]+)\/?$/;
@@ -27,8 +28,8 @@ const PROJECT_PATH = /^\/projets\/([^/]+)\/?$/;
 const pad = (n: number) => String(n).padStart(2, "0");
 
 // A project's detail over the scene, shaped like a train ticket: the
-// details on card stock, then a stub past a perforation with room for
-// images and the actions (on the right, or below on phones). Only the
+// details on card stock, then a stub past a perforation with the
+// screenshots and the actions (on the right, or below on phones). Only the
 // details scroll, so the notches stay put. A native modal <dialog>: focus
 // trap, Escape and focus return come for free. It stays open from one
 // project to the next (the stub's arrows, or a project link in the text).
@@ -46,6 +47,9 @@ export default function ProjectDialog({
   const project = projects[index];
   const previous = projects.at(index - 1)!;
   const next = projects[(index + 1) % projects.length];
+  const images = project.images.slice(0, MAX_IMAGES);
+  // The screenshot open in the viewer, if any.
+  const [viewing, setViewing] = useState<number | null>(null);
 
   // The arrows keep focus, so the new project is announced; a link in the
   // text goes away with the old details, so focus moves to the new title.
@@ -90,13 +94,18 @@ export default function ProjectDialog({
     <dialog
       ref={dialogRef}
       aria-labelledby="project-title"
-      onClose={onClose}
+      // React hands this the image viewer's close too.
+      onClose={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
       // A click on the backdrop lands on the <dialog> itself.
       onClick={(e) => {
         if (e.target === e.currentTarget) close();
       }}
-      // The masks would clip a box shadow: a drop shadow follows the notches.
-      className="theme-ticket pointer-events-auto m-auto max-h-[90dvh] w-[min(52rem,calc(100%-2rem))] flex-col overflow-visible border-0 bg-transparent p-0 text-foreground drop-shadow-2xl transition duration-300 backdrop:bg-black/70 open:flex sm:max-h-[min(36rem,90dvh)] sm:flex-row starting:translate-y-6 starting:-rotate-1 starting:opacity-0"
+      // A set size whatever the project, so the arrows stay put from one to
+      // the next. The masks would clip a box shadow: a drop shadow follows
+      // the notches.
+      className="theme-ticket pointer-events-auto m-auto h-[90dvh] w-[min(52rem,calc(100%-2rem))] flex-col overflow-visible border-0 bg-transparent p-0 text-foreground drop-shadow-2xl transition duration-300 backdrop:bg-black/70 open:flex sm:h-[min(36rem,90dvh)] sm:flex-row starting:translate-y-6 starting:-rotate-1 starting:opacity-0"
     >
       {/* The details. */}
       <div className="flex min-h-0 flex-1 flex-col rounded-t-xl bg-background notch-bottom sm:rounded-l-xl sm:rounded-tr-none sm:notch-right">
@@ -170,39 +179,56 @@ export default function ProjectDialog({
         >
           &nbsp;
         </span>
-        <div className="flex flex-1 flex-col gap-4 px-6 py-4 sm:justify-between sm:px-5 sm:py-5">
-          {/* Room for project images. Left out on short screens, where the
+        <div className="flex flex-1 flex-col gap-4 px-6 py-4 sm:px-5 sm:py-5">
+          {/* The project's screenshots, faded in with each project, each
+              opening the viewer. Left out on short screens, where the
               actions need the height. */}
-          <ul
-            aria-hidden="true"
-            className="grid grid-cols-3 gap-2 sm:grid-cols-1 short:hidden"
-          >
-            {Array.from({ length: IMAGE_SLOTS }, (_, i) => (
-              <li
-                key={i}
-                className="grid aspect-video place-items-center rounded-md border-2 border-dashed border-foreground/25 bg-foreground/5 text-foreground/30"
-              >
-                <svg
-                  viewBox="0 0 24 24"
-                  className="size-6"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <rect x="3" y="5" width="18" height="14" rx="2" />
-                  <circle cx="8.5" cy="10" r="1.5" />
-                  <path d="m21 15-5-5-8 9" />
-                </svg>
-              </li>
-            ))}
-          </ul>
+          {images.length > 0 && (
+            <ul
+              key={project.slug}
+              aria-label="Captures"
+              className="grid grid-cols-3 gap-2 transition duration-300 sm:grid-cols-1 starting:opacity-0 short:hidden"
+            >
+              {images.map((src, i) => (
+                <li key={src}>
+                  <button
+                    type="button"
+                    aria-label={`Agrandir la capture ${i + 1} sur ${images.length}`}
+                    onClick={() => setViewing(i)}
+                    className="group block w-full overflow-hidden rounded-md border border-foreground/15 transition hover:border-accent"
+                  >
+                    <Image
+                      src={src}
+                      alt=""
+                      width={640}
+                      height={360}
+                      sizes="(min-width: 640px) 152px, calc(33vw - 32px)"
+                      className="aspect-video w-full object-cover transition duration-300 group-hover:scale-105"
+                    />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
 
-          <div className="flex flex-wrap gap-2 sm:flex-col">
+          {/* The arrows keep their place from one project to the next,
+              however many screenshots and with or without "Voir en ligne":
+              on phones, first in a row under the screenshots' (one row
+              high, whatever their number); beside the ticket, laid out in
+              the stub's column, "Voir en ligne" under the screenshots and
+              the arrows at the foot, over the barcode and "Fermer". */}
+          <div className="flex flex-wrap gap-2 sm:contents">
+            {project.href && (
+              <a
+                href={project.href}
+                className="flex min-h-11 flex-1 items-center justify-center rounded-full bg-accent px-3 font-mono text-xs tracking-wide whitespace-nowrap text-on-accent uppercase transition hover:text-on-accent hover:brightness-110 sm:flex-none"
+              >
+                Voir en ligne ↗
+              </a>
+            )}
             <nav
               aria-label="Autres projets"
-              className="flex w-full items-center justify-between gap-1"
+              className="order-first flex w-full items-center justify-between gap-1 sm:order-none sm:mt-auto"
             >
               <StepButton
                 label={`Projet précédent : ${previous.title}`}
@@ -223,30 +249,118 @@ export default function ProjectDialog({
                 <path d="M5 12h14M13 6l6 6-6 6" />
               </StepButton>
             </nav>
-            {/* Printed barcode. */}
-            <span
-              aria-hidden="true"
-              className="mb-2 hidden h-8 opacity-60 barcode sm:block"
-            />
-            {project.href && (
-              <a
-                href={project.href}
-                className="flex min-h-11 flex-1 items-center justify-center rounded-full bg-accent px-3 font-mono text-xs tracking-wide whitespace-nowrap text-on-accent uppercase transition hover:text-on-accent hover:brightness-110 sm:flex-none"
-              >
-                Voir en ligne ↗
-              </a>
-            )}
             <button
               type="button"
               autoFocus
               onClick={close}
-              className="min-h-11 flex-1 rounded-full border border-foreground/40 px-4 font-mono text-xs tracking-wider uppercase transition hover:bg-foreground/10 sm:flex-none"
+              className="min-h-11 flex-1 rounded-full border border-foreground/40 px-4 font-mono text-xs tracking-wider uppercase transition hover:bg-foreground/10 sm:order-last sm:flex-none"
             >
               Fermer
             </button>
           </div>
+
+          {/* Printed barcode, near the foot of the stub. */}
+          <span
+            aria-hidden="true"
+            className="hidden h-8 shrink-0 opacity-60 barcode sm:block"
+          />
         </div>
       </div>
+
+      {viewing !== null && (
+        <ImageViewer
+          title={project.title}
+          images={images}
+          index={viewing}
+          onIndex={setViewing}
+          onClose={() => setViewing(null)}
+        />
+      )}
+    </dialog>
+  );
+}
+
+// A screenshot shown large, with arrows through the project's others. A
+// modal <dialog> of its own, over the ticket in the top layer: Escape
+// closes it alone, and focus goes back to its thumbnail.
+function ImageViewer({
+  title,
+  images,
+  index,
+  onIndex,
+  onClose,
+}: {
+  title: string;
+  images: string[];
+  index: number;
+  onIndex: (index: number) => void;
+  onClose: () => void;
+}) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  useEffect(() => dialogRef.current?.showModal(), []);
+  const close = () => dialogRef.current?.close();
+  const count = images.length;
+  const go = (step: number) => onIndex((index + step + count) % count);
+
+  return (
+    <dialog
+      ref={dialogRef}
+      aria-label={`${title} : captures`}
+      onClose={onClose}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) close();
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "ArrowLeft") go(-1);
+        if (e.key === "ArrowRight") go(1);
+      }}
+      // As wide as fits, with the caption, on a short screen too.
+      className="m-auto w-[min(48rem,calc(100%-2rem),calc((100dvh-9rem)*16/9))] overflow-visible border-0 bg-transparent p-0 text-foreground transition duration-300 backdrop:bg-black/85 starting:scale-95 starting:opacity-0"
+    >
+      <figure className="rounded-xl bg-background p-2 shadow-2xl sm:p-3">
+        {/* Keyed on the image, so the next one fades in. Whole, whatever
+            its shape. */}
+        <Image
+          key={images[index]}
+          src={images[index]}
+          alt={`${title}, capture ${index + 1} sur ${count}`}
+          width={640}
+          height={360}
+          sizes="(min-width: 800px) 768px, 100vw"
+          className="aspect-video w-full rounded-md bg-foreground/5 object-contain transition duration-300 starting:opacity-0"
+        />
+        <figcaption className="flex items-center gap-2 pt-2 pl-1 sm:pt-3">
+          <p className="mr-auto min-w-0">
+            <span className="block truncate font-extrabold tracking-tight uppercase">
+              {title}
+            </span>
+            <span
+              aria-live="polite"
+              className="font-mono text-xs text-muted tabular-nums"
+            >
+              Capture {pad(index + 1)} / {pad(count)}
+            </span>
+          </p>
+          {count > 1 && (
+            <>
+              <StepButton label="Capture précédente" onClick={() => go(-1)}>
+                <path d="M19 12H5M11 6l-6 6 6 6" />
+              </StepButton>
+              <StepButton label="Capture suivante" onClick={() => go(1)}>
+                <path d="M5 12h14M13 6l6 6-6 6" />
+              </StepButton>
+            </>
+          )}
+          <button
+            type="button"
+            autoFocus
+            onClick={close}
+            className="min-h-11 rounded-full border border-foreground/40 px-4 font-mono text-xs tracking-wider uppercase transition hover:bg-foreground/10"
+          >
+            Fermer
+          </button>
+        </figcaption>
+      </figure>
     </dialog>
   );
 }

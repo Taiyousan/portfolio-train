@@ -42,3 +42,6 @@ next-env.d.ts
 
 # raw 3D sources, their tooling and credits (not served, not versioned)
 /assets-src/
+
+# personal notes (not versioned)
+/notes/

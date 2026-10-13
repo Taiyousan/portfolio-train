@@ -20,7 +20,7 @@ src/app/page.tsx        Accueil : la scène du train (Experience) par-dessus sa 
 src/app/projets/[slug]/page.tsx   Page d'un projet (SSG via generateStaticParams)
 src/app/sitemap.ts, robots.ts, opengraph-image.tsx, icon.svg, apple-icon.tsx, not-found.tsx   SEO, icônes, 404
 src/app/globals.css     Tokens de thème (--background, --muted, --line, --accent) + mode sombre
-public/projets/<slug>/  thumb.png + video.mp4 de chaque projet
+public/projets/<slug>/  thumb.png + captures (shot-1.jpg...) de chaque projet
 public/doc/cv.pdf       CV
 public/models/, fonts/, hdri/   Ressources de la scène 3D (.glb, police du texte 3D, éclairage)
 ```

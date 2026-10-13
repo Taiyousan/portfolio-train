@@ -15,7 +15,7 @@ Le train qui roule en forêt est le fil conducteur. Chaque section du portfolio 
 |---|---|
 | `title`, `order` | Destination et heure de départ sur le tableau |
 | `technos` | « Dessert : React · Three · R3F » |
-| `summary`, corps MDX, `tasks`... | Détail du projet, dans un billet HTML (`ProjectDialog`) |
+| `summary`, corps MDX, `tasks`, `images`... | Détail du projet, dans un billet HTML (`ProjectDialog`), captures dans le coupon |
 | `site.intro`, `site.skills`, `site.links` | Panneau « À propos » (`AboutPanel`) |
 
 ## Chargement
@@ -88,7 +88,6 @@ Ajouter `#debug` à l'URL : panneau Leva et caméra libre.
 
 - Une URL par section (`/projets`, `/a-propos`), reliée à `mode`, avec le `<Canvas>` dans le layout pour qu'il persiste entre les routes.
 - Un bouton visible pour passer à la version HTML de l'accueil (aujourd'hui, seul le clavier la fait apparaître).
-- Les images de chaque projet dans le coupon du billet (emplacements prévus, `IMAGE_SLOTS`).
 - Faire descendre le conducteur de la cabine plutôt que le faire disparaître et réapparaître.
 - Printemps et automne ; saison par défaut selon la date.
 - Contact par télégramme (la locomotive siffle), wagon de marchandises pour les compétences, CV en billet de train, jour et nuit, levier de vitesse, son d'ambiance (coupé par défaut).

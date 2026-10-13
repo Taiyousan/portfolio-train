@@ -20,7 +20,7 @@ npm run format   # formate le code (Prettier, classes Tailwind triées)
 
 ```
 content/projets/       Un fichier .mdx par projet (le contenu)
-public/projets/<nom>/  L'image (thumb.png) et la vidéo (video.mp4) du projet
+public/projets/<nom>/  La vignette (thumb.png) et les captures (shot-1.jpg...) du projet
 public/doc/cv.pdf      Le CV
 src/lib/projects.ts    Lit et valide les fichiers de content/projets
 src/lib/site.ts        Textes globaux : intro, compétences, liens de contact
@@ -94,7 +94,7 @@ Si un fichier de projet est incorrect (champ manquant, mauvais type), le build s
 
 1. Copier un fichier existant de `content/projets/` sous un nouveau nom (ce nom devient l'URL : `nouveau.mdx` → `/projets/nouveau`).
 2. Modifier les infos en haut et le texte en bas.
-3. Déposer `thumb.png` (et optionnellement `video.mp4`) dans `public/projets/nouveau/`, puis vérifier que les chemins `thumb` et `video` du fichier y pointent. L'image sert aussi d'aperçu quand le lien de la page est partagé.
+3. Déposer `thumb.png` et jusqu'à trois captures (`shot-1.jpg`...) dans `public/projets/nouveau/`, puis vérifier que les chemins `thumb` et `images` du fichier y pointent. La vignette sert aussi d'aperçu quand le lien de la page est partagé.
 4. `npm run dev` pour vérifier le rendu.
 
 Exemple de frontmatter :
@@ -111,7 +111,7 @@ partners: ["..."]            # optionnel
 tasks: ["Développement de l'interface"]
 href: "https://..."          # optionnel : lien vers le projet en ligne
 thumb: /projets/reims/thumb.png
-video: /projets/reims/video.mp4   # optionnel
+images: [/projets/reims/shot-1.jpg, /projets/reims/shot-2.jpg]   # optionnel : captures, 3 au plus
 ```
 
 La liste exacte des champs et leurs contraintes est dans le schéma de [src/lib/projects.ts](src/lib/projects.ts).

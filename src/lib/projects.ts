@@ -17,7 +17,8 @@ const frontmatterSchema = z.object({
   tasks: z.array(z.string()),
   href: z.url().optional(),
   thumb: z.string(),
-  video: z.string().optional(),
+  // Screenshots, shown in the scene's project ticket.
+  images: z.array(z.string()).default([]),
 });
 
 export type Project = z.infer<typeof frontmatterSchema> & {

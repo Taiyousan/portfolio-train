@@ -15,4 +15,5 @@ export type StationProject = Pick<
   | "partners"
   | "tasks"
   | "href"
+  | "images"
 > & { body: ReactNode };

@@ -39,6 +39,7 @@ export default function Home() {
     partners: project.partners,
     tasks: project.tasks,
     href: project.href,
+    images: project.images,
     body: <MDXRemote source={project.body} />,
   }));
 
