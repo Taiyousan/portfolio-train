@@ -125,6 +125,19 @@ export default function Overlay({
         </p>
       </header>
 
+      {/* The small print, in a bottom corner throughout, under the tickets'
+          room (pb-11 below). Before the panels, so their sheets cover it on
+          phones; left out on short screens, where the room isn't there
+          (the about card has it too). */}
+      <Link
+        href="/mentions-legales"
+        className="group pointer-events-auto absolute right-3 bottom-0 flex min-h-11 items-end pb-2 sm:right-5 short:hidden"
+      >
+        <span className="theme-ticket rounded-sm bg-background/85 px-2 py-1 font-mono text-[0.625rem] tracking-wider text-muted uppercase shadow transition group-hover:text-foreground">
+          Mentions légales
+        </span>
+      </Link>
+
       {inWorkshop && <Workshop onLeave={() => setMode("ride")} />}
 
       {atHome && <AboutPanel onDepart={depart} />}
@@ -138,7 +151,7 @@ export default function Overlay({
             open. The two share a slot so "Retour" doesn't move. Beside a
             side panel, centred in the room it leaves. */}
         <div
-          className={`absolute inset-x-0 bottom-0 flex items-center justify-center gap-4 p-4 pb-8 transition-[right] duration-500 ease-out short:pb-4 ${atHome || inWorkshop ? "right-[25.25rem] max-sm:hidden" : ""}`}
+          className={`absolute inset-x-0 bottom-0 flex items-center justify-center gap-4 p-4 pb-11 transition-[right] duration-500 ease-out short:pb-4 ${atHome || inWorkshop ? "right-[25.25rem] max-sm:hidden" : ""}`}
         >
           <Dealt
             shown={atStation || atHome || inWorkshop}
@@ -213,7 +226,7 @@ export default function Overlay({
             on phones, in a row past them, narrowing to fit. */}
         <div
           inert={!riding}
-          className="absolute inset-x-0 top-[58%] bottom-0 flex flex-col items-center justify-center gap-6 p-4 pb-8 sm:top-auto sm:flex-row sm:gap-3 sm:px-3 lg:gap-6 short:pb-4"
+          className="absolute inset-x-0 top-[58%] bottom-0 flex flex-col items-center justify-center gap-6 p-4 pb-11 sm:top-auto sm:flex-row sm:gap-3 sm:px-3 lg:gap-6 short:pb-4"
         >
           <Dealt
             shown={riding}

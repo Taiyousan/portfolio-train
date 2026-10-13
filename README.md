@@ -23,6 +23,7 @@ content/projets/       Un fichier .mdx par projet (le contenu)
 public/projets/<nom>/  La vignette (thumb.png) et les captures (shot-1.jpg...) du projet
 public/doc/cv.pdf      Le CV
 src/lib/projects.ts    Lit et valide les fichiers de content/projets
+content/pages/         Les pages de texte seules (mentions légales et crédits)
 src/lib/site.ts        Textes globaux : intro, compétences, liens de contact
 src/app/page.tsx       Page d'accueil (la scène du train et sa version HTML)
 src/app/projets/[slug]/page.tsx   Page détail d'un projet
@@ -119,6 +120,7 @@ La liste exacte des champs et leurs contraintes est dans le schéma de [src/lib/
 ## Modifier le reste
 
 - **Intro, compétences, liens de contact, CV** : `src/lib/site.ts`
+- **Mentions légales et crédits** : `content/pages/mentions-legales.mdx` (un nouvel élément 3D sous licence CC-BY doit y être crédité)
 - **Couleurs et thème** : variables en haut de `src/app/globals.css`
 
 ## Workflow git

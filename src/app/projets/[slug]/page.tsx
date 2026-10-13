@@ -150,6 +150,10 @@ export default async function ProjectPage({
         <ProjectLink project={previous} label="← Précédent" />
         <ProjectLink project={next} label="Suivant →" align="end" />
       </nav>
+
+      <footer className="mt-10 font-mono text-sm text-muted">
+        <Link href="/mentions-legales">Mentions légales</Link>
+      </footer>
     </main>
   );
 }

@@ -125,6 +125,10 @@ export default function Home() {
             </dl>
             <p className="mt-8 text-muted">{site.education}</p>
           </section>
+
+          <footer className="mt-20 border-t border-line pt-6 font-mono text-sm text-muted">
+            <Link href="/mentions-legales">Mentions légales</Link>
+          </footer>
         </main>
       </Experience>
     </>

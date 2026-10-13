@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import Link from "next/link";
 import { site } from "@/lib/site";
 import { OUTFITS } from "../config/livery";
 import { useLivery } from "../state/LiveryContext";
@@ -183,11 +184,17 @@ export default function AboutPanel({ onDepart }: { onDepart: () => void }) {
           ))}
         </ul>
 
-        {/* Printed barcode. */}
+        {/* Printed barcode, then the small print. */}
         <span
           aria-hidden="true"
           className="mt-6 block h-8 opacity-60 barcode"
         />
+        <Link
+          href="/mentions-legales"
+          className={`${LABEL} mt-1 flex min-h-11 w-max items-center text-muted underline decoration-foreground/30 underline-offset-4 hover:text-foreground`}
+        >
+          Mentions légales et crédits
+        </Link>
       </div>
 
       {/* On phones, the way back, riding on top of the sheet. */}

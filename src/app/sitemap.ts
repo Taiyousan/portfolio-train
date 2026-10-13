@@ -9,5 +9,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
       url: `${SITE_URL}/projets/${project.slug}`,
       priority: 0.8,
     })),
+    { url: `${SITE_URL}/mentions-legales`, priority: 0.1 },
   ];
 }

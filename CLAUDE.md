@@ -12,12 +12,14 @@ Portfolio de Shams Benhamou (dev front-end, React / Three.js). Next 16 (App Rout
 
 ```
 content/projets/*.mdx   Source de vérité du contenu des projets (1 fichier = 1 projet)
+content/pages/*.mdx     Pages de texte seules (mentions légales), lues par src/lib/pages.ts
 src/lib/projects.ts     Lecture + validation (zod) des MDX ; getProjects(), getProject(slug)
 src/lib/site.ts         Contenu global : identité, intro, compétences, liens de contact
 src/lib/url.ts          URL absolue du site (domaine de production Vercel), côté serveur
 src/app/layout.tsx      Layout racine (lang="fr", polices, metadata par défaut, Open Graph)
 src/app/page.tsx        Accueil : la scène du train (Experience) par-dessus sa version HTML (intro, grille de projets, compétences)
 src/app/projets/[slug]/page.tsx   Page d'un projet (SSG via generateStaticParams)
+src/app/mentions-legales/page.tsx   Mentions légales et crédits (content/pages/mentions-legales.mdx)
 src/app/sitemap.ts, robots.ts, opengraph-image.tsx, icon.svg, apple-icon.tsx, not-found.tsx   SEO, icônes, 404
 src/app/globals.css     Tokens de thème (--background, --muted, --line, --accent) + mode sombre
 public/projets/<slug>/  thumb.png + captures (shot-1.jpg...) de chaque projet
