@@ -14,7 +14,7 @@ import FlapText from "./FlapText";
 import { DriverIcon } from "./LiveryIcons";
 
 // Field labels and section titles, as on the project ticket.
-const LABEL = "font-mono text-[0.625rem] tracking-[0.2em] uppercase";
+const LABEL = "font-mono text-[0.6875rem] tracking-[0.12em] uppercase";
 
 // A swipe on the sheet's header further than this, in pixels, raises or
 // lowers it; any less is a tap, which toggles it.

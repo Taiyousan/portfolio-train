@@ -5,6 +5,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import StationPage from "@/components/StationPage";
+import WholeWords from "@/components/WholeWords";
 import { getProject, getProjects, type Project } from "@/lib/projects";
 import { site } from "@/lib/site";
 
@@ -68,7 +69,7 @@ export default async function ProjectPage({
             </span>
           </p>
           <h1 className="mt-3 max-w-4xl text-4xl font-bold tracking-tight text-balance sm:text-6xl">
-            {project.title}
+            <WholeWords text={project.title} />
           </h1>
         </header>
 

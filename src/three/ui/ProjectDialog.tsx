@@ -6,6 +6,7 @@ import {
   type ReactNode,
 } from "react";
 import Image from "next/image";
+import WholeWords from "@/components/WholeWords";
 import type { StationProject } from "./types";
 
 type Props = {
@@ -16,8 +17,8 @@ type Props = {
   onClose: () => void;
 };
 
-// Field labels and the header band.
-const LABEL = "font-mono text-[0.625rem] tracking-[0.2em] uppercase";
+// Field labels and the header band: small, but read without effort.
+const LABEL = "font-mono text-[0.6875rem] tracking-[0.12em] uppercase";
 
 // Screenshots the stub has room for.
 const MAX_IMAGES = 3;
@@ -130,11 +131,11 @@ export default function ProjectDialog({
             id="project-title"
             ref={titleRef}
             tabIndex={-1}
-            className="text-3xl leading-none font-extrabold tracking-tight text-balance uppercase outline-none sm:text-4xl"
+            className="text-3xl leading-tight font-extrabold tracking-tight text-balance outline-none sm:text-4xl"
           >
-            {project.title}
+            <WholeWords text={project.title} />
           </h2>
-          <dl className="mt-4 grid grid-cols-2 gap-x-6 gap-y-3 border-y border-line py-4 sm:grid-cols-3">
+          <dl className="mt-5 grid grid-cols-2 gap-x-6 gap-y-3 border-y border-line py-4 sm:grid-cols-3">
             <Field label="Rôle">
               {project.role.charAt(0).toUpperCase() + project.role.slice(1)}
             </Field>
@@ -145,21 +146,28 @@ export default function ProjectDialog({
               <Field label="Avec">{project.partners.join(", ")}</Field>
             )}
             <Field label="Technos" wide>
-              <span className="font-mono text-xs tracking-wider uppercase">
-                {project.technos.join(" · ")}
-              </span>
+              <ul className="mt-1 flex flex-wrap gap-1.5">
+                {project.technos.map((techno) => (
+                  <li
+                    key={techno}
+                    className="rounded-full border border-line bg-foreground/5 px-2.5 py-0.5 font-mono text-xs font-normal"
+                  >
+                    {techno}
+                  </li>
+                ))}
+              </ul>
             </Field>
           </dl>
 
           {/* The summary, the body's detail under it, smaller. */}
-          <p className="mt-5 text-lg leading-snug font-medium text-pretty">
+          <p className="mt-6 text-lg leading-snug font-medium text-pretty">
             {project.summary}
           </p>
-          <div className="mt-2 space-y-2 text-sm leading-relaxed text-muted [&_a]:font-semibold [&_a]:text-foreground [&_a]:underline [&_a]:decoration-accent [&_a]:decoration-2">
+          <div className="mt-2 space-y-2 text-[0.9375rem] leading-relaxed text-muted [&_a]:font-semibold [&_a]:text-foreground [&_a]:underline [&_a]:decoration-accent [&_a]:decoration-2">
             {project.body}
           </div>
 
-          <h3 className={`${LABEL} mt-6 font-normal text-muted`}>Missions</h3>
+          <h3 className={`${LABEL} mt-7 font-normal text-muted`}>Missions</h3>
           <ul className="mt-3 ml-1.5 space-y-2 border-l-2 border-dotted border-foreground/30 pl-5 text-sm">
             {project.tasks.map((t) => (
               <li

@@ -2,8 +2,8 @@ import type { Metadata, Viewport } from "next";
 import { MDXRemote } from "next-mdx-remote/rsc";
 import Image from "next/image";
 import Link from "next/link";
-import { Fragment } from "react";
 import LegalNotice from "@/components/LegalNotice";
+import WholeWords from "@/components/WholeWords";
 import StationPage from "@/components/StationPage";
 import { getPage } from "@/lib/pages";
 import { getProjects } from "@/lib/projects";
@@ -75,13 +75,7 @@ export default function Home() {
             <header>
               <p className="font-mono text-sm text-muted">{site.name}</p>
               <h1 className="mt-3 text-4xl font-bold tracking-tight text-balance sm:text-5xl">
-                {/* Compound words ("front-end") kept whole on a line. */}
-                {site.headline.split(" ").map((word, i) => (
-                  <Fragment key={i}>
-                    {i > 0 && " "}
-                    <span className="whitespace-nowrap">{word}</span>
-                  </Fragment>
-                ))}
+                <WholeWords text={site.headline} />
               </h1>
               <div className="mt-6 max-w-2xl space-y-2 text-lg text-muted">
                 {site.intro.map((line) => (
