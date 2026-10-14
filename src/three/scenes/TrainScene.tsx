@@ -133,8 +133,14 @@ function SceneReady() {
 
 export default function TrainScene({
   projects,
+  multisampling,
+  bloom,
 }: {
   projects: StationProject[];
+  // The effect composer's samples per pixel, 0 for none.
+  multisampling: number;
+  // Off on a device that can't keep up (see Scene).
+  bloom: boolean;
 }) {
   const {
     cameraControlsRef,
@@ -298,7 +304,11 @@ export default function TrainScene({
         ref={sunRef}
         position={SUN_POSITION}
         castShadow
-        shadow-mapSize={[2048, 2048]}
+        // Variance shadows (see Scene), blurred over `radius` texels: a
+        // small map is enough for shadows this soft.
+        shadow-mapSize={[1024, 1024]}
+        shadow-radius={3}
+        shadow-blurSamples={8}
         // Low sun, flat-shaded faces: without these, faces facing it shadow
         // themselves in stripes (shadow acne).
         shadow-bias={-0.0005}
@@ -320,14 +330,16 @@ export default function TrainScene({
           to frame new ones. */}
       <CameraControls ref={cameraControlsRef} enabled={debug} />
 
-      <EffectComposer>
-        <Bloom
-          ref={bloomRef}
-          luminanceThreshold={0.3}
-          luminanceSmoothing={0.9}
-          intensity={bloomIntensity}
-          mipmapBlur
-        />
+      <EffectComposer multisampling={multisampling}>
+        {bloom && (
+          <Bloom
+            ref={bloomRef}
+            luminanceThreshold={0.3}
+            luminanceSmoothing={0.9}
+            intensity={bloomIntensity}
+            mipmapBlur
+          />
+        )}
         <Vignette offset={0.3} darkness={vignetteDarkness} />
         <Noise opacity={0.02} />
       </EffectComposer>

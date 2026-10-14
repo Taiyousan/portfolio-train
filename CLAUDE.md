@@ -2,11 +2,11 @@
 
 # Portfolio train
 
-Portfolio de Shams Benhamou (dev front-end, React / Three.js). Next 16 (App Router), React 19, TypeScript, Tailwind 4. Contenu en français. Voir [README.md](README.md) pour la vue d'ensemble et le mode d'emploi côté humain.
+Portfolio de Shams Benhamou (dev fullstack spécialisé front-end et 3D, React / Three.js). Next 16 (App Router), React 19, TypeScript, Tailwind 4. Contenu en français. Voir [README.md](README.md) pour la vue d'ensemble et le mode d'emploi côté humain.
 
 ## Principe directeur
 
-**Le contenu HTML accessible passe avant la 3D.** Le site doit rester lisible et utilisable sans WebGL (SEO, accessibilité, mobiles faibles). L'accueil est une scène React Three Fiber (un train en forêt), posée *par-dessus* ce contenu, jamais à sa place : `Experience` rend la version HTML de l'accueil en tête de page, masquée visuellement mais lue par les lecteurs d'écran et les moteurs de recherche, affichée par-dessus la scène dès qu'elle reçoit le focus clavier, et seule à la place de la scène quand le navigateur n'a pas WebGL 2 ou que la scène plante. three.js est chargé à part, après la page : il ne doit jamais entrer dans le bundle initial. Les pages projet restent en HTML.
+**Le contenu HTML accessible passe avant la 3D.** Le site doit rester lisible et utilisable sans WebGL (SEO, accessibilité, mobiles faibles). L'accueil est une scène React Three Fiber (un train en forêt), posée *par-dessus* ce contenu, jamais à sa place : `Experience` rend la version HTML de l'accueil en tête de page, masquée visuellement mais lue par les lecteurs d'écran et les moteurs de recherche, affichée par-dessus la scène dès qu'elle reçoit le focus clavier, et seule à la place de la scène quand le navigateur n'a pas WebGL 2, que la scène plante ou qu'elle rame trop. three.js est chargé à part, après la page : il ne doit jamais entrer dans le bundle initial. Les pages projet restent en HTML.
 
 ## Structure
 

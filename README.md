@@ -1,8 +1,8 @@
 # Portfolio train
 
-Portfolio de Shams Benhamou, développeur front-end (React, Next.js, Three.js / React Three Fiber).
+Portfolio de Shams Benhamou, développeur web fullstack, spécialisé front-end et 3D (React, Next.js, Three.js / React Three Fiber).
 
-**Idée directrice : le contenu d'abord.** Le site est un vrai site HTML, lisible en quelques secondes et utilisable sans WebGL. Sur l'accueil, une scène 3D interactive (un train en forêt) se superpose à ce contenu sans le remplacer : la version HTML reste dans la page pour les lecteurs d'écran et les moteurs de recherche, apparaît au clavier, et s'affiche seule si le navigateur ne peut pas dessiner la scène.
+**Idée directrice : le contenu d'abord.** Le site est un vrai site HTML, lisible en quelques secondes et utilisable sans WebGL. Sur l'accueil, une scène 3D interactive (un train en forêt) se superpose à ce contenu sans le remplacer : la version HTML reste dans la page pour les lecteurs d'écran et les moteurs de recherche, apparaît au clavier, et s'affiche seule si le navigateur ne peut pas dessiner la scène, ou trop lentement.
 
 **Stack :** Next 16 (App Router) · React 19 · TypeScript · Tailwind 4 · MDX (`next-mdx-remote`) · zod · React Three Fiber
 

@@ -26,7 +26,8 @@ const DebugPanel = dynamic(() => import("./debug/DebugPanel"), { ssr: false });
 // Full-screen train scene. `children` is the page's plain HTML version,
 // first in reading order (screen readers, crawlers) but out of sight until
 // it holds keyboard focus, then shown over the scene. Shown on its own
-// instead without WebGL 2, or if the scene fails to load or run. Append
+// instead without WebGL 2, if the scene fails to load or run, or if the
+// device can't keep up with it even at its lowest quality. Append
 // #debug to the URL for the Leva panel and a free camera. `legal` is the
 // legal notice, opened over the scene rather than on its own page.
 export default function Experience({
@@ -76,7 +77,7 @@ export default function Experience({
     />
   );
 
-  if (!webgl) {
+  if (!webgl || failure) {
     return (
       <>
         {children}
@@ -120,6 +121,7 @@ export default function Experience({
                   projects={projects}
                   onProgress={setProgress}
                   paused={reading}
+                  onTooSlow={setFailure}
                 />
               )}
               <Overlay projects={projects} legal={legal} boarded={boarded} />

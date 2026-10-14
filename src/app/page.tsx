@@ -13,6 +13,15 @@ import Experience, { type StationProject } from "@/three/Experience";
 
 export const metadata: Metadata = {
   alternates: { canonical: "/" },
+  // Whole: a page's openGraph replaces the layout's.
+  openGraph: {
+    type: "website",
+    locale: "fr_FR",
+    siteName: site.name,
+    url: "/",
+    title: site.title,
+    description: site.description,
+  },
 };
 
 // The scene's dusk (--dusk), around the train.

@@ -23,7 +23,7 @@ Le train qui roule en forêt est le fil conducteur. Chaque section du portfolio 
 1. `src/app/page.tsx` rend `Experience` (composant client) avec la version HTML de l'accueil en enfants.
 2. `Experience` affiche cette version HTML (cachée, mais lue par les lecteurs d'écran et les moteurs de recherche, et visible dès qu'elle reçoit le focus clavier), l'écran de chargement, la surcouche HTML (`ui/Overlay`), et `Scene`.
 3. `Scene` (le `<Canvas>`) est chargé à part (`import()` dans un effet ; pas `next/dynamic`, dont le `Suspense` remonte le canvas en dev et lui fait perdre son contexte WebGL) : three.js et tous les modèles sont dans un chunk séparé, téléchargé une fois la page affichée. L'écran de chargement et la version HTML fonctionnent pendant ce temps.
-4. Sans WebGL 2 (`useWebGLSupport`), ou si la scène plante (`SceneBoundary`), seule la version HTML s'affiche.
+4. Sans WebGL 2 (`useWebGLSupport`), si la scène plante (`SceneBoundary`), ou si l'appareil reste sous 15 images par seconde au plus bas réglage (`Scene`), seule la version HTML s'affiche.
 5. Tant que la version HTML a le focus, la scène cachée derrière attend : pas encore montée (la compilation de ses shaders bloquerait la page), ou en pause (`Pause` dans `Scene`, par le drapeau `internal.active` de R3F plutôt que `frameloop`, qui remet l'horloge à zéro). Le curseur y est celui du système (`data-system-cursor`).
 6. Tout ce qui se charge dans la scène (`useGLTF`, `Environment`, `<Text>`...) doit rester dans le `<Suspense>` de `TrainScene` : laissé au `<Canvas>`, un chargement en cours suspend la page autour de lui, ce qui provoque en dev une boucle de rendus qui bloque l'écran de chargement.
 
@@ -86,14 +86,14 @@ Un petit lien en bas à droite (et un autre dans le panneau « À propos ») les
 - Shaders préchauffés pendant le chargement (`useShaderWarmup`) : pas de saccade à la première arrivée. Tous sont compilés avant d'être dessinés, pour que le navigateur les construise en parallèle : la compilation, une à une, était l'essentiel du temps de chargement.
 - Blocs et cylindres (`StationPrimitives`) partagent géométries et matériaux entre éléments identiques : des centaines de pièces, peu de formes et de couleurs différentes. Utiliser `Block`, `Cylinder` et `RoundedBox` de `StationPrimitives`, pas le `RoundedBox` de drei.
 - Éclairage d'environnement servi par le site et réduit (`public/hdri/sunset.hdr`, 512 × 256).
-- Résolution adaptative : sous 40 images par seconde pendant quelques secondes, elle baisse d'un cran (`Scene`).
+- Ombres en VSM (`shadows="variance"`), floutées dans la carte d'ombres : douces et stables quand la forêt défile, là où le PCF montrait ses texels et scintillait sous le soleil rasant. Carte de 1024 px, le flou suffit.
+- Qualité adaptative (`Scene`) : anticrénelage du post-traitement ×4, aucun sur les écrans haute densité (DPR 2). Sous 40 images par seconde pendant quelques secondes, elle baisse d'un cran : anticrénelage coupé, puis résolution (jusqu'à 1), puis bloom. Encore sous 15 images par seconde au plus bas, la scène laisse la place à la version HTML.
 - `prefers-reduced-motion` (`hooks/useReducedMotion`) : animations figées, lapin, oiseau, flocons, feuilles et pluie qui tombent retirés.
 - Le trajet est annoncé aux lecteurs d'écran (`aria-live`), chaque panneau prend le focus, Échap ramène en arrière, zones tactiles d'au moins 44 px.
 
 ## Pistes
 
 - Une URL par section (`/projets`, `/a-propos`), reliée à `mode`, avec le `<Canvas>` dans le layout pour qu'il persiste entre les routes.
-- Un bouton visible pour passer à la version HTML de l'accueil (aujourd'hui, seul le clavier la fait apparaître).
 - Faire descendre le conducteur de la cabine plutôt que le faire disparaître et réapparaître.
 - Printemps.
 - Contact par télégramme (la locomotive siffle), wagon de marchandises pour les compétences, CV en billet de train, jour et nuit, levier de vitesse, son d'ambiance (coupé par défaut).
@@ -105,6 +105,7 @@ Un petit lien en bas à droite (et un autre dans le panneau « À propos ») les
 - Pancartes 3D flottant de part et d'autre du train, puis plan de ligne HTML : peu lisibles ou trop abstraits. Remplacés par les billets.
 - Navigation directe d'un écran à l'autre : le trajet entre deux écrans renforce le concept, et les écrans restent plus lisibles.
 - Gare en modèles Sketchfab : la gare en primitives arrondies rend mieux et reste dans la DA de la maison.
+- Lien ou bouton visible vers la version texte de l'accueil : elle est là pour les lecteurs d'écran et le clavier, pas comme une autre façon de visiter le site.
 - Volée de plusieurs oiseaux : à la caméra, elle semblait faire du sur-place.
 
 ## Modèles 3D
