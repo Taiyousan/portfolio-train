@@ -42,7 +42,7 @@ const FALLS: Record<
     spin: 0,
   },
   leaves: {
-    count: 700,
+    count: 400,
     season: "leaffall",
     opacity: 1,
     colors: AUTUMN_LEAVES,

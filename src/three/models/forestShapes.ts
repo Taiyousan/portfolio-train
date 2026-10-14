@@ -3,6 +3,7 @@ import {
   mergeGeometries,
   mergeVertices,
 } from "three/examples/jsm/utils/BufferGeometryUtils.js";
+import { AUTUMN_LEAVES } from "../config/seasons";
 import { FLOWER_COLORS, STATION_COLORS } from "./StationPrimitives";
 
 // The forest's props, in the stops' rounded cartoon style: each one a
@@ -436,6 +437,35 @@ function mushrooms() {
   return assemble(parts);
 }
 
+// A few fallen leaves, flat on the ground, each an autumn colour. Raised
+// one above the other where they overlap.
+function leaves() {
+  const random = seededRandom(61);
+  return assemble(
+    Array.from({ length: 5 }, (_, i) => {
+      const leaf = new THREE.CircleGeometry(0.055, 7);
+      leaf.scale(1, 0.5, 1);
+      leaf.rotateX(-Math.PI / 2);
+      // Curled a little, so they don't all catch the light alike.
+      leaf.rotateZ((random() - 0.5) * 0.5);
+      leaf.rotateY(random() * Math.PI * 2);
+      const angle = random() * Math.PI * 2;
+      const distance = random() * 0.16;
+      leaf.translate(
+        Math.cos(angle) * distance,
+        0.006 + i * 0.002,
+        Math.sin(angle) * distance,
+      );
+      return {
+        geometry: leaf,
+        color: new THREE.Color(
+          AUTUMN_LEAVES[i % AUTUMN_LEAVES.length],
+        ).multiplyScalar(0.8 + random() * 0.2),
+      };
+    }),
+  );
+}
+
 function stump() {
   const roots = Array.from({ length: 4 }, (_, i) => {
     const root = ball(0.12, [0.24, 0.05, 0], [1.5, 0.55, 0.75], 6);
@@ -483,6 +513,7 @@ export const FOREST_SHAPES = {
   grass,
   flowers,
   mushrooms,
+  leaves,
   stump,
   log,
 };

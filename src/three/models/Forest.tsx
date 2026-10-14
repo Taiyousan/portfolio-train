@@ -41,7 +41,7 @@ const CAMERA_DISTANCE = Math.abs(CAMERA_POSITION[0]);
 // for all of the layer's kinds), and takes `share` of its count: an
 // average per side of the track, so rare kinds can come less than once a
 // tile.
-type Layer = "trees" | "bushes" | "rocks" | "details";
+type Layer = "trees" | "bushes" | "rocks" | "details" | "leaves";
 
 type Kind = {
   shape: ForestShape;
@@ -57,8 +57,10 @@ type Kind = {
   scale: [number, number];
   // Its tinted parts' colour, one picked per prop.
   tints: string[];
-  // Flattens away under the snow (see shaders/forestMaterial).
+  // Flattens away under the snow, or lies on the ground in autumn only
+  // (see shaders/forestMaterial).
   wither?: boolean;
+  fallen?: boolean;
   shadow?: boolean;
   // Grows in the verge on the stops' side too (see STOP_SIDE_VERGE), low
   // enough to leave the bunny in sight.
@@ -68,6 +70,10 @@ type Kind = {
 const GREENS = ["#4f8a3c", "#5d9a45", "#457f3a", "#6aa04a"];
 const FIR_GREENS = ["#2f6b45", "#3a7a4c", "#2b5f40", "#357048"];
 const ROCK_GREYS = ["#7d786f", "#6f6c66", "#867e71", "#6c7075"];
+
+// Nearest the fallen leaves come to the track: just past the ballast (see
+// Rails).
+const LEAVES_MIN_X = 0.6;
 
 // Stumps and logs stay out of the strip between the track and the camera,
 // where they'd fill the foreground.
@@ -200,6 +206,17 @@ const KINDS: Kind[] = [
     inVerge: true,
   },
   {
+    shape: "leaves",
+    layer: "leaves",
+    share: 1,
+    minX: LEAVES_MIN_X,
+    reach: 0.2,
+    scale: [0.8, 1.3],
+    tints: ["#ffffff"],
+    fallen: true,
+    inVerge: true,
+  },
+  {
     shape: "stump",
     layer: "details",
     share: 0.08,
@@ -269,7 +286,7 @@ function sideSegments(
   const bandStart = Math.max(minX, CAMERA_DISTANCE - clearing);
   const bandEnd = Math.min(maxX, CAMERA_DISTANCE + clearing);
   const segments: [number, number][] = [];
-  if (bandStart > minX) segments.push([minX, bandStart]);
+  if (bandStart > minX) segments.push([minX, Math.min(bandStart, maxX)]);
   if (bandEnd < maxX) segments.push([bandEnd, maxX]);
   return segments;
 }
@@ -543,7 +560,11 @@ function InstancedKind({
         ref={ref}
         args={[
           geometries[kind.shape],
-          kind.wither ? materials.withering : materials.solid,
+          kind.fallen
+            ? materials.fallen
+            : kind.wither
+              ? materials.withering
+              : materials.solid,
           placements.length,
         ]}
         castShadow={kind.shadow ?? false}
@@ -636,18 +657,20 @@ function ForestTile({
   cull: CullRefs;
 }) {
   // Laid out again only when a setting changes.
-  const { trees, bushes, rocks, details } = density;
+  const { trees, bushes, rocks, details, leaves } = density;
   const { trees: treeSpread, rocks: rockSpread } = spread;
   const { bushes: bushSpread, details: detailSpread } = spread;
+  const { leaves: leafSpread } = spread;
   const layout = useMemo(
     () =>
       layoutTile(
-        { trees, bushes, rocks, details },
+        { trees, bushes, rocks, details, leaves },
         {
           trees: treeSpread,
           bushes: bushSpread,
           rocks: rockSpread,
           details: detailSpread,
+          leaves: leafSpread,
         },
         clearing,
         verge,
@@ -658,10 +681,12 @@ function ForestTile({
       bushes,
       rocks,
       details,
+      leaves,
       treeSpread,
       bushSpread,
       rockSpread,
       detailSpread,
+      leafSpread,
       clearing,
       verge,
       pondChance,
@@ -745,6 +770,8 @@ export default function Forest({
     rockSpread,
     detailsPerTile,
     detailSpread,
+    leavesPerTile,
+    leafSpread,
     pondChance,
     clearing,
     verge,
@@ -758,6 +785,8 @@ export default function Forest({
     rockSpread: { value: 30, min: 5, max: 80, step: 1 },
     detailsPerTile: { value: 3, min: 0, max: 100, step: 0.5 },
     detailSpread: { value: 9, min: 2, max: 30, step: 0.5 },
+    leavesPerTile: { value: 25, min: 0, max: 100, step: 1 },
+    leafSpread: { value: 8, min: 1, max: 30, step: 0.5 },
     pondChance: { value: 0.08, min: 0, max: 1, step: 0.01 },
     clearing: { value: 2, min: 0, max: 10, step: 0.5 },
     verge: { value: STOP_SIDE_VERGE, min: 0, max: 8, step: 0.1 },
@@ -768,12 +797,14 @@ export default function Forest({
     bushes: bushesPerTile,
     rocks: rocksPerTile,
     details: detailsPerTile,
+    leaves: leavesPerTile,
   };
   const spread: Counts = {
     trees: treeSpread,
     bushes: bushSpread,
     rocks: rockSpread,
     details: detailSpread,
+    leaves: leafSpread,
   };
 
   const tiles = useScrollingLoop(tileCount, TILE_SPACING);

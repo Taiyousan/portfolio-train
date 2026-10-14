@@ -20,11 +20,23 @@ const autumnColors = {
 // Snow settles on whatever faces up (see shaders/snow). The "withering"
 // material's props (grass, flowers, reeds) flatten into the ground instead
 // as it grows; they cast no shadow, the depth pass doesn't flatten them.
+// The "fallen" material's (leaves on the ground) grow as the leaves turn
+// and shrink away as they turn back; matte, or the sunset environment,
+// mirrored at grazing angles, washes them out.
+type Look = "solid" | "withering" | "fallen";
+
+const GROWTH: Record<Look, string> = {
+  solid: "",
+  withering: "transformed.y = transformed.y * (1.0 - uSnow) - 0.06 * uSnow;",
+  fallen: "transformed *= uAutumn;",
+};
+
 export function createForestMaterials() {
-  const create = (wither: boolean) => {
+  const create = (look: Look) => {
     const material = new THREE.MeshStandardMaterial({
       vertexColors: true,
-      roughness: 0.85,
+      roughness: look === "fallen" ? 1 : 0.85,
+      envMapIntensity: look === "fallen" ? 0.4 : 1,
     });
     material.onBeforeCompile = (shader) => {
       shader.uniforms.uAutumn = autumn;
@@ -55,38 +67,36 @@ vec3 autumnLeaves(vec3 green) {
         )
         .replace(
           "#include <begin_vertex>",
-          wither
-            ? `#include <begin_vertex>
-transformed.y = transformed.y * (1.0 - uSnow) - 0.06 * uSnow;`
-            : "#include <begin_vertex>",
+          `#include <begin_vertex>
+${GROWTH[look]}`,
         );
       addSnow(shader);
     };
-    // The same onBeforeCompile source for both: tell three's program cache
+    // The same onBeforeCompile source for all: tell three's program cache
     // they differ.
-    material.customProgramCacheKey = () =>
-      wither ? "forest-wither" : "forest";
+    material.customProgramCacheKey = () => `forest-${look}`;
     return material;
   };
 
-  const solid = create(false);
-  const withering = create(true);
+  const solid = create("solid");
+  const withering = create("withering");
+  const fallen = create("fallen");
+  const all = [solid, withering, fallen];
 
   return {
     solid,
     withering,
+    fallen,
     // The season's tint over everything (white in summer).
     setTint(color: THREE.Color) {
-      solid.color.copy(color);
-      withering.color.copy(color);
+      all.forEach((material) => material.color.copy(color));
     },
     // How far the leaves have turned, 0 → 1.
     setAutumn(value: number) {
       autumn.value = value;
     },
     dispose() {
-      solid.dispose();
-      withering.dispose();
+      all.forEach((material) => material.dispose());
     },
   };
 }

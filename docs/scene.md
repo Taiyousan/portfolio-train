@@ -76,6 +76,7 @@ Un petit lien en bas à droite (et un autre dans le panneau « À propos ») les
 ## Décor
 
 - Forêt (`Forest`, formes dans `forestShapes`) : chaque type est une seule géométrie (parties fusionnées, couleurs dans les sommets), instanciée une fois par tuile. Les éléments gardent leurs distances entre eux (pas de couronnes fusionnées). Côté arrêts, seul un accotement de `STOP_SIDE_VERGE` reste dégagé (le couloir du lapin) : ce qui se trouve sous un arrêt en vue, ou autour de la caméra de l'atelier, rétrécit jusqu'à disparaître. Côté caméra, un couloir reste libre devant elle.
+- Sol (`ForestFloor`, `shaders/ground.ts`) : un seul plan immobile, dont les motifs défilent dans le shader avec la forêt (`advanceTravel`, bouclé tous les 100 m pour garder la précision). Variations larges et douces vers une teinte plus sèche (`groundPatch` de chaque saison), et flaques sous la pluie, qui s'étendent avec le fondu. Ballast sous la voie (`Rails`), grain dans le même shader, enneigé en hiver. En automne, des feuilles mortes au sol (couche `leaves`, matériau `fallen` de `shaders/forestMaterial` : elles grandissent avec la saison et disparaissent hors automne).
 - Mares (`Pond`), nuages, lapin, oiseau, fumée (`shaders/smoke.ts`, toutes les bouffées en un seul appel de dessin), flocons, feuilles et pluie qui tombent (`Fall`, un même shader pour les trois, la forme des points réglable).
 
 ## Performances et accessibilité
@@ -100,6 +101,7 @@ Un petit lien en bas à droite (et un autre dans le panneau « À propos ») les
 
 ## Écarté
 
+- Sol : taches de mousse à bords nets (effet marécage), plaques de feuilles mortes en automne (du caramel renversé), tapis sombre au pied des arbres (une tache noire, pas une ombre), bordure d'herbe le long du ballast (surcharge le premier plan).
 - Pancartes 3D flottant de part et d'autre du train, puis plan de ligne HTML : peu lisibles ou trop abstraits. Remplacés par les billets.
 - Navigation directe d'un écran à l'autre : le trajet entre deux écrans renforce le concept, et les écrans restent plus lisibles.
 - Gare en modèles Sketchfab : la gare en primitives arrondies rend mieux et reste dans la DA de la maison.

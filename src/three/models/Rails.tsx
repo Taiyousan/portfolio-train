@@ -5,6 +5,7 @@ import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js
 import usePopIn from "../hooks/usePopIn";
 import useScrollingLoop from "../hooks/useScrollingLoop";
 import { RAIL_TILE_LENGTH } from "../config/scene";
+import { createGravelMaterial } from "../shaders/ground";
 import { GAUGE_X, RAIL_TOP } from "./Locomotive";
 
 const TILE_COUNT = 10;
@@ -17,6 +18,12 @@ const RAIL = { wide: 0.0176, narrow: 0.0116, foot: 0.0046, web: 0.0033 };
 const RAIL_HEIGHT = 0.0143;
 // Past the sleepers' loop at both ends, out of sight in the fog.
 const RAIL_LENGTH = (TILE_COUNT + 1) * RAIL_TILE_LENGTH;
+
+// The gravel bed the sleepers sit in, `sunk` of their height, its foot
+// `depth` below its top: under the ground (y = -0.6, see TrainScene), which
+// leaves a low bank with sloping sides.
+const BALLAST = { top: 0.86, foot: 1.2, sunk: 0.3, depth: 0.06 };
+const BALLAST_COLOR = "#7a7266";
 
 // One tile's sleepers, merged: a single mesh per tile.
 function sleepersGeometry() {
@@ -59,16 +66,43 @@ function railGeometry() {
   }).translate(0, 0, -RAIL_LENGTH / 2);
 }
 
+// The ballast's cross-section extruded along z, as long as the rails: its
+// grain scrolls in the shader (see shaders/ground).
+function ballastGeometry() {
+  const top = -RAIL_HEIGHT - SLEEPER.height * BALLAST.sunk;
+  const foot = top - BALLAST.depth;
+  const shape = new THREE.Shape(
+    [
+      [-BALLAST.foot / 2, foot],
+      [BALLAST.foot / 2, foot],
+      [BALLAST.top / 2, top],
+      [-BALLAST.top / 2, top],
+    ].map(([x, y]) => new THREE.Vector2(x, y)),
+  );
+  return new THREE.ExtrudeGeometry(shape, {
+    depth: RAIL_LENGTH,
+    bevelEnabled: false,
+  }).translate(0, 0, -RAIL_LENGTH / 2);
+}
+
 // The endless track, its rail heads at RAIL_TOP under the wheels. A rail
 // is the same all along, so only the sleepers scroll (see
 // useScrollingLoop); the rails stay put.
 export default function Rails() {
   const tiles = useScrollingLoop(TILE_COUNT, RAIL_TILE_LENGTH);
   const scale = usePopIn();
-  const { sleepers, rail, sleeperMaterial, railMaterial } = useMemo(
+  const {
+    sleepers,
+    rail,
+    ballast,
+    sleeperMaterial,
+    railMaterial,
+    ballastMaterial,
+  } = useMemo(
     () => ({
       sleepers: sleepersGeometry(),
       rail: railGeometry(),
+      ballast: ballastGeometry(),
       sleeperMaterial: new THREE.MeshStandardMaterial({
         color: SLEEPER_COLOR,
         roughness: 1,
@@ -78,6 +112,7 @@ export default function Rails() {
         metalness: 1,
         roughness: 1 / 3,
       }),
+      ballastMaterial: createGravelMaterial(BALLAST_COLOR),
     }),
     [],
   );
@@ -86,6 +121,7 @@ export default function Rails() {
     // Popped in from the rail heads' height, so it doesn't rise as it grows.
     <group position-y={RAIL_TOP}>
       <animated.group scale={scale}>
+        <mesh geometry={ballast} material={ballastMaterial} receiveShadow />
         {[-1, 1].map((side) => (
           <mesh
             key={side}

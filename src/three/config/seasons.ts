@@ -29,6 +29,8 @@ type SeasonLook = {
     ambient: string;
     sun: string;
     ground: string;
+    // The ground's drier patches (see shaders/ground).
+    groundPatch: string;
     // Over the whole forest (see Forest): white leaves its own colours.
     forest: string;
     // Ponds: water, then ice.
@@ -66,7 +68,8 @@ export const SEASON_LOOKS: Record<Season, SeasonLook> = {
       haze: "#3a2a1f",
       ambient: "#4a5a7a",
       sun: "#ffb56b",
-      ground: "#243520",
+      ground: "#34502a",
+      groundPatch: "#465a2f",
       forest: "#ffffff",
       water: "#3d8fd6",
       clouds: "#ffd2b5",
@@ -92,7 +95,8 @@ export const SEASON_LOOKS: Record<Season, SeasonLook> = {
       haze: "#4a3222",
       ambient: "#6a5a70",
       sun: "#ffa04f",
-      ground: "#36361f",
+      ground: "#4a4628",
+      groundPatch: "#56492c",
       forest: "#fff1e0",
       water: "#4b80aa",
       clouds: "#ffc29a",
@@ -119,6 +123,7 @@ export const SEASON_LOOKS: Record<Season, SeasonLook> = {
       ambient: "#8a9ac0",
       sun: "#ffc9a0",
       ground: "#dfe5ec",
+      groundPatch: "#d6dde6",
       forest: "#d5dde6",
       water: "#a9cbe0",
       clouds: "#dfe4ee",
@@ -145,6 +150,7 @@ export const SEASON_LOOKS: Record<Season, SeasonLook> = {
       ambient: "#7c8698",
       sun: "#c8c2b8",
       ground: "#1c2619",
+      groundPatch: "#2c2a1d",
       forest: "#c9d0cf",
       water: "#4f6f86",
       clouds: "#8d939d",
