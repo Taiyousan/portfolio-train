@@ -9,6 +9,7 @@ export type StationProject = Pick<
   | "title"
   | "summary"
   | "type"
+  | "year"
   | "role"
   | "technos"
   | "clients"

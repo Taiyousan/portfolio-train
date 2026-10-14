@@ -43,6 +43,7 @@ export default function Home() {
     title: project.title,
     summary: project.summary,
     type: project.type,
+    year: project.year,
     role: project.role,
     technos: project.technos,
     clients: project.clients,
@@ -124,8 +125,8 @@ export default function Home() {
                         </h3>
                         <p className="mt-1 text-sm text-muted">{p.summary}</p>
                         <p className="mt-3 font-mono text-xs text-muted">
-                          {p.type === "pro" ? "Pro" : "Perso"} ·{" "}
-                          {p.technos.join(" · ")}
+                          {p.type === "pro" ? "Pro" : "Perso"}
+                          {p.year && ` · ${p.year}`} · {p.technos.join(" · ")}
                         </p>
                       </div>
                     </Link>

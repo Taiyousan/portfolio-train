@@ -21,7 +21,6 @@ npm run format   # formate le code (Prettier, classes Tailwind triées)
 ```
 content/projets/       Un fichier .mdx par projet (le contenu)
 public/projets/<nom>/  La vignette (thumb.png) et les captures (shot-1.jpg...) du projet
-public/doc/cv.pdf      Le CV
 src/lib/projects.ts    Lit et valide les fichiers de content/projets
 content/pages/         Les pages de texte seules (mentions légales et crédits)
 src/lib/site.ts        Textes globaux : intro, compétences, liens de contact
@@ -40,7 +39,7 @@ On range par **nature de chose**, pas par page.
 | Zone | Ce qu'on y met |
 |---|---|
 | `content/` | Du texte et des données que tu écris (projets, plus tard un blog...) |
-| `public/` | Des fichiers bruts servis tels quels (images, vidéos, CV, `.glb`) |
+| `public/` | Des fichiers bruts servis tels quels (images, vidéos, `.glb`) |
 | `src/app/` | Des pages : un dossier = une URL |
 | `src/lib/` | De la logique sans affichage (lecture et validation du contenu) |
 | `src/components/` | Morceaux d'interface utilisés à plusieurs endroits (le cadre des pages, le billet, le curseur) |
@@ -105,6 +104,7 @@ title: "Musée des Beaux-Arts de Reims"
 summary: "Viewer 3D interactif pour les œuvres d'un musée."   # une ligne, affichée sur les cartes
 type: pro                    # pro | perso
 order: 2                     # position dans la liste
+year: "2025"                 # optionnel : "2024–2025" pour une période
 role: "développeur"
 technos: ["react", "three", "r3f", "blender"]
 clients: ["..."]             # optionnel
@@ -119,7 +119,7 @@ La liste exacte des champs et leurs contraintes est dans le schéma de [src/lib/
 
 ## Modifier le reste
 
-- **Intro, compétences, liens de contact, CV** : `src/lib/site.ts`
+- **Intro, compétences, liens de contact** : `src/lib/site.ts`
 - **Mentions légales et crédits** : `content/pages/mentions-legales.mdx` (un nouvel élément 3D sous licence CC-BY doit y être crédité)
 - **Couleurs et thème** : variables en haut de `src/app/globals.css`
 

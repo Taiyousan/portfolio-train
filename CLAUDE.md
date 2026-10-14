@@ -24,7 +24,6 @@ src/app/sitemap.ts, robots.ts, opengraph-image.tsx, icon.svg, apple-icon.tsx, no
 src/app/globals.css     Tokens de thème (--background, --muted, --line, --accent) + palettes (.theme-ticket, .theme-board)
 src/components/         Pièces HTML partagées : StationPage (cadre des pages HTML), Ticket, NameCard, LegalNotice, Cursor
 public/projets/<slug>/  thumb.png + captures (shot-1.jpg...) de chaque projet
-public/doc/cv.pdf       CV
 public/fonts/, hdri/   Ressources de la scène 3D (police du texte 3D, éclairage) ; public/models/ pour d'éventuels .glb
 ```
 
@@ -35,7 +34,7 @@ Ranger par nature de chose, pas par page :
 | Zone | Contenu |
 |---|---|
 | `content/` | Texte et données rédigés par l'utilisateur (projets, futur blog...) |
-| `public/` | Fichiers bruts servis tels quels (images, vidéos, CV, `.glb`) |
+| `public/` | Fichiers bruts servis tels quels (images, vidéos, `.glb`) |
 | `src/app/` | Pages : un dossier = une URL |
 | `src/lib/` | Logique sans affichage (lecture/validation du contenu) |
 | `src/components/` | Interface réutilisable. N'y extraire un composant que lorsqu'une deuxième page en a besoin (la carte de projet reste inline dans `page.tsx`, le détail d'un projet dans `projets/[slug]/page.tsx` : le train a son propre billet) |

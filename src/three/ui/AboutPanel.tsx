@@ -148,7 +148,7 @@ export default function AboutPanel({
             />
           </div>
           <dl className="grid min-w-0 flex-1 gap-y-2">
-            <Field label="Métier">{site.role}</Field>
+            <Field label="Profil">{site.role}</Field>
             <Field label="Ville">{site.city}</Field>
           </dl>
         </div>
@@ -178,8 +178,9 @@ export default function AboutPanel({
 
         <h3 className={`${LABEL} mt-6 font-normal text-muted`}>Contact</h3>
         <ul className="mt-3 grid grid-cols-2 gap-2">
+          {/* The first one across, stressed. */}
           {contacts.map(({ label, href }, i) => (
-            <li key={label}>
+            <li key={label} className={i === 0 ? "col-span-full" : undefined}>
               <a
                 href={href}
                 className={`flex min-h-11 items-center justify-center rounded-full px-3 font-mono text-xs tracking-wider whitespace-nowrap uppercase transition ${i === 0 ? "bg-accent text-on-accent hover:text-on-accent hover:brightness-110" : "border border-foreground/40 hover:bg-foreground/10 hover:text-foreground"}`}

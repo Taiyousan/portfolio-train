@@ -61,18 +61,15 @@ export default async function ProjectPage({
           <p className="flex items-baseline justify-between gap-4 font-mono text-sm">
             <span className="text-accent">
               {project.type === "pro" ? "Projet pro" : "Projet perso"}
-              {project.clients.length > 0 && ` · ${project.clients.join(", ")}`}
+              {project.year && ` · ${project.year}`}
             </span>
-            <span className="text-muted">
+            <span className="whitespace-nowrap text-muted">
               {pad(index + 1)} / {pad(projects.length)}
             </span>
           </p>
           <h1 className="mt-3 max-w-4xl text-4xl font-bold tracking-tight text-balance sm:text-6xl">
             {project.title}
           </h1>
-          <p className="mt-5 max-w-2xl text-xl text-pretty text-muted">
-            {project.summary}
-          </p>
         </header>
 
         {/* The fact sheet: on top on smaller screens, a sticky side column on
@@ -119,7 +116,12 @@ export default async function ProjectPage({
           </aside>
 
           <div className="lg:col-start-1 lg:row-start-1">
-            <div className="space-y-4 text-lg leading-relaxed [&_a]:font-semibold [&_a]:underline [&_a]:decoration-accent [&_a]:decoration-2 [&_p]:max-w-prose">
+            {/* The summary, then its detail in a quieter voice: after the
+                fact sheet on smaller screens, beside it on larger ones. */}
+            <p className="mb-4 max-w-2xl text-xl font-medium text-pretty sm:text-2xl">
+              {project.summary}
+            </p>
+            <div className="space-y-4 leading-relaxed text-muted [&_a]:font-semibold [&_a]:text-foreground [&_a]:underline [&_a]:decoration-accent [&_a]:decoration-2 [&_p]:max-w-prose">
               <MDXRemote source={project.body} />
             </div>
 

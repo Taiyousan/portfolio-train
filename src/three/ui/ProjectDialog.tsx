@@ -113,6 +113,7 @@ export default function ProjectDialog({
           className={`${LABEL} shrink-0 rounded-t-xl bg-foreground px-6 py-2 text-background sm:rounded-tr-none sm:px-8`}
         >
           {project.type === "pro" ? "Projet pro" : "Projet perso"}
+          {project.year && ` · ${project.year}`}
         </p>
         <p aria-live="polite" className="sr-only">
           {announcement}
@@ -133,9 +134,7 @@ export default function ProjectDialog({
           >
             {project.title}
           </h2>
-          <p className="mt-2 text-muted">{project.summary}</p>
-
-          <dl className="mt-5 grid grid-cols-2 gap-x-6 gap-y-3 border-y border-line py-4 sm:grid-cols-3">
+          <dl className="mt-4 grid grid-cols-2 gap-x-6 gap-y-3 border-y border-line py-4 sm:grid-cols-3">
             <Field label="Rôle">
               {project.role.charAt(0).toUpperCase() + project.role.slice(1)}
             </Field>
@@ -152,7 +151,11 @@ export default function ProjectDialog({
             </Field>
           </dl>
 
-          <div className="mt-5 space-y-3 leading-relaxed [&_a]:font-semibold [&_a]:underline [&_a]:decoration-accent [&_a]:decoration-2">
+          {/* The summary, the body's detail under it, smaller. */}
+          <p className="mt-5 text-lg leading-snug font-medium text-pretty">
+            {project.summary}
+          </p>
+          <div className="mt-2 space-y-2 text-sm leading-relaxed text-muted [&_a]:font-semibold [&_a]:text-foreground [&_a]:underline [&_a]:decoration-accent [&_a]:decoration-2">
             {project.body}
           </div>
 
