@@ -205,15 +205,16 @@ export default function AboutPanel({
         </Link>
       </div>
 
-      {/* On phones, the way back, riding on top of the sheet. */}
-      <div className="absolute bottom-full left-4 mb-3 w-max sm:hidden">
+      {/* On phones, the way back, riding on top of the sheet, where the
+          action bar's left slot is (see Overlay). */}
+      <div className="absolute bottom-full left-4 mb-3 w-[calc(50%-1.375rem)] sm:hidden">
         <Ticket
           kicker="Billet · Retour"
           title="Retour"
           tilt={1}
           delay={0}
           variant="return"
-          size="mini"
+          size="action"
           onClick={onDepart}
         />
       </div>

@@ -11,11 +11,12 @@ type Props = {
   // Entrance stagger, in ms.
   delay: number;
   // A return ticket is printed on different card (.ticket-return), and,
-  // small, mirrored: its stub on the left, a U-turn on it.
+  // action or mini, mirrored: its stub on the left, a U-turn on it.
   variant?: "outbound" | "return";
-  // A small ticket, as wide as its title: the title alone, and an arrow
-  // on the stub.
-  size?: "full" | "mini";
+  // "action": the scene's tickets past the ride, all one size, as wide as
+  // their slot, the title alone and an arrow on the stub. "mini": the same,
+  // smaller and as wide as its title, in the pages' header.
+  size?: "full" | "action" | "mini";
   // On the stub: an arrow (a U-turn, mirrored), or a cross for a ticket
   // that closes something.
   icon?: "arrow" | "close";
@@ -48,12 +49,21 @@ export default function Ticket({
   onClick,
 }: Props) {
   const mini = size === "mini";
-  const mirrored = variant === "return" && mini;
+  const action = size === "action";
+  // The title alone, and an arrow on the stub.
+  const compact = mini || action;
+  const mirrored = variant === "return" && compact;
   // A full ticket fills its slot, up to 18rem, narrowing with its stub and
   // margins; on phones and short screens, pared down to its title and
-  // arrow.
+  // arrow. An action ticket fills its slot, height included, so tickets
+  // side by side match even when a title wraps.
   const style = { rotate: `${tilt}deg`, transitionDelay: `${delay}ms` };
-  const className = `group pointer-events-auto block w-full text-left text-ticket-ink outline-offset-4 outline-board-ink drop-shadow-xl transition duration-300 ease-out hover:-translate-y-1.5 hover:rotate-0! hover:text-ticket-ink hover:delay-0! focus-visible:-translate-y-1.5 focus-visible:rotate-0! focus-visible:outline-2 focus-visible:delay-0! active:translate-y-0 active:scale-[0.98] starting:translate-y-8 starting:opacity-0 ${mini ? "max-w-full [--stub:2.5rem] sm:w-max" : "max-w-72 [--stub:2.75rem] sm:[--stub:4rem] sm:max-lg:[--stub:3rem]"} ${variant === "return" ? "ticket-return" : ""}`;
+  const sizing = {
+    full: "max-w-72 [--stub:2.75rem] sm:[--stub:4rem] sm:max-lg:[--stub:3rem]",
+    action: "h-full [--stub:2.75rem] sm:[--stub:3rem]",
+    mini: "max-w-full [--stub:2.5rem] sm:w-max",
+  }[size];
+  const className = `group pointer-events-auto block w-full text-left text-ticket-ink outline-offset-4 outline-board-ink drop-shadow-xl transition duration-300 ease-out hover:-translate-y-1.5 hover:rotate-0! hover:text-ticket-ink hover:delay-0! focus-visible:-translate-y-1.5 focus-visible:rotate-0! focus-visible:outline-2 focus-visible:delay-0! active:translate-y-0 active:scale-[0.98] starting:translate-y-8 starting:opacity-0 ${sizing} ${variant === "return" ? "ticket-return" : ""}`;
 
   // The mask would clip the drop shadow: it goes on this inner card, the
   // shadow on the button or link.
@@ -64,18 +74,30 @@ export default function Ticket({
           "--notch-x": mirrored ? "var(--stub)" : "calc(100% - var(--stub))",
         } as CSSProperties
       }
-      className={`ticket flex bg-ticket ${mirrored ? "flex-row-reverse" : ""}`}
+      className={`ticket flex bg-ticket ${mirrored ? "flex-row-reverse" : ""} ${action ? "h-full min-h-12" : ""}`}
     >
       <span
-        className={`min-w-0 flex-1 ${mini ? "px-3 py-2" : "px-3 py-3 sm:px-4 sm:max-lg:px-3"}`}
+        className={`min-w-0 flex-1 ${
+          action
+            ? "flex items-center px-3 py-2 sm:px-4"
+            : mini
+              ? "px-3 py-2"
+              : "px-3 py-3 sm:px-4 sm:max-lg:px-3"
+        }`}
       >
-        {!mini && (
+        {!compact && (
           <span className="block truncate font-mono text-[0.625rem] tracking-[0.2em] text-ticket-ink/60 uppercase max-sm:hidden short:hidden">
             {kicker}
           </span>
         )}
         <span
-          className={`block truncate leading-tight font-extrabold tracking-tight uppercase ${mini ? "text-sm" : "text-base sm:mt-0.5 sm:text-lg short:mt-0 short:text-base"}`}
+          className={`block leading-tight font-extrabold tracking-tight uppercase ${
+            action
+              ? "text-sm text-balance sm:text-base"
+              : mini
+                ? "truncate text-sm"
+                : "truncate text-base sm:mt-0.5 sm:text-lg short:mt-0 short:text-base"
+          }`}
         >
           {title}
         </span>
@@ -84,7 +106,7 @@ export default function Ticket({
       <span
         className={`flex w-(--stub) shrink-0 flex-col items-center justify-center gap-1 border-dashed border-ticket-ink/25 bg-ticket-stamp/10 transition group-hover:bg-ticket-stamp group-hover:text-ticket group-focus-visible:bg-ticket-stamp group-focus-visible:text-ticket ${mirrored ? "border-r-2" : "border-l-2"}`}
       >
-        {!mini && (
+        {!compact && (
           <span className="font-mono text-[0.625rem] tracking-widest uppercase max-sm:hidden short:hidden">
             Départ
           </span>
@@ -95,7 +117,7 @@ export default function Ticket({
           <svg
             aria-hidden="true"
             viewBox="0 0 24 24"
-            className={`block ${mini ? "size-4" : "size-5 sm:size-6"}`}
+            className={`block ${mini ? "size-4" : action ? "size-5" : "size-5 sm:size-6"}`}
             fill="none"
             stroke="currentColor"
             strokeWidth="2.5"

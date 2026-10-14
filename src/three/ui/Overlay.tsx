@@ -136,14 +136,15 @@ export default function Overlay({
         </p>
       </header>
 
-      {/* The small print, in a bottom corner throughout, under the tickets'
-          room (pb-11 below). Before the panels, so their sheets cover it on
-          phones; left out on short screens, where the room isn't there
-          (the about card has it too). */}
+      {/* The small print, in a bottom corner, under the tickets' room
+          (pb-11 below). Before the panels, so their sheets cover it on
+          phones; left out on short screens, where the room isn't there, and
+          on phones past the ride, to leave the bottom to the tickets (the
+          about card has it too). */}
       <Link
         href="/mentions-legales"
         onClick={openLegal}
-        className="group pointer-events-auto absolute right-3 bottom-0 flex min-h-11 items-end pb-2 sm:right-5 short:hidden"
+        className={`group pointer-events-auto absolute right-3 bottom-0 flex min-h-11 items-end pb-2 sm:right-5 short:hidden ${riding ? "" : "max-sm:hidden"}`}
       >
         <span className="theme-ticket rounded-sm bg-background/85 px-2 py-1 font-mono text-[0.625rem] tracking-wider text-muted uppercase shadow transition group-hover:text-foreground">
           Mentions légales
@@ -157,17 +158,20 @@ export default function Overlay({
       {/* After the about card and the workshop (tab order), before the
           departures board's HTML twin (drawn over it). */}
       <nav aria-label="Voyage" className="absolute inset-0">
-        {/* On a screen: a small return ticket (on phones, the about card and
-            the workshop have their own), and at the station "Voir les
-            projets" into the 3D board, swapped for "Fermer" while it's
-            open. The two share a slot so "Retour" doesn't move. Beside a
-            side panel, centred in the room it leaves. */}
+        {/* On a screen, the action bar: two slots of one size, "Retour"
+            always on the left, the screen's action on the right (at the
+            station, "Voir les projets" into the 3D board, swapped in place
+            for "Fermer" while it's open). Two columns across on phones (where
+            the about card and the workshop carry their own "Retour", as
+            wide as a column); beside a side panel, centred in the room it
+            leaves. */}
         <div
-          className={`absolute inset-x-0 bottom-0 flex items-center justify-center gap-4 p-4 pb-11 transition-[right] duration-500 ease-out short:pb-4 ${atHome || inWorkshop ? "right-[25.25rem] max-sm:hidden" : ""}`}
+          className={`absolute inset-x-0 bottom-0 grid grid-cols-2 gap-3 p-4 transition-[right] duration-500 ease-out sm:flex sm:justify-center sm:gap-4 sm:pb-11 short:pb-4 ${atHome || inWorkshop ? "right-[25.25rem] max-sm:hidden" : ""}`}
         >
           <Dealt
             shown={atStation || atHome || inWorkshop}
             delay={STOP_DEAL_MS + (atStation ? DEAL_MS : 0)}
+            className="sm:w-60"
           >
             <Ticket
               kicker="Billet · Retour"
@@ -175,14 +179,14 @@ export default function Overlay({
               tilt={1}
               delay={0}
               variant="return"
-              size="mini"
+              size="action"
               onClick={inWorkshop ? () => setMode("ride") : depart}
             />
           </Dealt>
           {/* Mounted while the station is the stop, so they're gathered
               away as the train departs. */}
           {stop === "station" && (
-            <div className="grid justify-items-start">
+            <div className="grid sm:w-60">
               <Dealt
                 shown={atStation && !boardFocused && !selected}
                 delay={boardOpened ? SWAP_MS : STOP_DEAL_MS}
@@ -192,9 +196,9 @@ export default function Overlay({
                   ref={seeProjectsRef}
                   kicker="Billet · Aller simple"
                   title="Voir les projets"
-                  tilt={-1.5}
+                  tilt={-1}
                   delay={0}
-                  size="mini"
+                  size="action"
                   onClick={(e) => {
                     setBoardFocused(true);
                     // From the keyboard, on to the HTML board, which shows
@@ -215,7 +219,7 @@ export default function Overlay({
                   title="Fermer"
                   tilt={-1}
                   delay={0}
-                  size="mini"
+                  size="action"
                   icon="close"
                   onClick={(e) => {
                     setBoardFocused(false);

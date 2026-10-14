@@ -10,6 +10,9 @@ Le train qui roule en forêt est le fil conducteur. Chaque section du portfolio 
 - **À propos** : la maison. Sur la terrasse, le conducteur, en sweat et sans képi, travaille à son bureau : le conducteur est un rôle, là c'est le développeur au travail.
 - **L'atelier** (mode `custom`) : le visiteur repeint la locomotive et habille le conducteur.
 - **Navigation** : des billets de train HTML en bas de l'écran. Le trajet est le centre : on y revient toujours pour aller ailleurs.
+  - Les billets servent à se déplacer (changer d'écran, revenir) ; les pastilles et onglets servent à agir dans un panneau (fiche projet, atelier, saisons).
+  - Deux tailles de billet : « destination » (les grands billets du trajet) et « action » (`Ticket size="action"`) sur tous les autres écrans, tous de la même taille.
+  - Hors trajet, une barre à deux emplacements fixes : « Retour » toujours à gauche, l'action de l'écran à droite (« Voir les projets », remplacé sur place par « Fermer »). Sur téléphone, deux colonnes égales en pleine largeur ; à la maison et à l'atelier, le « Retour » posé sur le panneau a la largeur d'une colonne. Sur grand écran, 15 rem chacun, centrés dans la place que laisse le panneau.
 
 | Donnée (`projects.ts` / `site.ts`) | Dans la scène |
 |---|---|
