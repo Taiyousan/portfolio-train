@@ -6,6 +6,17 @@
   --muted: #5c5c66;
   --line: #e4e4e7;
   --accent: #4f46e5;
+  --on-accent: #ffffff;
+  /* Split-flap departures board: dark whatever the colour scheme. */
+  --board: #16140f;
+  --board-flap: #26231c;
+  --board-ink: #f5c542;
+  /* Train tickets: ivory card stock, printed ink, a red stamp. */
+  --ticket: #f4efe4;
+  --ticket-ink: #26211b;
+  --ticket-stamp: #a63d2a;
+  /* The scene's dusk, behind the canvas until it draws. */
+  --dusk: #3a2a1f;
 }
 
 @theme inline {
@@ -14,9 +25,21 @@
   --color-muted: var(--muted);
   --color-line: var(--line);
   --color-accent: var(--accent);
+  --color-on-accent: var(--on-accent);
+  --color-board: var(--board);
+  --color-board-flap: var(--board-flap);
+  --color-board-ink: var(--board-ink);
+  --color-ticket: var(--ticket);
+  --color-ticket-ink: var(--ticket-ink);
+  --color-ticket-stamp: var(--ticket-stamp);
+  --color-dusk: var(--dusk);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
+
+/* Short screens (phones held sideways): the scene's overlay tightens its
+   margins and drops what doesn't fit. */
+@custom-variant short (@media (max-height: 32rem));
 
 @media (prefers-color-scheme: dark) {
   :root {
@@ -28,8 +51,221 @@
   }
 }
 
+/* Re-themes a subtree in the departures board's palette: components
+   styled with the tokens above follow along. */
+.theme-board {
+  --background: #1d1a14;
+  --foreground: #eee4cf;
+  --muted: #b8a57a;
+  --line: #3a3526;
+  --accent: var(--board-ink);
+  --on-accent: var(--board);
+  color-scheme: dark;
+}
+
+/* Re-themes a subtree as a printed train ticket: ink on card stock, the
+   stamp as accent, whatever the colour scheme. */
+.theme-ticket {
+  --background: var(--ticket);
+  --foreground: var(--ticket-ink);
+  --muted: #6d6355;
+  --line: #ddd4c2;
+  --accent: var(--ticket-stamp);
+  --on-accent: var(--ticket);
+  color-scheme: light;
+}
+
+/* Half notches cut at the two ends of a perforation, on either part
+   (notch-bottom over notch-top, notch-right before notch-left): put
+   together, two round notches either side of it. Utilities, so a
+   breakpoint can turn the seam (sm:notch-right). */
+@utility notch-bottom {
+  --notch: 0.75rem;
+  mask:
+    radial-gradient(
+        circle at 0 100%,
+        #0000 var(--notch),
+        #000 calc(var(--notch) + 0.5px)
+      )
+      left / 51% 100% no-repeat,
+    radial-gradient(
+        circle at 100% 100%,
+        #0000 var(--notch),
+        #000 calc(var(--notch) + 0.5px)
+      )
+      right / 51% 100% no-repeat;
+}
+
+@utility notch-top {
+  --notch: 0.75rem;
+  mask:
+    radial-gradient(
+        circle at 0 0,
+        #0000 var(--notch),
+        #000 calc(var(--notch) + 0.5px)
+      )
+      left / 51% 100% no-repeat,
+    radial-gradient(
+        circle at 100% 0,
+        #0000 var(--notch),
+        #000 calc(var(--notch) + 0.5px)
+      )
+      right / 51% 100% no-repeat;
+}
+
+@utility notch-right {
+  --notch: 0.75rem;
+  mask:
+    radial-gradient(
+        circle at 100% 0,
+        #0000 var(--notch),
+        #000 calc(var(--notch) + 0.5px)
+      )
+      top / 100% 51% no-repeat,
+    radial-gradient(
+        circle at 100% 100%,
+        #0000 var(--notch),
+        #000 calc(var(--notch) + 0.5px)
+      )
+      bottom / 100% 51% no-repeat;
+}
+
+@utility notch-left {
+  --notch: 0.75rem;
+  mask:
+    radial-gradient(
+        circle at 0 0,
+        #0000 var(--notch),
+        #000 calc(var(--notch) + 0.5px)
+      )
+      top / 100% 51% no-repeat,
+    radial-gradient(
+        circle at 0 100%,
+        #0000 var(--notch),
+        #000 calc(var(--notch) + 0.5px)
+      )
+      bottom / 100% 51% no-repeat;
+}
+
+/* Train ticket shape (components/Ticket): rounded corners, and two notches
+   at the stub's perforation. Each mask layer covers one half, so no mask
+   compositing is needed. */
+.ticket {
+  --notch: 0.45rem;
+  --notch-x: calc(100% - 4rem);
+  border-radius: 0.375rem;
+  mask:
+    radial-gradient(
+        circle at var(--notch-x) 0,
+        #0000 var(--notch),
+        #000 calc(var(--notch) + 0.5px)
+      )
+      top / 100% 51% no-repeat,
+    radial-gradient(
+        circle at var(--notch-x) 100%,
+        #0000 var(--notch),
+        #000 calc(var(--notch) + 0.5px)
+      )
+      bottom / 100% 51% no-repeat;
+}
+
+/* Return ticket: the same shape on pale sage card, with a green stamp. */
+.ticket-return {
+  --ticket: #e2e6df;
+  --ticket-stamp: #3d6656;
+}
+
+/* Printed barcode in the current ink, decorative. */
+@utility barcode {
+  background: repeating-linear-gradient(
+    90deg,
+    currentColor 0 2px,
+    transparent 2px 4px,
+    currentColor 4px 5px,
+    transparent 5px 7px,
+    currentColor 7px 10px,
+    transparent 10px 12px
+  );
+}
+
+/* A thin scrollbar in the subtree's ink, on no track. Chrome and Safari
+   get a rounded thumb without the arrow buttons their thin standard one
+   keeps on Windows; Firefox, the standard properties. */
+@utility scrollbar-ink {
+  --scrollbar-thumb: color-mix(in oklab, var(--foreground) 35%, transparent);
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    border-radius: 9999px;
+    background: var(--scrollbar-thumb);
+  }
+
+  @supports not selector(::-webkit-scrollbar) {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
+  }
+}
+
+/* Chimney puff of the loading screen's locomotive. */
+@keyframes puff {
+  0% {
+    translate: 0 0;
+    scale: 0.4;
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    translate: -0.75rem -0.9rem;
+    scale: 1.6;
+    opacity: 0;
+  }
+}
+
+/* The site's cursor (components/Cursor) stands in for the system's, save
+   over text fields and while the scene loads. */
+.custom-cursor:not([data-loading]),
+.custom-cursor:not([data-loading]) * {
+  cursor: none !important;
+}
+
+.custom-cursor
+  :is(
+    input:not(
+      [type="checkbox"],
+      [type="radio"],
+      [type="range"],
+      [type="color"],
+      [type="button"],
+      [type="submit"],
+      [type="reset"]
+    ),
+    textarea,
+    [contenteditable="true"]
+  ) {
+  cursor: text !important;
+}
+
+/* What's marked for the system's cursor (the home page's HTML version):
+   the browser's own cursors there. */
+.custom-cursor [data-system-cursor],
+.custom-cursor [data-system-cursor] * {
+  cursor: auto !important;
+}
+
+.custom-cursor [data-system-cursor] :is(a[href], button) {
+  cursor: pointer !important;
+}
+
+/* The pages' card stock (StationPage), so no white shows past their ends. */
 body {
-  background: var(--background);
+  background: var(--ticket);
   color: var(--foreground);
   font-family: var(--font-sans), system-ui, sans-serif;
 }

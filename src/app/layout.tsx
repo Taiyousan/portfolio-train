@@ -1,6 +1,8 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { site } from "@/lib/site";
+import { SITE_URL } from "@/lib/url";
+import Cursor from "@/components/Cursor";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -14,8 +16,25 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: { default: site.title, template: `%s | ${site.name}` },
   description: site.description,
+  applicationName: site.name,
+  authors: [{ name: site.name, url: SITE_URL }],
+  creator: site.name,
+  openGraph: {
+    type: "website",
+    locale: "fr_FR",
+    siteName: site.name,
+    title: site.title,
+    description: site.description,
+  },
+  twitter: { card: "summary_large_image" },
+};
+
+export const viewport: Viewport = {
+  // The pages' card stock (--ticket); the scene's dusk on the home page.
+  themeColor: "#f4efe4",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -24,7 +43,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="fr"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="flex min-h-full flex-col">
+        {children}
+        <Cursor />
+      </body>
     </html>
   );
 }

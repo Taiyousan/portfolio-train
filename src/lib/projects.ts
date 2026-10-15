@@ -10,6 +10,8 @@ const frontmatterSchema = z.object({
   summary: z.string(),
   type: z.enum(["pro", "perso"]),
   order: z.number(),
+  // When it was made, as shown: "2025", "2024–2025".
+  year: z.string().optional(),
   role: z.string(),
   technos: z.array(z.string()),
   clients: z.array(z.string()).default([]),
@@ -17,7 +19,8 @@ const frontmatterSchema = z.object({
   tasks: z.array(z.string()),
   href: z.url().optional(),
   thumb: z.string(),
-  video: z.string().optional(),
+  // Screenshots, shown in the scene's project ticket.
+  images: z.array(z.string()).default([]),
 });
 
 export type Project = z.infer<typeof frontmatterSchema> & {
