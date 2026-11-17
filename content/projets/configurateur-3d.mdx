@@ -1,0 +1,14 @@
+---
+title: "Configurateur 3D"
+summary: "Un configurateur de produits dans le navigateur : on importe un modèle 3D, on choisit ses pièces et on change leurs matériaux."
+type: perso
+order: 5
+year: "2026"
+role: "concepteur et développeur"
+technos: ["React", "TypeScript", "React Three Fiber", "Three.js", "Zustand"]
+tasks: ["Import par glisser-déposer : glTF, FBX, OBJ, STL, compression Draco et Meshopt", "Sélection des pièces dans la vue 3D ou dans l'arborescence", "Édition des matériaux, coloris enregistrés, annuler et rétablir", "Export du modèle personnalisé en .glb et capture en PNG"]
+thumb: /projets/configurateur-3d/thumb.jpg
+images: [/projets/configurateur-3d/shot-1.jpg, /projets/configurateur-3d/shot-2.jpg, /projets/configurateur-3d/shot-3.jpg]
+---
+
+On part de l'un des cinq modèles d'exemple (chaussure, fauteuil, canapé, voiture, lunettes) ou de son propre fichier, puis on enregistre plusieurs coloris pour passer de l'un à l'autre. La scène n'est redessinée que lorsque quelque chose change, pour ne pas faire travailler la carte graphique pour rien.
