@@ -21,6 +21,8 @@ const frontmatterSchema = z.object({
   thumb: z.string(),
   // Screenshots, shown in the scene's project ticket.
   images: z.array(z.string()).default([]),
+  // Kept in the repository but left out of the site: no card, no page.
+  hidden: z.boolean().default(false),
 });
 
 export type Project = z.infer<typeof frontmatterSchema> & {
@@ -47,6 +49,7 @@ export function getProjects(): Project[] {
     .readdirSync(PROJECTS_DIR)
     .filter((f) => f.endsWith(".mdx"))
     .map(readProject)
+    .filter((p) => !p.hidden)
     .sort((a, b) => a.order - b.order);
 }
 

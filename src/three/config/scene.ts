@@ -54,6 +54,10 @@ export const STATION_VIEW_CAMERA: CameraShot = {
 
 // Square to the board, near enough for its rows to read, with the driver
 // propped against its side. Update with STATION_BOARD / STATION_DRIVER.
+// Framed, as BOARD_PHONE_CAMERA, for a board of BOARD_SHOT_ROWS projects:
+// past those, TrainScene lifts and backs off both to fit the taller board.
+export const BOARD_SHOT_ROWS = 6;
+
 export const BOARD_CAMERA: CameraShot = {
   position: [1.675, 0.151, 1.086],
   target: [3.106, 0.119, 1.086],
