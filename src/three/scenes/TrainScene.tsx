@@ -36,10 +36,12 @@ import Fall from "../models/Fall";
 import Clouds from "../models/Clouds";
 import Bunny from "../models/Bunny";
 import Bird from "../models/Bird";
+import { stationBoardHeight } from "../models/StationBoard";
 import type { StationProject } from "../ui/types";
 import {
   BOARD_CAMERA,
   BOARD_PHONE_CAMERA,
+  BOARD_SHOT_ROWS,
   CAMERA_FOV,
   CUSTOM_CAMERAS,
   ENVIRONMENT_MAP,
@@ -48,6 +50,7 @@ import {
   MAX_FOV,
   PHONE_BREAKPOINT,
   RIDE_CAMERA,
+  STATION_BOARD,
   STOP_SETTLE_MS,
   STOP_CAMERAS,
   SUN_POSITION,
@@ -103,6 +106,27 @@ function workshopShot(
     shot,
     offsetX: (panel.x / 2) * offset,
     offsetY: (panel.y / 2) * offset,
+  };
+}
+
+// The board's shot `base` (framed for BOARD_SHOT_ROWS projects) for a board
+// of `rows`, with a `fov` degree camera. The board grows up from its feet:
+// the shot rises by half the growth and backs off until the board's plane
+// shows that much more height, so the margins above and below stay put.
+function boardShot(base: CameraShot, rows: number, fov: number): CameraShot {
+  const growth =
+    (stationBoardHeight(rows) - stationBoardHeight(BOARD_SHOT_ROWS)) *
+    STATION_BOARD.scale;
+  if (growth <= 0) return base;
+  const target = new THREE.Vector3(...base.target);
+  const line = new THREE.Vector3(...base.position).sub(target);
+  const halfFov = THREE.MathUtils.degToRad(fov) / 2;
+  line.setLength(line.length() + growth / (2 * Math.tan(halfFov)));
+  target.y += growth / 2;
+  return {
+    position: target.clone().add(line).toArray(),
+    target: target.toArray(),
+    offset: base.offset,
   };
 }
 
@@ -244,14 +268,23 @@ export default function TrainScene({
     camera.updateProjectionMatrix();
   }, [getState, fov]);
 
-  // The workshop's shot is fitted to the screen, the others are fixed
-  // (phones have their own): memoised so that resizing only reframes the
-  // workshop.
+  // The workshop's shot is fitted to the screen and the board's to its
+  // rows, the others are fixed (phones have their own): memoised so that
+  // resizing only reframes those two.
   const phone = width < PHONE_BREAKPOINT;
   const workshop = useMemo(
     () =>
       mode === "custom" ? workshopShot(workshopView, width, height, fov) : null,
     [mode, workshopView, width, height, fov],
+  );
+  const board = useMemo(
+    () =>
+      boardShot(
+        phone ? BOARD_PHONE_CAMERA : BOARD_CAMERA,
+        projects.length,
+        fov,
+      ),
+    [phone, projects.length, fov],
   );
   useEffect(() => {
     if (mode !== "stopped") return;
@@ -268,9 +301,7 @@ export default function TrainScene({
     const shot = workshop
       ? workshop.shot
       : stopped && stop === "station" && boardFocused
-        ? phone
-          ? BOARD_PHONE_CAMERA
-          : BOARD_CAMERA
+        ? board
         : stopped && stopSettled
           ? phone
             ? shots.phone
@@ -289,6 +320,7 @@ export default function TrainScene({
     stop,
     boardFocused,
     workshop,
+    board,
     stopSettled,
     phone,
     cameraControlsRef,
