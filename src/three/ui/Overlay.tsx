@@ -29,8 +29,9 @@ const DEAL_MS = 120;
 const GATHER_MS = 50;
 const RIDE_DEAL_MS = 300;
 const STOP_DEAL_MS = 700;
-// At the station, "Voir les projets" and "Fermer" swap places as the board
-// opens and closes: one dealt this long after the other starts going.
+// At the station, "Voir les projets" and "Retour en gare" swap places as
+// the board opens and closes: one dealt this long after the other starts
+// going.
 const SWAP_MS = 150;
 
 // Announced to screen readers as the journey moves on.
@@ -94,8 +95,8 @@ export default function Overlay({
   const atHome = mode === "stopped" && stop === "home";
   const inWorkshop = mode === "custom";
   // Once the board has been open at this stop, "Voir les projets" comes
-  // back as a swap with "Fermer", not after the arrival's wait (state
-  // adjusted while rendering, without an effect).
+  // back as a swap with "Retour en gare", not after the arrival's wait
+  // (state adjusted while rendering, without an effect).
   const [boardOpened, setBoardOpened] = useState(false);
   if (atStation && boardFocused && !boardOpened) setBoardOpened(true);
   if (!atStation && boardOpened) setBoardOpened(false);
@@ -158,13 +159,13 @@ export default function Overlay({
       {/* After the about card and the workshop (tab order), before the
           departures board's HTML twin (drawn over it). */}
       <nav aria-label="Voyage" className="absolute inset-0">
-        {/* On a screen, the action bar: two slots of one size, "Retour"
-            always on the left, the screen's action on the right (at the
-            station, "Voir les projets" into the 3D board, swapped in place
-            for "Fermer" while it's open). Two columns across on phones (where
-            the about card and the workshop carry their own "Retour", as
-            wide as a column); beside a side panel, centred in the room it
-            leaves. */}
+        {/* On a screen, the action bar: two slots of one size, "Retour au
+            menu" always on the left, the screen's action on the right (at
+            the station, "Voir les projets" into the 3D board, swapped in
+            place for "Retour en gare" while it's open). Two columns across
+            on phones (where the about card and the workshop carry their own
+            "Retour au menu", as wide as a column); beside a side panel,
+            centred in the room it leaves. */}
         <div
           className={`absolute inset-x-0 bottom-0 grid grid-cols-2 gap-3 p-4 transition-[right] duration-500 ease-out sm:flex sm:justify-center sm:gap-4 sm:pb-11 short:pb-4 ${atHome || inWorkshop ? "right-[25.25rem] max-sm:hidden" : ""}`}
         >
@@ -175,7 +176,7 @@ export default function Overlay({
           >
             <Ticket
               kicker="Billet · Retour"
-              title="Retour"
+              title="Retour au menu"
               tilt={1}
               delay={0}
               variant="return"
@@ -216,7 +217,7 @@ export default function Overlay({
               >
                 <Ticket
                   kicker="Billet · Retour en gare"
-                  title="Fermer"
+                  title="Retour en gare"
                   tilt={-1}
                   delay={0}
                   size="action"

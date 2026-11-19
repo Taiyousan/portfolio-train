@@ -134,17 +134,11 @@ export default function AboutPanel({
         className="min-h-0 scrollbar-ink overflow-y-auto border-t-2 border-dashed border-ticket-ink/30 bg-background px-5 pt-5 pb-6 notch-top sm:rounded-b-xl"
       >
         <div className="flex items-start gap-4">
-          {/* The holder's photo, stamped in a corner. */}
-          <div className="relative shrink-0">
-            <div className="w-20 overflow-hidden rounded-md border-2 border-line bg-accent/10">
-              <DriverIcon
-                outfit={outfit}
-                className="block aspect-square w-full translate-y-1"
-              />
-            </div>
-            <span
-              aria-hidden="true"
-              className="absolute -right-2 -bottom-2 size-7 -rotate-12 rounded-full border-2 border-dashed border-accent/70"
+          {/* The holder's photo. */}
+          <div className="w-20 shrink-0 overflow-hidden rounded-md border-2 border-line bg-accent/10">
+            <DriverIcon
+              outfit={outfit}
+              className="block aspect-square w-full translate-y-1"
             />
           </div>
           <dl className="grid min-w-0 flex-1 gap-y-2">
@@ -210,7 +204,7 @@ export default function AboutPanel({
       <div className="absolute bottom-full left-4 mb-3 w-[calc(50%-1.375rem)] sm:hidden">
         <Ticket
           kicker="Billet · Retour"
-          title="Retour"
+          title="Retour au menu"
           tilt={1}
           delay={0}
           variant="return"
