@@ -147,7 +147,7 @@ export default function Workshop({ onLeave }: { onLeave: () => void }) {
       <div className="absolute bottom-full left-4 mb-3 w-[calc(50%-1.375rem)] sm:hidden">
         <Ticket
           kicker="Billet · Retour"
-          title="Retour"
+          title="Retour au menu"
           tilt={1}
           delay={0}
           variant="return"
